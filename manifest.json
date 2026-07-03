@@ -1,0 +1,10 @@
+{
+  "id": "cortex",
+  "name": "Cortex",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Turn dictated or pasted notes into a linked, tagged knowledge graph, right inside Obsidian - calls the Anthropic API directly, no CLI or background scheduler required.",
+  "author": "Andy Ho",
+  "authorUrl": "https://github.com/AndyMDH",
+  "isDesktopOnly": false
+}
