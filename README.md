@@ -31,6 +31,26 @@ Pick whichever matches how you pay for Claude - switch any time in Settings → 
 If you already have Claude Code set up for the bash version of Cortex, CLI
 mode is very likely what you want - same cost as what you're already paying.
 
+## Privacy & permissions
+
+Disclosed up front, per Obsidian's developer policy:
+
+- **Remote service used**: the [Anthropic API](https://www.anthropic.com/) (`api.anthropic.com`).
+  In CLI mode this call is made by the Claude Code CLI, not the plugin
+  itself; in API mode the plugin calls it directly. Either way, the only
+  data sent is the content of your captured notes (plus tag names and a
+  short index of recent note titles/snippets, for tagging and duplicate
+  detection) - nothing else in your vault is transmitted.
+- **File access outside the vault**: none. The plugin only reads/writes
+  files inside the current vault.
+- **Local process execution**: CLI mode spawns the `claude` CLI (a separate
+  program you installed yourself) as a child process, scoped to your vault's
+  folder, using the `--allowedTools Read,Write,Edit,Glob,Grep,Bash` and
+  `--permission-mode acceptEdits` flags so it can read/write your notes
+  without an interactive confirmation prompt per file. No other command is
+  ever executed. API mode does not spawn any process.
+- **Telemetry**: none, client- or server-side.
+
 ## Requirements
 
 - Obsidian
