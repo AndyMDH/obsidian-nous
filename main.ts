@@ -94,7 +94,7 @@ export default class CortexPlugin extends Plugin {
 
 	private cliExec: CliExec = (command, args, options) => {
 		return new Promise((resolve) => {
-			execFile(
+			const child = execFile(
 				command,
 				args,
 				{ cwd: options.cwd, env: options.env, maxBuffer: 20 * 1024 * 1024 },
@@ -103,6 +103,10 @@ export default class CortexPlugin extends Plugin {
 					resolve({ code, stdout: stdout?.toString() ?? "", stderr: stderr?.toString() ?? "" });
 				}
 			);
+			// execFile leaves the child's stdin open by default; claude waits
+			// on it (and warns) before proceeding. Close it immediately since
+			// we never pipe anything in - same effect as `< /dev/null`.
+			child.stdin?.end();
 		});
 	};
 
