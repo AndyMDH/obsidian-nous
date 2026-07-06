@@ -1,7 +1,7 @@
 {
   "id": "cortex",
   "name": "Cortex",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "minAppVersion": "1.4.0",
   "description": "Turn dictated or pasted notes into a linked, tagged knowledge graph, right inside Obsidian - uses Claude Code (your subscription) or a direct API key from Anthropic, OpenAI, Gemini, or a local model, your choice.",
   "author": "Andy Ho",
