@@ -63,9 +63,12 @@ else to start using it.
 
 ## How to use it day to day
 
-1. Create a new note in Obsidian (`Cmd/Ctrl+N`) and dictate or paste
-   whatever you want captured — a meeting, a thought, anything. New notes
-   land in the `00-Inbox` folder automatically.
+1. Get a note into the `00-Inbox` folder, either:
+   - **Manually**: create a new note in Obsidian (`Cmd/Ctrl+N`) and dictate
+     or paste whatever you want captured — a meeting, a thought, anything.
+     New notes land in `00-Inbox` automatically.
+   - **Fully hands-free** (optional, see below): a dictation tool writes the
+     note for you, with no need to open Obsidian at all.
 2. Within a few seconds (or the next time you open Obsidian), Cortex picks
    it up on its own — no button to press. You can also trigger it manually
    any time via the brain-circuit icon in the left sidebar, or the command
@@ -80,6 +83,27 @@ Your tags come from the `30-Tags` folder — one file per tag. Add a file
 there for any tag you want Cortex to be able to use (for example, a client
 or project name), and Cortex will start using it going forward instead of
 falling back to something more generic.
+
+### Fully hands-free capture (optional)
+
+If your dictation tool supports running a custom script with the transcript
+(check its settings for something like "paste method" or "output" → "run a
+script" / "external script") — [Handy](https://handy.computer) does, under
+Settings → Paste method → "External script" — you can skip Obsidian
+entirely: press your dictation hotkey, talk, press it again, and the
+transcript lands straight in `00-Inbox` on its own. Cortex picks it up the
+same way either way.
+
+[`examples/dictation-capture.sh`](examples/dictation-capture.sh) is a small
+script for this: edit the `VAULT` and `INBOX_FOLDER` variables at the top to
+match your vault and Cortex's "Inbox folder" setting, point your dictation
+tool's external-script option at it, and you're done.
+
+One thing to know: this is usually an all-or-nothing setting for the
+dictation tool, not per-hotkey — turning it on means that tool stops typing
+transcribed text into other apps, since every transcription now goes to the
+script instead. Fine if you want a dictation hotkey dedicated to capture;
+skip this section if you use that hotkey for other apps too.
 
 ## Something not working?
 

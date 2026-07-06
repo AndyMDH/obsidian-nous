@@ -1,7 +1,7 @@
 {
   "name": "obsidian-cortex",
   "version": "1.0.1",
-  "description": "Turn dictated or pasted notes into a linked, tagged knowledge graph, in-app, powered directly by the Anthropic API.",
+  "description": "Turn dictated or pasted notes into a linked, tagged knowledge graph, right inside Obsidian - uses Claude Code (your subscription) or a direct Anthropic API key, your choice.",
   "main": "main.js",
   "type": "module",
   "engines": {
@@ -11,6 +11,7 @@
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
     "test": "node --experimental-strip-types --test test/*.test.ts",
+    "lint": "eslint .",
     "version": "node version-bump.mjs && git add manifest.json versions.json"
   },
   "keywords": [
@@ -26,8 +27,10 @@
     "@types/node": "^20.11.0",
     "builtin-modules": "^3.3.0",
     "esbuild": "^0.20.0",
+    "eslint": "^10.6.0",
     "obsidian": "^1.5.7",
     "tslib": "^2.6.2",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "typescript-eslint": "^8.62.1"
   }
 }
