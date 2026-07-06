@@ -12,22 +12,15 @@ required day to day.
 
 ## What you need before installing
 
-- **Obsidian** (free, [obsidian.md](https://obsidian.md))
-- Either of these — pick whichever applies to you:
-  - **A Claude subscription** (Claude Pro or Max) — recommended if you
-    already pay for Claude. You'll also need
-    [Claude Code](https://docs.claude.com/claude-code) installed, which is
-    Anthropic's free command-line tool. It sounds technical but installing
-    it is just following the instructions on that page — you won't need to
-    use a terminal for anything beyond that one-time install.
-  - **An Anthropic API key** — if you don't have a Claude subscription, you
-    can pay for usage separately instead. Get a key at
-    [console.anthropic.com](https://console.anthropic.com/settings/keys).
+You don't need to know how to code to use Cortex. You need:
 
-You don't need to know how to code to use Cortex. The one exception: if
-you're going with the Claude Code option above, that install involves a
-short trip to your computer's terminal app, but only to run the one command
-its own instructions give you.
+- **Obsidian** (free, [obsidian.md](https://obsidian.md))
+- Either of these:
+  - **A Claude subscription** (Claude Pro or Max) — also needs
+    [Claude Code](https://docs.claude.com/claude-code) installed (a one-time
+    terminal step, just following that page's instructions — no coding).
+  - **An Anthropic API key** instead, billed separately — get one at
+    [console.anthropic.com](https://console.anthropic.com/settings/keys).
 
 ## Installing Cortex
 
