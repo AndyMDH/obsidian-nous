@@ -86,6 +86,24 @@ Tags come from the `30-Tags` folder — one file per tag. Add a file there for
 any tag you want Cortex to use (a client or project name, say), and Cortex
 will prefer it over inventing something more generic.
 
+### Photos and screenshots
+
+Drop a `.png`, `.jpg`/`.jpeg`, or `.webp` file into `00-Inbox` (a whiteboard
+photo, a screenshot) and Cortex enriches it the same way — tagged, summarized,
+with the image itself embedded in the resulting note instead of a transcript.
+
+A few things to know:
+- Not HEIC or GIF — inconsistent support across providers' vision APIs, no
+  conversion step. (iOS's Share sheet commonly re-encodes to JPEG anyway, so
+  this bites less often than it sounds.)
+- No resizing — a full-resolution phone photo can fail specifically on
+  Anthropic (its practical cap is ~5MB) while working fine on OpenAI/Gemini.
+  Downscale it first if that happens.
+- One image per note. Multiple images in one capture isn't supported yet.
+- If you're on Direct API key mode with the Local provider, check your
+  model actually supports vision — a text-only local model (Ollama's default
+  `llama3.1`, for example) will just error out on an image.
+
 ## Something not working?
 
 - **Nothing happens after capturing a note**: open the command palette and

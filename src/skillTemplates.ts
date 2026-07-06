@@ -6,12 +6,16 @@
 // separately. Folder names are interpolated so they track this plugin's
 // settings instead of being hardcoded to 00-Inbox/10-Meetings/etc.
 
+import { IMAGE_EXTENSIONS } from "./logic.ts";
+
 export interface SkillFolders {
 	inbox: string;
 	meetings: string;
 	wikis: string;
 	tags: string;
 }
+
+const IMAGE_EXTENSIONS_MD = IMAGE_EXTENSIONS.map((e) => `\`.${e}\``).join(", ");
 
 export function meetingEnricherSkill(f: SkillFolders): string {
 	return `---
@@ -28,20 +32,27 @@ Vault root is the current working directory. All paths below are relative to it.
 
 ## Scope
 
-Process every \`.md\` and \`.txt\` file directly inside \`${f.inbox}/\` (not
+Process every \`.md\`, \`.txt\`, and image file (${IMAGE_EXTENSIONS_MD} - not
+HEIC or GIF, unsupported) directly inside \`${f.inbox}/\` (not
 \`${f.inbox}/duplicates/\`). Process files **one at a time, fully, before moving to
 the next** — read, enrich, move, log, then proceed.
 
 Skip a file if its frontmatter already contains \`status: enriched\` — it's
 already been processed. This is the idempotency guard; it means it's always
-safe to re-run this skill over an inbox that partially succeeded before.
+safe to re-run this skill over an inbox that partially succeeded before. (Image
+files never have frontmatter of their own, so this guard only applies once
+they've already been turned into a note in \`${f.meetings}/\` - at that point the
+original image is gone from \`${f.inbox}/\`, so there's nothing left to re-skip.)
 
 ## Step 0 — Duplicate check
 
-Read the first ~200 characters of the inbox file's body (ignore any frontmatter
-if present). Compare against the first ~200 characters of the body of every
-note in \`${f.meetings}/\`. If it matches an existing note closely enough that it's
-clearly the same transcript:
+Skip this step entirely for image files - two photos are essentially never an
+exact duplicate of each other, and there's no transcript body to compare.
+
+For text files: read the first ~200 characters of the inbox file's body
+(ignore any frontmatter if present). Compare against the first ~200 characters
+of the body of every note in \`${f.meetings}/\`. If it matches an existing note
+closely enough that it's clearly the same transcript:
 
 - Move the inbox file to \`${f.inbox}/duplicates/\` (create the folder if needed).
 - Append to \`.cortex/pipeline.log\`:
@@ -50,18 +61,23 @@ clearly the same transcript:
 
 ## Step 1 — Classify
 
-Read the full transcript. Decide:
+If the file is an image, use the Read tool to view it directly (Claude Code
+can read image files, not just text) - do not attempt to read it as text.
+Otherwise read the full transcript. Decide:
 
-- **type**: \`meeting\` if it reads like a conversation/discussion between people,
-  \`note\` if it's a single-person idea, reflection, or fragment with no
-  attendees/decisions/actions structure.
+- **type**: \`meeting\` if it reads like (or shows, for an image - e.g. a
+  whiteboard from a meeting) a conversation/discussion between people, \`note\`
+  if it's a single-person idea, reflection, screenshot of an article, or
+  fragment with no attendees/decisions/actions structure.
 - **word count**: if the body is under ~50 words, this is a \`fragment\` regardless
   of type — it still gets frontmatter and moves to \`${f.meetings}/\`, but skip wiki
   eligibility (wiki-builder won't count it) and always include the \`fragment\`
-  tag in addition to any other applicable tag(s).
+  tag in addition to any other applicable tag(s). Images are never fragments
+  purely for being an image - judge by how much content is actually in them.
 - **source**: \`handy\` if it reads like raw dictation (first-person, informal,
   no clear multi-speaker turn-taking); \`pasted\` if it has clear speaker labels
-  or formatting suggesting it was copied from Teams/Zoom/Granola.
+  or formatting suggesting it was copied from Teams/Zoom/Granola; \`photo\` if
+  the file is an image.
 
 ## Step 2 — Frontmatter
 
@@ -159,6 +175,11 @@ aren't actually in the transcript.
 It moves intact, verbatim, under \`## Transcript\`. Enrichment adds structure
 above it; it does not touch the source material.
 
+**For an image file, there is no transcript.** Replace the \`## Transcript\`
+section with \`## Captured image\` containing only \`![[<final image
+filename>]]\` (see Step 6 for the final filename) - nothing else in that
+section, no description duplicated from the Summary above it.
+
 ## Step 5 — Relations
 
 Append a \`## Related\` section at the bottom, after \`## Transcript\`:
@@ -190,7 +211,13 @@ the same topic name. If linking to an existing wiki, use its actual filename
    from frontmatter). Sanitize the title for filesystem safety (no \`/\`, \`:\`,
    etc.) but keep it human-readable.
 2. Write the fully enriched content to \`${f.meetings}/<final filename>\`.
-3. Remove the original file from \`${f.inbox}/\`.
+3. For a text file: remove the original from \`${f.inbox}/\` - its content is
+   now fully copied into the new note. **For an image file: move (rename) it
+   into \`${f.meetings}/\` instead of deleting it**, using the same date+title
+   as the note but keeping the image's original extension (e.g.
+   \`2026-07-06 Whiteboard Sketch.png\` next to \`2026-07-06 Whiteboard
+   Sketch.md\`) - this is the file the \`## Captured image\` embed points to, so
+   it must actually exist at that path afterward, not be deleted.
 4. Append to \`.cortex/pipeline.log\`:
    \`<ISO timestamp> ENRICHED: <final filename> - tags: [<tags>] - project: <project>\`
 

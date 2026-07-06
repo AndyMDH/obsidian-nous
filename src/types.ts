@@ -60,7 +60,7 @@ export interface EnrichResult {
 	date: string;
 	title: string;
 	attendees: string[];
-	source: "handy" | "pasted";
+	source: "handy" | "pasted" | "photo";
 	project: string;
 	tags: string[];
 	new_tag: { name: string; justification: string } | null;

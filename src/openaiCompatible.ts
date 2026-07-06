@@ -6,7 +6,7 @@
 // with zero data ever leaving the machine.
 
 import type { HttpPost } from "./anthropic.ts";
-import { LlmApiError, type LlmProvider, type LlmTool } from "./llmProvider.ts";
+import { LlmApiError, type LlmMessage, type LlmProvider, type LlmTool } from "./llmProvider.ts";
 
 export class OpenAiCompatibleProvider implements LlmProvider {
 	private httpPost: HttpPost;
@@ -21,13 +21,23 @@ export class OpenAiCompatibleProvider implements LlmProvider {
 		this.baseUrl = baseUrl.replace(/\/+$/, "");
 	}
 
-	async callTool<T>(system: string, userMessage: string, tool: LlmTool, maxTokens = 4096): Promise<T> {
+	async callTool<T>(system: string, message: LlmMessage, tool: LlmTool, maxTokens = 4096): Promise<T> {
+		const userContent = message.image
+			? [
+					{ type: "text", text: message.text },
+					{
+						type: "image_url",
+						image_url: { url: `data:${message.image.mediaType};base64,${message.image.base64Data}` },
+					},
+				]
+			: message.text;
+
 		const body = JSON.stringify({
 			model: this.model,
 			max_tokens: maxTokens,
 			messages: [
 				{ role: "system", content: system },
-				{ role: "user", content: userMessage },
+				{ role: "user", content: userContent },
 			],
 			tools: [
 				{

@@ -12,6 +12,31 @@ export function wikiFilename(topic: string): string {
 	return `${sanitizeFilename(topic)} Wiki.md`;
 }
 
+// Not HEIC (inconsistent vision-API support) or GIF (animated-frame
+// ambiguity, inconsistent support) - disclosed limitation, no conversion step.
+export const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp"];
+
+export function isCaptureFile(extension: string): boolean {
+	const ext = extension.toLowerCase();
+	return ext === "md" || ext === "txt" || IMAGE_EXTENSIONS.includes(ext);
+}
+
+export function meetingImageFilename(date: string, title: string, extension: string): string {
+	return `${date} ${sanitizeFilename(title)}.${extension}`;
+}
+
+// Portable byte -> base64 (works in the Electron renderer, a mobile webview,
+// and Node's test runner) - not Buffer.from(), which doesn't exist on mobile.
+export function arrayBufferToBase64(buffer: ArrayBuffer): string {
+	const bytes = new Uint8Array(buffer);
+	let binary = "";
+	const chunkSize = 0x8000;
+	for (let i = 0; i < bytes.length; i += chunkSize) {
+		binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+	}
+	return btoa(binary);
+}
+
 export function extractFilenameDateHint(filename: string): string | null {
 	const match = filename.match(/^(\d{4}-\d{2}-\d{2})/);
 	return match ? match[1] : null;
@@ -83,7 +108,8 @@ export function buildMeetingMarkdown(
 	result: EnrichResult,
 	rawTranscript: string,
 	enrichedAt: string,
-	existingWikiLink: string | null
+	existingWikiLink: string | null,
+	capturedImageFilename?: string
 ): string {
 	const fmLines = [
 		"---",
@@ -122,7 +148,11 @@ export function buildMeetingMarkdown(
 		);
 	}
 
-	bodyParts.push(`## Transcript\n\n${rawTranscript.trim()}`);
+	if (capturedImageFilename) {
+		bodyParts.push(`## Captured image\n\n![[${capturedImageFilename}]]`);
+	} else {
+		bodyParts.push(`## Transcript\n\n${rawTranscript.trim()}`);
+	}
 
 	const relatedLines: string[] = [];
 	for (const tag of result.tags) relatedLines.push(`- [[${tag}]]`);

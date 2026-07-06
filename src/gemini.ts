@@ -5,7 +5,7 @@
 // rather than trying to squeeze it into one of the other two.
 
 import type { HttpPost } from "./anthropic.ts";
-import { LlmApiError, type LlmProvider, type LlmTool } from "./llmProvider.ts";
+import { LlmApiError, type LlmMessage, type LlmProvider, type LlmTool } from "./llmProvider.ts";
 
 export class GeminiProvider implements LlmProvider {
 	private httpPost: HttpPost;
@@ -18,14 +18,19 @@ export class GeminiProvider implements LlmProvider {
 		this.model = model;
 	}
 
-	async callTool<T>(system: string, userMessage: string, tool: LlmTool, maxTokens = 4096): Promise<T> {
+	async callTool<T>(system: string, message: LlmMessage, tool: LlmTool, maxTokens = 4096): Promise<T> {
 		if (!this.apiKey) {
 			throw new Error("No Gemini API key configured. Set one in Cortex plugin settings.");
 		}
 
+		const parts: Record<string, unknown>[] = [{ text: message.text }];
+		if (message.image) {
+			parts.push({ inline_data: { mime_type: message.image.mediaType, data: message.image.base64Data } });
+		}
+
 		const body = JSON.stringify({
 			system_instruction: { parts: [{ text: system }] },
-			contents: [{ role: "user", parts: [{ text: userMessage }] }],
+			contents: [{ role: "user", parts }],
 			tools: [
 				{
 					function_declarations: [

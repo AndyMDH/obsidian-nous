@@ -20,8 +20,32 @@ test("callTool returns the functionCall args (already an object) on success", as
 		}),
 	});
 	const provider = new GeminiProvider(mockPost, "key", "model");
-	const result = await provider.callTool("sys", "msg", TOOL);
+	const result = await provider.callTool("sys", { text: "msg" }, TOOL);
 	assert.deepEqual(result, { foo: "bar" });
+});
+
+test("callTool sends an inline_data part alongside the text when an image is given", async () => {
+	let capturedBody = "";
+	const mockPost: HttpPost = async (_url, _headers, body) => {
+		capturedBody = body;
+		return {
+			status: 200,
+			text: JSON.stringify({
+				candidates: [{ content: { parts: [{ functionCall: { name: "test_tool", args: {} } }] } }],
+			}),
+		};
+	};
+	const provider = new GeminiProvider(mockPost, "key", "model");
+	await provider.callTool(
+		"sys",
+		{ text: "describe this", image: { mediaType: "image/png", base64Data: "abc123" } },
+		TOOL
+	);
+	const parsedBody = JSON.parse(capturedBody);
+	assert.deepEqual(parsedBody.contents[0].parts, [
+		{ text: "describe this" },
+		{ inline_data: { mime_type: "image/png", data: "abc123" } },
+	]);
 });
 
 test("callTool sends the API key as a header and forces the tool via tool_config", async () => {
@@ -40,7 +64,7 @@ test("callTool sends the API key as a header and forces the tool via tool_config
 		};
 	};
 	const provider = new GeminiProvider(mockPost, "my-key", "gemini-3-pro-preview");
-	await provider.callTool("sys", "msg", TOOL);
+	await provider.callTool("sys", { text: "msg" }, TOOL);
 	assert.equal(capturedUrl, "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent");
 	assert.equal(capturedHeaders["x-goog-api-key"], "my-key");
 	assert.equal(capturedUrl.includes("key="), false); // key must not leak into the URL
@@ -57,7 +81,7 @@ test("callTool rejects before making a request when no API key is set", async ()
 		return { status: 200, text: "{}" };
 	};
 	const provider = new GeminiProvider(mockPost, "", "model");
-	await assert.rejects(() => provider.callTool("sys", "msg", TOOL));
+	await assert.rejects(() => provider.callTool("sys", { text: "msg" }, TOOL));
 	assert.equal(called, false);
 });
 
@@ -68,7 +92,7 @@ test("callTool throws LlmApiError on a non-2xx response", async () => {
 	});
 	const provider = new GeminiProvider(mockPost, "key", "model");
 	await assert.rejects(
-		() => provider.callTool("sys", "msg", TOOL),
+		() => provider.callTool("sys", { text: "msg" }, TOOL),
 		(err: unknown) => {
 			assert.ok(err instanceof LlmApiError);
 			assert.equal(err.status, 429);
@@ -83,5 +107,5 @@ test("callTool throws when the response has no matching functionCall", async () 
 		text: JSON.stringify({ candidates: [{ content: { parts: [{ text: "no tool call" }] } }] }),
 	});
 	const provider = new GeminiProvider(mockPost, "key", "model");
-	await assert.rejects(() => provider.callTool("sys", "msg", TOOL));
+	await assert.rejects(() => provider.callTool("sys", { text: "msg" }, TOOL));
 });

@@ -22,10 +22,22 @@ export class LlmApiError extends Error {
 	}
 }
 
+export interface ImageInput {
+	mediaType: string; // e.g. "image/png"
+	base64Data: string;
+}
+
+// Bundled rather than two positional params so a caller wanting maxTokens
+// without an image doesn't have to write callTool(sys, msg, tool, undefined, 8192).
+export interface LlmMessage {
+	text: string;
+	image?: ImageInput;
+}
+
 export interface LlmProvider {
 	callTool<T>(
 		system: string,
-		userMessage: string,
+		message: LlmMessage,
 		tool: LlmTool,
 		maxTokens?: number
 	): Promise<T>;

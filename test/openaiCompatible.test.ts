@@ -26,8 +26,32 @@ test("callTool parses the tool call arguments (a JSON string) on success", async
 		}),
 	});
 	const provider = new OpenAiCompatibleProvider(mockPost, "key", "model", "https://api.openai.com/v1");
-	const result = await provider.callTool("sys", "msg", TOOL);
+	const result = await provider.callTool("sys", { text: "msg" }, TOOL);
 	assert.deepEqual(result, { foo: "bar" });
+});
+
+test("callTool sends a data-URI image_url block alongside the text when an image is given", async () => {
+	let capturedBody = "";
+	const mockPost: HttpPost = async (_url, _headers, body) => {
+		capturedBody = body;
+		return {
+			status: 200,
+			text: JSON.stringify({
+				choices: [{ message: { tool_calls: [{ function: { name: "test_tool", arguments: "{}" } }] } }],
+			}),
+		};
+	};
+	const provider = new OpenAiCompatibleProvider(mockPost, "key", "model", "https://api.openai.com/v1");
+	await provider.callTool(
+		"sys",
+		{ text: "describe this", image: { mediaType: "image/png", base64Data: "abc123" } },
+		TOOL
+	);
+	const parsedBody = JSON.parse(capturedBody);
+	assert.deepEqual(parsedBody.messages[1].content, [
+		{ type: "text", text: "describe this" },
+		{ type: "image_url", image_url: { url: "data:image/png;base64,abc123" } },
+	]);
 });
 
 test("callTool sends bearer auth and forces the tool via tool_choice", async () => {
@@ -46,7 +70,7 @@ test("callTool sends bearer auth and forces the tool via tool_choice", async () 
 		};
 	};
 	const provider = new OpenAiCompatibleProvider(mockPost, "my-key", "my-model", "https://api.openai.com/v1");
-	await provider.callTool("sys", "msg", TOOL);
+	await provider.callTool("sys", { text: "msg" }, TOOL);
 	assert.equal(capturedUrl, "https://api.openai.com/v1/chat/completions");
 	assert.equal(capturedHeaders["authorization"], "Bearer my-key");
 	const parsedBody = JSON.parse(capturedBody);
@@ -66,7 +90,7 @@ test("callTool omits the authorization header when no API key is set (local mode
 		};
 	};
 	const provider = new OpenAiCompatibleProvider(mockPost, "", "llama3.1", "http://localhost:11434/v1");
-	await provider.callTool("sys", "msg", TOOL);
+	await provider.callTool("sys", { text: "msg" }, TOOL);
 	assert.equal("authorization" in capturedHeaders, false);
 });
 
@@ -82,7 +106,7 @@ test("callTool strips a trailing slash from the base URL", async () => {
 		};
 	};
 	const provider = new OpenAiCompatibleProvider(mockPost, "key", "model", "http://localhost:11434/v1/");
-	await provider.callTool("sys", "msg", TOOL);
+	await provider.callTool("sys", { text: "msg" }, TOOL);
 	assert.equal(capturedUrl, "http://localhost:11434/v1/chat/completions");
 });
 
@@ -93,7 +117,7 @@ test("callTool throws LlmApiError on a non-2xx response", async () => {
 	});
 	const provider = new OpenAiCompatibleProvider(mockPost, "key", "model", "https://api.openai.com/v1");
 	await assert.rejects(
-		() => provider.callTool("sys", "msg", TOOL),
+		() => provider.callTool("sys", { text: "msg" }, TOOL),
 		(err: unknown) => {
 			assert.ok(err instanceof LlmApiError);
 			assert.equal(err.status, 500);
@@ -108,5 +132,5 @@ test("callTool throws when the response has no matching tool call", async () => 
 		text: JSON.stringify({ choices: [{ message: {} }] }),
 	});
 	const provider = new OpenAiCompatibleProvider(mockPost, "key", "model", "https://api.openai.com/v1");
-	await assert.rejects(() => provider.callTool("sys", "msg", TOOL));
+	await assert.rejects(() => provider.callTool("sys", { text: "msg" }, TOOL));
 });

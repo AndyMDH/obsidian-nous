@@ -20,6 +20,7 @@ import { GeminiProvider } from "./src/gemini";
 import {
 	ENRICH_TOOL,
 	WIKI_TOOL,
+	enrichImageUserMessage,
 	enrichSystemPrompt,
 	enrichUserMessage,
 	wikiSystemPrompt,
@@ -191,7 +192,7 @@ export default class CortexPlugin extends Plugin {
 		return (
 			file.path.startsWith(this.settings.inboxFolder + "/") &&
 			!file.path.includes("/duplicates/") &&
-			(file.extension === "md" || file.extension === "txt")
+			logic.isCaptureFile(file.extension)
 		);
 	}
 
@@ -278,8 +279,7 @@ export default class CortexPlugin extends Plugin {
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		if (!folder) return;
 		const files = folder.children.filter(
-			(f): f is TFile =>
-				f instanceof TFile && (f.extension === "md" || f.extension === "txt")
+			(f): f is TFile => f instanceof TFile && logic.isCaptureFile(f.extension)
 		);
 		if (files.length === 0) return;
 
@@ -314,7 +314,7 @@ export default class CortexPlugin extends Plugin {
 
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		const hasFiles = folder?.children.some(
-			(f) => f instanceof TFile && (f.extension === "md" || f.extension === "txt")
+			(f) => f instanceof TFile && logic.isCaptureFile(f.extension)
 		);
 		if (!hasFiles) return;
 
@@ -403,6 +403,12 @@ export default class CortexPlugin extends Plugin {
 		new Notice(parts.length > 0 ? `Cortex: ${parts.join(", ")}.` : "Cortex: no wikis to build or update.");
 	}
 
+	private mimeTypeForExtension(extension: string): string {
+		const ext = extension.toLowerCase();
+		if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+		return `image/${ext}`;
+	}
+
 	async processFile(file: TFile): Promise<boolean> {
 		if (this.inFlight.has(file.path)) return false;
 		if (this.settings.apiProvider !== "local" && !this.settings.apiKeys[this.settings.apiProvider]) {
@@ -411,17 +417,33 @@ export default class CortexPlugin extends Plugin {
 		}
 		this.inFlight.add(file.path);
 		try {
-			const raw = await this.app.vault.read(file);
-			if (raw.trim().length === 0) return false;
+			const isImage = logic.IMAGE_EXTENSIONS.includes(file.extension.toLowerCase());
+			let raw = "";
+			let image: { mediaType: string; base64Data: string } | undefined;
+			if (isImage) {
+				const binary = await this.app.vault.readBinary(file);
+				if (binary.byteLength === 0) return false;
+				image = {
+					mediaType: this.mimeTypeForExtension(file.extension),
+					base64Data: logic.arrayBufferToBase64(binary),
+				};
+			} else {
+				raw = await this.app.vault.read(file);
+				if (raw.trim().length === 0) return false;
+			}
 
 			const tagRegistry = await this.listTagRegistry();
 			const existingIndex = await this.buildNoteIndex();
 			const dateHint = logic.extractFilenameDateHint(file.name);
 			const ctime = new Date(file.stat.ctime).toISOString().slice(0, 10);
 
+			const message = image
+				? { text: enrichImageUserMessage(dateHint, ctime, existingIndex), image }
+				: { text: enrichUserMessage(raw, dateHint, ctime, existingIndex) };
+
 			const result = await this.getLlmProvider().callTool<EnrichResult>(
 				enrichSystemPrompt(tagRegistry),
-				enrichUserMessage(raw, dateHint, ctime, existingIndex),
+				message,
 				ENRICH_TOOL
 			);
 
@@ -442,12 +464,19 @@ export default class CortexPlugin extends Plugin {
 
 			const existingWikiLink = await this.findExistingWikiLink(result.tags);
 			const enrichedAt = new Date().toISOString();
-			const markdown = logic.buildMeetingMarkdown(result, raw, enrichedAt, existingWikiLink);
 			const finalFilename = logic.meetingFilename(result.date, result.title);
 			const destPath = `${this.settings.meetingsFolder}/${finalFilename}`;
 
-			await this.app.vault.create(destPath, markdown);
-			await this.app.vault.delete(file);
+			if (isImage) {
+				const imageFilename = logic.meetingImageFilename(result.date, result.title, file.extension);
+				const markdown = logic.buildMeetingMarkdown(result, "", enrichedAt, existingWikiLink, imageFilename);
+				await this.app.vault.create(destPath, markdown);
+				await this.app.fileManager.renameFile(file, `${this.settings.meetingsFolder}/${imageFilename}`);
+			} else {
+				const markdown = logic.buildMeetingMarkdown(result, raw, enrichedAt, existingWikiLink);
+				await this.app.vault.create(destPath, markdown);
+				await this.app.vault.delete(file);
+			}
 			await this.appendLog(
 				`ENRICHED: ${finalFilename} - tags: [${result.tags.join(", ")}] - project: ${result.project}`
 			);
@@ -555,7 +584,7 @@ export default class CortexPlugin extends Plugin {
 		const { sources, timeline } = await this.readSourcesForWiki(notes, noteFiles);
 		const result = await this.getLlmProvider().callTool<WikiSynthesisResult>(
 			wikiSystemPrompt(topic, false),
-			wikiUserMessage(sources, null),
+			{ text: wikiUserMessage(sources, null) },
 			WIKI_TOOL
 		);
 		const today = new Date().toISOString().slice(0, 10);
@@ -590,7 +619,7 @@ export default class CortexPlugin extends Plugin {
 
 		const result = await this.getLlmProvider().callTool<WikiSynthesisResult>(
 			wikiSystemPrompt(topic, true),
-			wikiUserMessage(newSources, existingCurrentState),
+			{ text: wikiUserMessage(newSources, existingCurrentState) },
 			WIKI_TOOL
 		);
 

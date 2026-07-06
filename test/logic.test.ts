@@ -14,6 +14,9 @@ import {
 	buildTagFileContent,
 	buildWikiMarkdown,
 	clusterByTag,
+	isCaptureFile,
+	meetingImageFilename,
+	arrayBufferToBase64,
 } from "../src/logic.ts";
 import type { EnrichResult, WikiSynthesisResult } from "../src/types.ts";
 
@@ -187,6 +190,51 @@ test("buildWikiMarkdown shows a placeholder when there are no open questions", (
 	const result: WikiSynthesisResult = { current_state: "State.", open_questions: [] };
 	const md = buildWikiMarkdown("Acme", result, [], [], "2026-06-01", "2026-07-02");
 	assert.ok(md.includes("(none currently)"));
+});
+
+test("isCaptureFile accepts md/txt/images and rejects everything else", () => {
+	assert.ok(isCaptureFile("md"));
+	assert.ok(isCaptureFile("txt"));
+	assert.ok(isCaptureFile("png"));
+	assert.ok(isCaptureFile("JPG")); // case-insensitive
+	assert.ok(isCaptureFile("jpeg"));
+	assert.ok(isCaptureFile("webp"));
+	assert.ok(!isCaptureFile("heic"));
+	assert.ok(!isCaptureFile("gif"));
+	assert.ok(!isCaptureFile("pdf"));
+});
+
+test("meetingImageFilename combines date, sanitized title, and the original extension", () => {
+	assert.equal(
+		meetingImageFilename("2026-07-06", "Whiteboard: Sketch", "png"),
+		"2026-07-06 Whiteboard- Sketch.png"
+	);
+});
+
+test("arrayBufferToBase64 round-trips through atob", () => {
+	const bytes = new Uint8Array([72, 101, 108, 108, 111]); // "Hello"
+	const encoded = arrayBufferToBase64(bytes.buffer);
+	assert.equal(encoded, "SGVsbG8=");
+	assert.equal(atob(encoded), "Hello");
+});
+
+test("arrayBufferToBase64 handles buffers larger than one chunk", () => {
+	const bytes = new Uint8Array(0x8000 + 10).fill(65); // > chunk size, all "A"
+	const encoded = arrayBufferToBase64(bytes.buffer);
+	assert.equal(atob(encoded).length, bytes.length);
+});
+
+test("buildMeetingMarkdown embeds the image and omits Transcript when capturedImageFilename is set", () => {
+	const md = buildMeetingMarkdown(
+		baseResult({ source: "photo" }),
+		"",
+		"2026-07-06T12:00:00.000Z",
+		null,
+		"2026-07-06 Whiteboard Sketch.png"
+	);
+	assert.ok(md.includes("## Captured image"));
+	assert.ok(md.includes("![[2026-07-06 Whiteboard Sketch.png]]"));
+	assert.ok(!md.includes("## Transcript"));
 });
 
 test("clusterByTag excludes fragment-tagged notes from eligibility counting", () => {

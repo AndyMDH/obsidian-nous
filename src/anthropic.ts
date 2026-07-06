@@ -6,7 +6,7 @@
 // is what actually makes calling api.anthropic.com directly from an Obsidian
 // plugin possible at all.
 
-import { LlmApiError, type LlmProvider, type LlmTool } from "./llmProvider.ts";
+import { LlmApiError, type LlmMessage, type LlmProvider, type LlmTool } from "./llmProvider.ts";
 
 export interface HttpResponse {
 	status: number;
@@ -39,7 +39,7 @@ export async function callClaudeTool<T>(
 	apiKey: string,
 	model: string,
 	system: string,
-	userMessage: string,
+	message: LlmMessage,
 	tool: AnthropicTool,
 	maxTokens = 4096
 ): Promise<T> {
@@ -49,11 +49,27 @@ export async function callClaudeTool<T>(
 		);
 	}
 
+	// Image block before text - Anthropic's own recommended order for a
+	// single image, for better attention/quality on the accompanying prompt.
+	const content = message.image
+		? [
+				{
+					type: "image",
+					source: {
+						type: "base64",
+						media_type: message.image.mediaType,
+						data: message.image.base64Data,
+					},
+				},
+				{ type: "text", text: message.text },
+			]
+		: message.text;
+
 	const body = JSON.stringify({
 		model,
 		max_tokens: maxTokens,
 		system,
-		messages: [{ role: "user", content: userMessage }],
+		messages: [{ role: "user", content }],
 		tools: [tool],
 		tool_choice: { type: "tool", name: tool.name },
 	});
@@ -109,7 +125,7 @@ export class AnthropicProvider implements LlmProvider {
 		this.model = model;
 	}
 
-	callTool<T>(system: string, userMessage: string, tool: LlmTool, maxTokens = 4096): Promise<T> {
-		return callClaudeTool<T>(this.httpPost, this.apiKey, this.model, system, userMessage, tool, maxTokens);
+	callTool<T>(system: string, message: LlmMessage, tool: LlmTool, maxTokens = 4096): Promise<T> {
+		return callClaudeTool<T>(this.httpPost, this.apiKey, this.model, system, message, tool, maxTokens);
 	}
 }
