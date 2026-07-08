@@ -52,6 +52,15 @@ export function buildWikiArgs(meetingsFolder: string): string[] {
 	];
 }
 
+export function buildQueryArgs(question: string): string[] {
+	return [
+		"-p",
+		`Use the vault-query skill to answer this question: ${question}`,
+		"--allowedTools",
+		"Read,Glob,Grep",
+	];
+}
+
 export interface LogSummary {
 	enriched: number;
 	newWikis: number;
