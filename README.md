@@ -8,6 +8,11 @@ pulling everything together.
 
 No coding needed. Everything happens inside Obsidian.
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/pipeline-dark.svg">
+  <img alt="Capture anything into 00-Inbox; Cortex turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="assets/pipeline-light.svg">
+</picture>
+
 ## What you need
 
 - [Obsidian](https://obsidian.md) (free)
@@ -30,13 +35,16 @@ BRAT keeps Cortex updated automatically from then on.
 
 ## Set up
 
-Open **Settings → Cortex**:
+All settings live inside Obsidian (nothing to configure on your computer
+itself). Open **Obsidian's settings** — the gear icon bottom-left, or
+`Cmd/Ctrl+,` — and click **Cortex** in the left sidebar. One choice to make:
 
-- Claude subscription? Set **Execution mode** to "Claude Code CLI".
-- Otherwise pick "Direct API key", choose your **Provider**, and paste your
-  key (or your base URL, for a local model).
+- **Claude subscription (Pro/Max)?** Set **Execution mode** to
+  "Claude Code CLI". Done.
+- **API key instead?** Set it to "Direct API key", pick your **Provider**,
+  and paste your key (or your base URL, for a local model). Done.
 
-That's the whole setup — everything else has a sensible default.
+Everything else has a sensible default.
 
 ## Use it
 
@@ -68,7 +76,8 @@ to `40-Queries`. Needs CLI execution mode.
 - **Nothing happened?** Command palette → "Cortex: Process inbox now" and
   watch for an error notification.
 - **"Claude not found" (CLI mode)?** Run `which claude` in Terminal and
-  paste the result into the **Claude CLI path** setting.
+  paste the result into the **Claude CLI path** field in Obsidian's Cortex
+  settings.
 - **Logs**: `.cortex/pipeline.log` (hidden file in your vault) records every
   run and error.
 
