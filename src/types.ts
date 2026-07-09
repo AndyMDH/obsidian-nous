@@ -22,6 +22,29 @@ export interface CortexSettings {
 	dedupLookback: number;
 }
 
+// Curated model choices shown in the settings dropdown, so users pick from a
+// list instead of typing a model id. "Local" has no list - any Ollama tag is
+// valid - and every provider also gets a "Custom" escape hatch in the UI.
+// First entry is the recommended default.
+export const MODEL_OPTIONS: Record<Exclude<ApiProvider, "local">, { id: string; label: string }[]> = {
+	anthropic: [
+		{ id: "claude-sonnet-5", label: "Claude Sonnet 5 — best balance (default)" },
+		{ id: "claude-opus-4-8", label: "Claude Opus 4.8 — most capable" },
+		{ id: "claude-haiku-4-5", label: "Claude Haiku 4.5 — fastest, cheapest" },
+	],
+	openai: [
+		{ id: "gpt-5.1", label: "GPT-5.1 — best balance (default)" },
+		{ id: "gpt-5", label: "GPT-5" },
+		{ id: "gpt-5-mini", label: "GPT-5 mini — cheaper" },
+		{ id: "gpt-4.1", label: "GPT-4.1" },
+	],
+	gemini: [
+		{ id: "gemini-3-pro-preview", label: "Gemini 3 Pro — best balance (default)" },
+		{ id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+		{ id: "gemini-2.5-flash", label: "Gemini 2.5 Flash — fastest, cheapest" },
+	],
+};
+
 export const DEFAULT_SETTINGS: CortexSettings = {
 	executionMode: "cli",
 	apiProvider: "anthropic",

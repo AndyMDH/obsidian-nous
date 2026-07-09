@@ -39,6 +39,11 @@ All settings live inside Obsidian (nothing to configure on your computer
 itself). Open **Obsidian's settings** — the gear icon bottom-left, or
 `Cmd/Ctrl+,` — and click **Cortex** in the left sidebar. One choice to make:
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/settings-nav-dark.svg">
+  <img alt="Obsidian's settings window: Cortex in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav-light.svg">
+</picture>
+
 - **Claude subscription (Pro/Max)?** Set **Execution mode** to
   "Claude Code CLI". Done.
 - **API key instead?** Set it to "Direct API key", pick your **Provider**,
@@ -48,11 +53,15 @@ Everything else has a sensible default.
 
 ## Use it
 
-Drop anything into the **`00-Inbox`** folder:
+Drop anything into the **`00-Inbox`** folder — four ways in, same result:
 
-- **Text** — type or paste a note (`Cmd/Ctrl+N`), or go hands-free by
-  pointing your dictation app's "run a script" option at
-  [`examples/dictation-capture.sh`](examples/dictation-capture.sh)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/capture-ways-dark.svg">
+  <img alt="Type/paste, dictate, photo/screenshot, or PDF — all land in 00-Inbox, and Cortex turns each into a tagged, summarized, linked note." src="assets/capture-ways-light.svg">
+</picture>
+
+- **Type or paste** — create a note (`Cmd/Ctrl+N`) anywhere in `00-Inbox`
+- **Dictate** — see "Capture by voice" below
 - **Photos & screenshots** — `.png`, `.jpg`, `.webp`, `.heic` (to auto-capture
   Mac screenshots, see [`examples/`](examples/))
 - **PDFs**
@@ -61,6 +70,21 @@ Within seconds, Cortex tags it, summarizes it, links it to related notes,
 and files it in **`10-Notes`** — your original text or image preserved
 inside. Topics with 4+ notes get a wiki page in **`30-Wikis`** (or force one
 anytime: command palette → "Cortex: Build/update wikis now").
+
+### Capture by voice (dictation)
+
+Dictation itself isn't part of the plugin — any dictation app that can "run a
+script with the transcript" works. Point that setting at
+[`examples/dictation-capture.sh`](examples/dictation-capture.sh) (edit the two
+variables at the top first — [Handy](https://handy.computer) calls this
+Settings → Paste method → "External script"). Then: press your dictation
+hotkey, talk, press it again — the transcript lands in `00-Inbox` on its own,
+no need to even have Obsidian open at that moment.
+
+One thing to know: that external-script setting is usually all-or-nothing for
+the dictation app — once on, it stops typing transcripts into other apps,
+since everything goes to the script instead. Skip it if you use the same
+hotkey for dictating into other apps.
 
 Want Cortex to use a specific tag — a client, a project? Add a file with
 that name in **`20-Tags`** and it'll prefer it over inventing its own.

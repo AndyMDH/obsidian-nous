@@ -15,7 +15,7 @@ import { promises as fsPromises } from "fs";
 import * as os from "os";
 import * as path from "path";
 import type { ApiProvider, CortexSettings, EnrichResult, NoteIndexEntry, WikiSynthesisResult } from "./src/types";
-import { DEFAULT_SETTINGS } from "./src/types";
+import { DEFAULT_SETTINGS, MODEL_OPTIONS } from "./src/types";
 import { AnthropicProvider } from "./src/anthropic";
 import type { HttpPost } from "./src/anthropic";
 import { LlmApiError, type LlmProvider } from "./src/llmProvider";
@@ -802,6 +802,10 @@ export default class CortexPlugin extends Plugin {
 
 class CortexSettingTab extends PluginSettingTab {
 	plugin: CortexPlugin;
+	// Which provider's model dropdown is showing the "Custom model id" text
+	// field even though the stored id matches a listed option - transient UI
+	// state, not persisted.
+	private customModelFor: ApiProvider | null = null;
 
 	constructor(app: App, plugin: CortexPlugin) {
 		super(app, plugin);
@@ -906,17 +910,54 @@ class CortexSettingTab extends PluginSettingTab {
 					);
 			}
 
-			new Setting(containerEl)
-				.setName("Model")
-				.setDesc(`${providerLabel} model id used for both enrichment and wiki synthesis.`)
-				.addText((text) =>
-					text
-						.setValue(this.plugin.settings.models[provider])
-						.onChange(async (value) => {
-							this.plugin.settings.models[provider] = value.trim();
-							await this.plugin.saveSettings();
-						})
-				);
+			if (provider === "local") {
+				new Setting(containerEl)
+					.setName("Model")
+					.setDesc("Model your local server should run, e.g. an Ollama model tag like \"llama3.1\".")
+					.addText((text) =>
+						text
+							.setValue(this.plugin.settings.models[provider])
+							.onChange(async (value) => {
+								this.plugin.settings.models[provider] = value.trim();
+								await this.plugin.saveSettings();
+							})
+					);
+			} else {
+				const options = MODEL_OPTIONS[provider];
+				const current = this.plugin.settings.models[provider];
+				const isListed = options.some((o) => o.id === current);
+				const showCustom = !isListed || this.customModelFor === provider;
+				new Setting(containerEl)
+					.setName("Model")
+					.setDesc(`${providerLabel} model used for both enrichment and wiki synthesis.`)
+					.addDropdown((dropdown) => {
+						for (const o of options) dropdown.addOption(o.id, o.label);
+						dropdown.addOption("__custom__", "Custom model id…");
+						dropdown.setValue(showCustom ? "__custom__" : current).onChange(async (value) => {
+							if (value === "__custom__") {
+								this.customModelFor = provider;
+							} else {
+								this.customModelFor = null;
+								this.plugin.settings.models[provider] = value;
+								await this.plugin.saveSettings();
+							}
+							this.display();
+						});
+					});
+				if (showCustom) {
+					new Setting(containerEl)
+						.setName("Custom model id")
+						.setDesc(`Exact ${providerLabel} model id to use instead of the list above.`)
+						.addText((text) =>
+							text
+								.setValue(current)
+								.onChange(async (value) => {
+									this.plugin.settings.models[provider] = value.trim();
+									await this.plugin.saveSettings();
+								})
+						);
+				}
+			}
 		}
 
 		new Setting(containerEl)
