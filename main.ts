@@ -124,6 +124,46 @@ export default class CortexPlugin extends Plugin {
 		}
 	}
 
+	// One round trip that exercises the exact config a real enrichment would
+	// use: in API mode a minimal tool call against the chosen provider/model/
+	// key; in CLI mode a `claude --version` (the common failure there is the
+	// binary not being found from Obsidian's minimal PATH, not auth).
+	async testConnection(): Promise<string> {
+		if (this.settings.executionMode === "cli") {
+			const basePath = this.getVaultBasePath();
+			if (!basePath) throw new Error("Could not resolve this vault's filesystem path.");
+			const result = await this.cliExec(this.settings.claudeCliPath, ["--version"], {
+				cwd: basePath,
+				env: this.cliEnv(),
+			});
+			if (result.code !== 0) {
+				throw new Error(
+					`"${this.settings.claudeCliPath} --version" exited ${result.code}: ${(result.stderr || result.stdout).slice(0, 200)}`
+				);
+			}
+			return `Claude Code found (${result.stdout.trim().slice(0, 60)}).`;
+		}
+		const provider = this.getLlmProvider();
+		const result = await provider.callTool<{ ok: boolean }>(
+			"You are a connection test. Call the ping tool exactly once with ok=true.",
+			{ text: "ping" },
+			{
+				name: "ping",
+				description: "Confirm the connection works.",
+				input_schema: {
+					type: "object",
+					properties: { ok: { type: "boolean" } },
+					required: ["ok"],
+				},
+			},
+			64
+		);
+		if (!result || result.ok !== true) {
+			throw new Error("The model responded, but not with the expected tool call - it may not support tool use.");
+		}
+		return `Connected - ${this.settings.models[this.settings.apiProvider]} responded correctly.`;
+	}
+
 	private cliExec: CliExec = (command, args, options) => {
 		return new Promise((resolve) => {
 			const child = execFile(
@@ -888,14 +928,16 @@ class CortexSettingTab extends PluginSettingTab {
 					.setDesc(
 						"Stored locally in this vault's .obsidian/plugins/cortex/data.json - keep this vault out of any repo or sync you don't fully control."
 					)
-					.addText((text) =>
+					.addText((text) => {
+						text.inputEl.type = "password";
+						text.inputEl.autocomplete = "off";
 						text
 							.setValue(this.plugin.settings.apiKeys[provider])
 							.onChange(async (value) => {
 								this.plugin.settings.apiKeys[provider] = value.trim();
 								await this.plugin.saveSettings();
-							})
-					);
+							});
+					});
 			} else {
 				new Setting(containerEl)
 					.setName("Base URL")
@@ -959,6 +1001,27 @@ class CortexSettingTab extends PluginSettingTab {
 				}
 			}
 		}
+
+		new Setting(containerEl)
+			.setName("Test connection")
+			.setDesc(
+				this.plugin.settings.executionMode === "cli"
+					? "Checks that the Claude Code CLI can be found and run from Obsidian."
+					: "Makes one tiny API call with the provider, key, and model above to confirm they work."
+			)
+			.addButton((button) =>
+				button.setButtonText("Test").onClick(async () => {
+					button.setButtonText("Testing…").setDisabled(true);
+					try {
+						new Notice(`Cortex: ${await this.plugin.testConnection()}`);
+					} catch (e) {
+						const msg = e instanceof LlmApiError ? `${e.message} (HTTP ${e.status})` : e instanceof Error ? e.message : String(e);
+						new Notice(`Cortex: connection test failed - ${msg}`, 10000);
+					} finally {
+						button.setButtonText("Test").setDisabled(false);
+					}
+				})
+			);
 
 		new Setting(containerEl)
 			.setName("Auto-process on capture")
