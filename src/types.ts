@@ -1,8 +1,6 @@
 export type ExecutionMode = "api" | "cli";
 
-// Only relevant when executionMode is "api" - CLI mode always shells out to
-// the `claude` binary regardless of this setting, since it's inherently tied
-// to Claude Code rather than something to generalize across providers.
+// Only used in API mode - CLI mode always shells out to `claude`.
 export type ApiProvider = "anthropic" | "openai" | "gemini" | "local";
 
 export interface CortexSettings {
@@ -24,10 +22,8 @@ export interface CortexSettings {
 	onboarded: boolean;
 }
 
-// Curated model choices shown in the settings dropdown, so users pick from a
-// list instead of typing a model id. "Local" has no list - any Ollama tag is
-// valid - and every provider also gets a "Custom" escape hatch in the UI.
-// First entry is the recommended default.
+// Model choices for the settings dropdown; first entry is the default.
+// Local has no list (any Ollama tag is valid); the UI adds a Custom option.
 export const MODEL_OPTIONS: Record<Exclude<ApiProvider, "local">, { id: string; label: string }[]> = {
 	anthropic: [
 		{ id: "claude-sonnet-5", label: "Claude Sonnet 5 — best balance (default)" },

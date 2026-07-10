@@ -1,35 +1,59 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="880" height="150" viewBox="0 0 880 150" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
-  <!-- Capture -->
-  <rect x="10" y="35" width="190" height="80" rx="10" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
-  <text x="105" y="66" text-anchor="middle" font-size="15" font-weight="600" fill="#1f2328">You capture</text>
-  <text x="105" y="90" text-anchor="middle" font-size="12.5" fill="#57606a">text · voice · photo · PDF</text>
-
-  <path d="M200 75 h32" stroke="#8250df" stroke-width="2" fill="none" marker-end="url(#a1)"/>
-
-  <!-- Inbox -->
-  <rect x="240" y="35" width="150" height="80" rx="10" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
-  <text x="315" y="66" text-anchor="middle" font-size="15" font-weight="600" fill="#1f2328">00-Inbox</text>
-  <text x="315" y="90" text-anchor="middle" font-size="12.5" fill="#57606a">drop it and forget it</text>
-
-  <path d="M390 75 h52" stroke="#8250df" stroke-width="2" fill="none" marker-end="url(#a1)"/>
-  <text x="416" y="60" text-anchor="middle" font-size="11.5" fill="#8250df" font-weight="600">Cortex</text>
-
-  <!-- Notes -->
-  <rect x="450" y="35" width="200" height="80" rx="10" fill="#fbf3ff" stroke="#8250df" stroke-width="1.5"/>
-  <text x="550" y="66" text-anchor="middle" font-size="15" font-weight="600" fill="#1f2328">10-Notes</text>
-  <text x="550" y="90" text-anchor="middle" font-size="12.5" fill="#57606a">tagged · summarized · linked</text>
-
-  <path d="M650 75 h52" stroke="#8250df" stroke-width="2" fill="none" marker-end="url(#a1)"/>
-  <text x="676" y="60" text-anchor="middle" font-size="11.5" fill="#8250df" font-weight="600">4+ notes</text>
-
-  <!-- Wikis -->
-  <rect x="710" y="35" width="160" height="80" rx="10" fill="#fbf3ff" stroke="#8250df" stroke-width="1.5"/>
-  <text x="790" y="66" text-anchor="middle" font-size="15" font-weight="600" fill="#1f2328">30-Wikis</text>
-  <text x="790" y="90" text-anchor="middle" font-size="12.5" fill="#57606a">one page per topic</text>
-
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="190" viewBox="0 0 880 190" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
   <defs>
-    <marker id="a1" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
-      <path d="M0 0 L9 4.5 L0 9 z" fill="#8250df"/>
+    <linearGradient id="pg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <marker id="pa" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" fill="#8250df"/>
     </marker>
   </defs>
+
+  <!-- capture -->
+  <rect x="16" y="35" width="186" height="120" rx="16" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="109" y="76" text-anchor="middle" font-size="26">💭</text>
+  <text x="109" y="106" text-anchor="middle" font-size="15" font-weight="650" fill="#1f2328">You capture</text>
+  <text x="109" y="128" text-anchor="middle" font-size="12" fill="#57606a">text · voice · photo · PDF</text>
+
+  <path d="M202 95 h34" stroke="#8250df" stroke-width="2" fill="none" marker-end="url(#pa)"/>
+
+  <!-- inbox -->
+  <rect x="244" y="35" width="150" height="120" rx="16" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="319" y="76" text-anchor="middle" font-size="26">📥</text>
+  <text x="319" y="106" text-anchor="middle" font-size="15" font-weight="650" fill="#1f2328">Inbox</text>
+  <text x="319" y="128" text-anchor="middle" font-size="12" fill="#57606a">drop it and forget it</text>
+
+  <!-- cortex spark on the arrow -->
+  <path d="M394 95 h30" stroke="#8250df" stroke-width="2" fill="none"/>
+  <circle cx="440" cy="95" r="17" fill="url(#pg)"/>
+  <g stroke="#ffffff" stroke-width="1.8" stroke-linecap="round">
+    <line x1="440" y1="95" x2="432" y2="88"/>
+    <line x1="440" y1="95" x2="448" y2="87"/>
+    <line x1="440" y1="95" x2="449" y2="100"/>
+    <line x1="440" y1="95" x2="436" y2="104"/>
+  </g>
+  <g fill="#ffffff">
+    <circle cx="440" cy="95" r="3.6"/>
+    <circle cx="432" cy="88" r="2.2"/>
+    <circle cx="448" cy="87" r="2.2"/>
+    <circle cx="449" cy="100" r="2.2"/>
+    <circle cx="436" cy="104" r="2.2"/>
+  </g>
+  <text x="440" y="135" text-anchor="middle" font-size="11.5" font-weight="650" fill="#8250df">Cortex</text>
+  <path d="M457 95 h30" stroke="#8250df" stroke-width="2" fill="none" marker-end="url(#pa)"/>
+
+  <!-- notes -->
+  <rect x="495" y="35" width="196" height="120" rx="16" fill="#fbf7ff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="593" y="76" text-anchor="middle" font-size="26">🔗</text>
+  <text x="593" y="106" text-anchor="middle" font-size="15" font-weight="650" fill="#1f2328">Linked notes</text>
+  <text x="593" y="128" text-anchor="middle" font-size="12" fill="#57606a">tagged · summarized · connected</text>
+
+  <path d="M691 95 h34" stroke="#8250df" stroke-width="2" fill="none" marker-end="url(#pa)"/>
+  <text x="708" y="82" text-anchor="middle" font-size="11" font-weight="650" fill="#8250df">4+ notes</text>
+
+  <!-- wikis -->
+  <rect x="733" y="35" width="132" height="120" rx="16" fill="#fbf7ff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="799" y="76" text-anchor="middle" font-size="26">📖</text>
+  <text x="799" y="106" text-anchor="middle" font-size="15" font-weight="650" fill="#1f2328">Wikis</text>
+  <text x="799" y="128" text-anchor="middle" font-size="12" fill="#57606a">one page per topic</text>
 </svg>

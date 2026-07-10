@@ -1,8 +1,4 @@
-// Adapter for Google's Gemini API. Different request/response shape from
-// both Anthropic (system is a top-level field here, not "system_instruction"
-// there... the reverse) and OpenAI-compatible (function call args arrive
-// already parsed as an object, not a JSON string) - hence its own file
-// rather than trying to squeeze it into one of the other two.
+// Gemini API adapter - its own request/response shape, hence its own file.
 
 import type { HttpPost } from "./anthropic.ts";
 import { LlmApiError, type LlmMessage, type LlmProvider, type LlmTool } from "./llmProvider.ts";
@@ -23,8 +19,7 @@ export class GeminiProvider implements LlmProvider {
 			throw new Error("No Gemini API key configured. Set one in Cortex plugin settings.");
 		}
 
-		// inline_data is generic over mime_type - Gemini accepts application/pdf
-		// here the same way it accepts image/*, so no per-kind branching needed.
+		// inline_data handles images and PDFs alike - no per-kind branching.
 		const parts: Record<string, unknown>[] = [{ text: message.text }];
 		if (message.attachment) {
 			parts.push({

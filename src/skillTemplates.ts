@@ -1,10 +1,5 @@
-// CLI execution mode shells out to the Claude Code CLI and lets it do its own
-// agentic Read/Write/Bash work, exactly like the original bash-based Cortex
-// (github.com/AndyMDH/cortex). These are that project's two SKILL.md files,
-// adapted so the plugin can write them into any vault's .claude/skills/
-// folder itself - CLI mode doesn't depend on the bash repo being installed
-// separately. Folder names are interpolated so they track this plugin's
-// settings instead of being hardcoded to 00-Inbox/10-Notes/etc.
+// SKILL.md templates the plugin writes into the vault's .claude/skills/ for
+// CLI mode. Folder names are interpolated from the plugin's settings.
 
 import { HEIC_EXTENSIONS, IMAGE_EXTENSIONS, PDF_EXTENSIONS } from "./logic.ts";
 

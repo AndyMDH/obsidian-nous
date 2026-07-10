@@ -97,22 +97,15 @@ export default class CortexPlugin extends Plugin {
 			this.registerEvent(
 				this.app.vault.on("create", (file) => {
 					if (file instanceof TFile && this.isInInbox(file)) {
-						// Dictation/sync tools sometimes create then immediately
-						// rewrite a file - give it a moment to settle before reading.
-						// CLI mode has no per-file granularity (one claude -p call
-						// processes the whole inbox), so it always goes through the
-						// same dispatcher as a manual run rather than processFile
-						// directly - the API-only method that would otherwise be
-						// called here regardless of execution mode.
+						// Dictation/sync tools create then immediately rewrite a
+						// file - let it settle before reading.
 						window.setTimeout(() => void this.processInbox(), 2000);
 					}
 				})
 			);
 		}
 
-		// Catch up on anything that arrived while Obsidian was closed - this is
-		// the plugin's substitute for the bash version's daily launchd run,
-		// since a plugin only runs while Obsidian is open.
+		// Catch up on anything that arrived while Obsidian was closed.
 		this.app.workspace.onLayoutReady(() => {
 			if (!this.settings.onboarded) {
 				new OnboardingModal(this.app, this).open();
@@ -146,10 +139,8 @@ export default class CortexPlugin extends Plugin {
 		return { status: res.status, text: res.text };
 	};
 
-	// Audio -> text. Independent of execution mode and chosen provider:
-	// Anthropic has no audio API and the claude CLI can't read audio, so
-	// transcription uses whichever of Gemini/OpenAI has a key configured
-	// (preferring the active provider's own key when it's one of those two).
+	// Audio -> text via whichever of Gemini/OpenAI has a key (Anthropic has
+	// no audio API), independent of execution mode.
 	async transcribeAudio(extension: string, binary: ArrayBuffer, filename: string): Promise<string> {
 		const keys = this.settings.apiKeys;
 		const mediaType = audioMimeType(extension);
@@ -182,10 +173,8 @@ export default class CortexPlugin extends Plugin {
 		}
 	}
 
-	// One round trip that exercises the exact config a real enrichment would
-	// use: in API mode a minimal tool call against the chosen provider/model/
-	// key; in CLI mode a `claude --version` (the common failure there is the
-	// binary not being found from Obsidian's minimal PATH, not auth).
+	// API mode: one minimal tool call with the configured provider/model/key.
+	// CLI mode: `claude --version` (the common failure is PATH, not auth).
 	async testConnection(): Promise<string> {
 		if (this.settings.executionMode === "cli") {
 			const basePath = this.getVaultBasePath();
@@ -233,9 +222,8 @@ export default class CortexPlugin extends Plugin {
 					resolve({ code, stdout: stdout?.toString() ?? "", stderr: stderr?.toString() ?? "" });
 				}
 			);
-			// execFile leaves the child's stdin open by default; claude waits
-			// on it (and warns) before proceeding. Close it immediately since
-			// we never pipe anything in - same effect as `< /dev/null`.
+			// claude waits on open stdin before proceeding - close it
+			// immediately since nothing is ever piped in.
 			child.stdin?.end();
 		});
 	};
@@ -365,8 +353,7 @@ export default class CortexPlugin extends Plugin {
 		}
 	}
 
-	// A believable first capture, so the wizard's "watch it happen" moment
-	// shows real tagging/summarizing rather than a lorem-ipsum non-event.
+	// A believable first capture for the wizard's "watch it happen" moment.
 	async createSampleNote() {
 		const path = `${this.settings.inboxFolder}/Try me.md`;
 		if (await this.app.vault.adapter.exists(path)) return;
@@ -469,10 +456,8 @@ export default class CortexPlugin extends Plugin {
 		}
 	}
 
-	// CLI mode can't hand audio to the claude binary, so the plugin transcribes
-	// each recording itself (Gemini/OpenAI key) and leaves a plain-text note in
-	// the inbox for the CLI enricher to pick up like any typed capture. The
-	// recording moves to the notes folder and stays embedded in that note.
+	// The claude binary can't read audio - transcribe each recording here and
+	// leave a text note in the inbox for the CLI enricher to pick up.
 	private async transcribeInboxAudioForCli(): Promise<void> {
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		if (!folder) return;
@@ -622,11 +607,8 @@ export default class CortexPlugin extends Plugin {
 		return `image/${ext}`;
 	}
 
-	// Obsidian's Electron/Chromium preview has no native HEIC decoder, and
-	// Anthropic/OpenAI's vision APIs reject it outright - so HEIC/HEIF always
-	// gets converted to JPEG before storage or any provider call, via macOS's
-	// built-in `sips` tool (desktop only; no bundled equivalent for
-	// Windows/Linux, and no shell access at all on mobile).
+	// HEIC -> JPEG via macOS's sips (Obsidian can't render HEIC and most
+	// vision APIs reject it). Desktop-only.
 	private async convertHeicToJpeg(binary: ArrayBuffer): Promise<ArrayBuffer> {
 		const stamp = Date.now();
 		const inPath = path.join(os.tmpdir(), `cortex-heic-${stamp}.heic`);
@@ -712,8 +694,7 @@ export default class CortexPlugin extends Plugin {
 			} else if (isAudio) {
 				const binary = await this.app.vault.readBinary(file);
 				if (binary.byteLength === 0) return false;
-				// Transcribe first; the transcript then goes through the normal
-				// text-enrichment path (no attachment sent to the enrich model).
+				// Transcript goes through the normal text-enrichment path.
 				raw = await this.transcribeAudio(ext, binary, file.name);
 			} else {
 				raw = await this.app.vault.read(file);
@@ -765,8 +746,7 @@ export default class CortexPlugin extends Plugin {
 				});
 				await this.app.vault.create(destPath, markdown);
 				if (convertedBinary) {
-					// Bytes changed (HEIC -> JPEG), so this is a new file, not a
-					// rename - write the converted image, then drop the original.
+					// Bytes changed (HEIC -> JPEG): write new file, drop original.
 					await this.app.vault.createBinary(
 						`${this.settings.meetingsFolder}/${attachmentFilename}`,
 						convertedBinary
@@ -776,8 +756,7 @@ export default class CortexPlugin extends Plugin {
 					await this.app.fileManager.renameFile(file, `${this.settings.meetingsFolder}/${attachmentFilename}`);
 				}
 			} else if (isAudio) {
-				// Keep the recording: transcript in the note body, audio embedded
-				// underneath and moved alongside the other note attachments.
+				// Transcript in the body, recording embedded underneath.
 				const attachmentFilename = logic.meetingAttachmentFilename(result.date, result.title, ext);
 				const markdown = logic.buildMeetingMarkdown(result, raw, enrichedAt, existingWikiLink, {
 					filename: attachmentFilename,
@@ -947,10 +926,8 @@ export default class CortexPlugin extends Plugin {
 			today
 		);
 		await this.app.vault.modify(existingWiki, markdown);
-		// Pass every source, not just the new ones: linkWikiIntoSources is
-		// idempotent (skips notes that already have the link), and this way an
-		// older note that somehow missed the backlink gets fixed too instead of
-		// only being checked once, on the run that first added it as a source.
+		// Pass every source, not just new ones - idempotent, and it repairs
+		// older notes that missed the backlink.
 		await this.linkWikiIntoSources(topic, allNotes, noteFiles);
 		await this.appendLog(`UPDATED WIKI: ${topic} - sources: ${allNotes.length}`);
 	}
@@ -982,9 +959,7 @@ export default class CortexPlugin extends Plugin {
 
 class CortexSettingTab extends PluginSettingTab {
 	plugin: CortexPlugin;
-	// Which provider's model dropdown is showing the "Custom model id" text
-	// field even though the stored id matches a listed option - transient UI
-	// state, not persisted.
+	// Provider whose model dropdown is showing the Custom field. Not persisted.
 	private customModelFor: ApiProvider | null = null;
 
 	constructor(app: App, plugin: CortexPlugin) {
@@ -1188,9 +1163,7 @@ class CortexSettingTab extends PluginSettingTab {
 			);
 
 		if (this.plugin.settings.executionMode === "api") {
-			// CLI mode's duplicate check is handled by the skill itself, reading
-			// the meetings folder directly via its own Bash/Glob tool access, so
-			// there's no lookback count to configure on the plugin side.
+			// CLI mode's duplicate check lives in the skill - nothing to configure here.
 			new Setting(containerEl)
 				.setName("Duplicate-check lookback")
 				.setDesc("How many of the most recent meeting notes to compare new captures against for duplicates and related-note linking.")
@@ -1223,8 +1196,7 @@ class CortexSettingTab extends PluginSettingTab {
 	}
 }
 
-// First-run setup: pick how Cortex thinks, prove it works, and watch a first
-// note get enriched - all before the user ever sees the settings page.
+// First-run setup: pick a mode, prove it works, watch a first enrichment.
 class OnboardingModal extends Modal {
 	constructor(app: App, private plugin: CortexPlugin) {
 		super(app);
@@ -1393,8 +1365,7 @@ class OnboardingModal extends Modal {
 	}
 }
 
-// One-stop capture: type or paste, or attach an image/PDF/voice memo -
-// lands in the inbox without the user ever thinking about folders.
+// Type/paste or attach a file - lands in the inbox, no folders involved.
 class QuickCaptureModal extends Modal {
 	private text = "";
 	private attachedFile: File | null = null;

@@ -1,10 +1,5 @@
-// CLI execution mode: instead of calling the Anthropic API directly, shell
-// out to the Claude Code CLI and let its own agentic Read/Write/Bash loop do
-// the work, exactly like the original bash-based Cortex's run.sh. This file
-// only holds pure helpers (command construction, PATH handling, log
-// summarizing) - the actual process-spawning lives in main.ts, next to the
-// httpPost wiring, since both are the one place that's allowed to touch
-// Node/Obsidian runtime APIs directly.
+// Pure helpers for CLI execution mode (command construction, PATH, log
+// summarizing). Process-spawning lives in main.ts.
 
 export interface CliExecResult {
 	code: number;
@@ -18,11 +13,8 @@ export type CliExec = (
 	options: { cwd: string; env: Record<string, string> }
 ) => Promise<CliExecResult>;
 
-// GUI apps on macOS (Obsidian included, since it's Electron) typically start
-// with a minimal PATH inherited from launchd/Finder, not the full PATH a
-// login shell builds from .zshrc etc - so `claude` often resolves fine in
-// Terminal but not here. Mirrors the same fallback list the bash version's
-// launchd plist template uses.
+// macOS GUI apps start with a minimal PATH, so `claude` often resolves in
+// Terminal but not here - prepend the usual install locations.
 export function augmentedPath(existingPath: string, homeDir: string, extraDir: string | null): string {
 	const extras = [extraDir, "/opt/homebrew/bin", "/usr/local/bin", `${homeDir}/.local/bin`].filter(
 		(p): p is string => !!p
@@ -68,9 +60,7 @@ export interface LogSummary {
 	problems: number;
 }
 
-// Mirrors run.sh's own notification logic: count event lines appended to
-// .cortex/pipeline.log by this run, rather than trying to parse the raw
-// (verbose, unstructured) CLI output.
+// Count event lines the run appended to the log - the CLI output itself is unstructured.
 export function summarizeLogLines(newLines: string): LogSummary {
 	const count = (pattern: RegExp) => (newLines.match(pattern) || []).length;
 	return {

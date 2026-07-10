@@ -12,27 +12,18 @@ export function wikiFilename(topic: string): string {
 	return `${sanitizeFilename(topic)} Wiki.md`;
 }
 
-// Natively viewable in Obsidian and accepted as-is by every provider's vision
-// API - no conversion needed. Not GIF (animated-frame ambiguity, inconsistent
-// provider support) - disclosed limitation, no conversion step for that one.
+// Viewable in Obsidian and accepted as-is by every provider's vision API.
 export const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "webp"];
 
-// HEIC/HEIF: Obsidian's Electron/Chromium preview can't render these at all
-// (no native HEIC decoder - the reason HEIC-preview community plugins exist),
-// and Anthropic/OpenAI's vision APIs reject them outright regardless. Always
-// converted to JPEG before storage or any provider call - see
-// convertHeicToJpeg in main.ts (API mode) and the CLI skill's own sips step.
+// Obsidian can't render HEIC and most vision APIs reject it - always
+// converted to JPEG first (convertHeicToJpeg in main.ts).
 export const HEIC_EXTENSIONS = ["heic", "heif"];
 
-// Anthropic and Gemini both accept a PDF as a native document input (no
-// conversion needed, unlike HEIC). OpenAI-compatible/local providers don't
-// support it through this plugin - see the guard in openaiCompatible.ts.
+// Native document input on Anthropic/Gemini; guarded off elsewhere.
 export const PDF_EXTENSIONS = ["pdf"];
 
-// What Obsidian's built-in Audio recorder core plugin produces (webm on
-// desktop, m4a on iOS) plus the common formats a user might drop in by hand.
-// Audio is transcribed first (see transcribe.ts), then enriched as text - so
-// unlike images/PDFs this works in every execution mode, including CLI.
+// Obsidian's Audio recorder output (webm desktop, m4a iOS) plus common
+// formats. Transcribed to text first, so audio works in every mode.
 export const AUDIO_EXTENSIONS = ["m4a", "webm", "mp3", "wav", "ogg", "flac"];
 
 export function isCaptureFile(extension: string): boolean {
@@ -51,8 +42,7 @@ export function meetingAttachmentFilename(date: string, title: string, extension
 	return `${date} ${sanitizeFilename(title)}.${extension}`;
 }
 
-// Portable byte -> base64 (works in the Electron renderer, a mobile webview,
-// and Node's test runner) - not Buffer.from(), which doesn't exist on mobile.
+// Buffer.from doesn't exist on mobile - chunked btoa works everywhere.
 export function arrayBufferToBase64(buffer: ArrayBuffer): string {
 	const bytes = new Uint8Array(buffer);
 	let binary = "";
@@ -75,17 +65,13 @@ function truncate(text: string, maxChars: number): string {
 		: collapsed;
 }
 
-// First ~200 chars of raw body, frontmatter stripped. Used for a freshly
-// captured inbox file, which has no ## Transcript heading of its own yet.
+// First ~200 chars of raw body, frontmatter stripped.
 export function snippet(body: string, maxChars = 200): string {
 	return truncate(body.replace(/^---\n[\s\S]*?\n---\n/, ""), maxChars);
 }
 
-// Mirrors meeting-enricher Step 0's duplicate check: compares against the
-// raw transcript text of existing notes specifically (not their generated
-// Summary prose, which won't character-match a re-pasted duplicate even when
-// it's the same meeting) - so this pulls from ## Transcript, not the top of
-// the file. Also doubles as the related-note hint in the same index entry.
+// Duplicate check compares raw transcript text, not generated Summary
+// prose - a re-pasted duplicate only character-matches the former.
 export function extractTranscriptSnippet(noteContent: string, maxChars = 200): string {
 	const idx = noteContent.indexOf("## Transcript");
 	const text =
@@ -95,9 +81,7 @@ export function extractTranscriptSnippet(noteContent: string, maxChars = 200): s
 	return truncate(text, maxChars);
 }
 
-// Pulls just the Summary/Key points/Decisions/Action items sections back out
-// of an already-enriched note, for feeding into the wiki synthesis prompt
-// without spending tokens on the raw transcript underneath.
+// Enriched sections only - wiki synthesis doesn't need the raw transcript.
 export function extractEnrichedSections(noteContent: string): string {
 	const afterFrontmatter = noteContent.replace(/^---\n[\s\S]*?\n---\n/, "");
 	const transcriptIdx = afterFrontmatter.indexOf("## Transcript");
@@ -108,9 +92,7 @@ export function extractEnrichedSections(noteContent: string): string {
 	return afterFrontmatter.slice(0, end).trim();
 }
 
-// Pulls just the Summary paragraph out of an enriched note - used so
-// firstSentence() below has clean prose to work with instead of a heading
-// ("## Summary") that has no sentence-ending punctuation on its own line.
+// Summary paragraph only, so firstSentence() gets prose, not a heading.
 export function extractSummaryText(noteContent: string): string {
 	const idx = noteContent.indexOf("## Summary");
 	if (idx === -1) return "";
@@ -122,9 +104,7 @@ export function extractSummaryText(noteContent: string): string {
 }
 
 export function firstSentence(text: string): string {
-	// Collapse whitespace first: `.` doesn't match newlines without the `s`
-	// flag, so a match spanning a line break would otherwise silently fail
-	// and fall through to returning the entire input untrimmed.
+	// Collapse whitespace first - `.` doesn't match newlines.
 	const collapsed = text.trim().replace(/\s+/g, " ");
 	const match = collapsed.match(/^.*?[.!?](?=\s|$)/);
 	return (match ? match[0] : collapsed).trim();
@@ -182,8 +162,7 @@ export function buildMeetingMarkdown(
 	if (capturedAttachment?.kind === "document") {
 		bodyParts.push(`## Captured document\n\n![[${capturedAttachment.filename}]]`);
 	} else if (capturedAttachment?.kind === "audio") {
-		// Audio keeps both: the transcript (searchable, feeds wikis) and the
-		// original recording, playable inline.
+		// Audio notes keep both the transcript and the playable recording.
 		bodyParts.push(`## Transcript\n\n${rawTranscript.trim()}`);
 		bodyParts.push(`## Captured audio\n\n![[${capturedAttachment.filename}]]`);
 	} else if (capturedAttachment) {
@@ -268,8 +247,7 @@ export interface TopicCluster {
 	notes: NoteMeta[];
 }
 
-// Mirrors wiki-builder Step 1: cluster by tag, fragments excluded from
-// eligibility counting even though they still live in the meetings folder.
+// Cluster by tag; fragments never count toward wiki eligibility.
 export function clusterByTag(notes: NoteMeta[]): TopicCluster[] {
 	const clusters = new Map<string, NoteMeta[]>();
 	for (const note of notes) {

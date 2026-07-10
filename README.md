@@ -1,4 +1,8 @@
-# Cortex
+<p align="center">
+  <img src="assets/logo.svg" alt="Cortex logo — a knowledge graph forming a brain" width="112">
+</p>
+
+<h1 align="center">Cortex</h1>
 
 Capture anything — a typed thought, a voice memo, pasted meeting notes, a
 photo, a PDF — and Cortex turns it into a tagged, linked knowledge graph

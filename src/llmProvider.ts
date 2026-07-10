@@ -1,8 +1,4 @@
-// Shared interface every model-provider adapter implements, so main.ts can
-// call whichever one the user picked in Settings without knowing anything
-// about its request/response shape. CLI mode is unaffected by this - it
-// always shells out to the `claude` binary regardless of provider choice,
-// since it's inherently tied to Claude Code, not something to generalize.
+// Shared interface every model-provider adapter implements.
 
 export interface LlmTool {
 	name: string;
@@ -28,8 +24,6 @@ export interface AttachmentInput {
 	base64Data: string;
 }
 
-// Bundled rather than two positional params so a caller wanting maxTokens
-// without an attachment doesn't have to write callTool(sys, msg, tool, undefined, 8192).
 export interface LlmMessage {
 	text: string;
 	attachment?: AttachmentInput;

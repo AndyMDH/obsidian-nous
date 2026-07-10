@@ -1,9 +1,5 @@
-// Adapter for any provider that speaks OpenAI's Chat Completions + function-
-// calling shape: OpenAI itself, a local model via Ollama's OpenAI-compatible
-// endpoint (baseUrl "http://localhost:11434/v1", no API key needed), or any
-// other compatible endpoint (Groq, OpenRouter, etc.) - one adapter, swap the
-// baseUrl/apiKey/model. Local mode makes this the only provider that can run
-// with zero data ever leaving the machine.
+// Adapter for anything speaking OpenAI's Chat Completions + function-calling
+// shape: OpenAI itself, Ollama, Groq, OpenRouter - swap baseUrl/apiKey/model.
 
 import type { HttpPost } from "./anthropic.ts";
 import { LlmApiError, type LlmMessage, type LlmProvider, type LlmTool } from "./llmProvider.ts";
@@ -22,15 +18,10 @@ export class OpenAiCompatibleProvider implements LlmProvider {
 	}
 
 	async callTool<T>(system: string, message: LlmMessage, tool: LlmTool, maxTokens = 4096): Promise<T> {
-		// image_url/data-URI is an image-specific convention - there's no
-		// reliable equivalent for a PDF across "any OpenAI-compatible backend"
-		// (Ollama, Groq, OpenRouter, etc.), so fail fast with a clear message
-		// instead of sending a document that's likely to be silently mishandled.
+		// No reliable PDF convention across arbitrary OpenAI-compatible
+		// backends - fail fast instead of silently mishandling the document.
 		if (message.attachment?.kind === "document") {
-			// Deliberately a plain Error, not LlmApiError: processFile's catch only
-			// special-cases LlmApiError (an HTTP response it got back) and would
-			// otherwise show "(0)" with no body text - a plain Error re-throws to
-			// processInboxViaApi's outer catch, which surfaces e.message as-is.
+			// Plain Error (not LlmApiError) so the message surfaces to the user as-is.
 			throw new Error(
 				"This provider does not support PDF/document ingestion in Cortex - switch to Anthropic or Gemini in plugin settings, or use CLI execution mode."
 			);

@@ -1,9 +1,7 @@
 import type { NoteIndexEntry } from "./types.ts";
 
-// Adapted from the meeting-enricher Claude Code skill. The original skill let
-// the model use Read/Write/Glob tools itself; here the plugin does all file
-// I/O, so the model's only job is to return the enrich_note tool call - no
-// tool loop, no filesystem access, one round trip.
+// The plugin does all file I/O; the model's only job is to return the
+// enrich_note tool call - no tool loop, one round trip.
 export function enrichSystemPrompt(tagRegistry: string[]): string {
 	return `You enrich a single raw meeting transcript or personal note into structured, tagged data. You do not have file access - the app that calls you will read your response and write files based on it. Always respond by calling the enrich_note tool exactly once.
 
@@ -71,9 +69,7 @@ ${indexBlock}
 ${rawText}`;
 }
 
-// Same context as enrichUserMessage, minus the raw transcript text - there
-// isn't one; the accompanying image is attached as a separate content block
-// by the caller, not inlined here as text.
+// enrichUserMessage minus the transcript - the image rides as a content block.
 export function enrichImageUserMessage(
 	filenameDateHint: string | null,
 	creationDateFallback: string,
@@ -99,8 +95,7 @@ ${indexBlock}
 Describe what's visible and enrich based on it, per the image-handling instructions above.`;
 }
 
-// Same context as enrichImageUserMessage, for a PDF attached as a document
-// content block instead of inlined text.
+// Same, for a PDF attached as a document content block.
 export function enrichDocumentUserMessage(
 	filenameDateHint: string | null,
 	creationDateFallback: string,
@@ -180,9 +175,8 @@ export const ENRICH_TOOL = {
 	},
 };
 
-// Adapted from the wiki-builder skill's synthesis step (Step 3/4). Timeline
-// and Sources are handled deterministically by the plugin from note
-// metadata, not by the model - only the narrative needs generation.
+// Timeline and Sources are built deterministically from note metadata -
+// only the narrative needs generation.
 export function wikiSystemPrompt(topic: string, isUpdate: boolean): string {
 	const base = `You synthesize a wiki hub page for the topic "${topic}" from a set of source meeting/note summaries. Always respond by calling the synthesize_wiki tool exactly once.
 

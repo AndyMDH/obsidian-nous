@@ -1,10 +1,5 @@
-// Thin wrapper around the Anthropic Messages API. Takes an injected HTTP
-// function rather than calling fetch/requestUrl directly, so this file has
-// zero dependency on Obsidian's runtime and can be unit tested with a mock
-// transport. The plugin wires this to Obsidian's `requestUrl` helper, which
-// - unlike a bare `fetch()` from the renderer - is not subject to CORS, and
-// is what actually makes calling api.anthropic.com directly from an Obsidian
-// plugin possible at all.
+// Anthropic Messages API adapter. HTTP is injected: the plugin wires
+// Obsidian's requestUrl (a bare fetch would hit CORS), tests wire a mock.
 
 import { LlmApiError, type LlmMessage, type LlmProvider, type LlmTool } from "./llmProvider.ts";
 
@@ -19,14 +14,10 @@ export type HttpPost = (
 	body: string
 ) => Promise<HttpResponse>;
 
-// Same shape as LlmTool - kept as its own export so existing call sites and
-// tests that import AnthropicTool don't need to change.
+// Alias kept so existing imports of AnthropicTool still work.
 export type AnthropicTool = LlmTool;
 
-// A subclass rather than a bare alias so existing `instanceof AnthropicApiError`
-// checks (including in tests) keep working, while call sites that only know
-// about the generic LlmProvider interface can catch `instanceof LlmApiError`
-// regardless of which provider actually threw.
+// Subclass so both instanceof checks (specific and generic) keep working.
 export class AnthropicApiError extends LlmApiError {
 	constructor(message: string, status: number, body: string) {
 		super(message, status, body);
@@ -49,10 +40,7 @@ export async function callClaudeTool<T>(
 		);
 	}
 
-	// Attachment block before text - Anthropic's own recommended order for a
-	// single image/document, for better attention/quality on the accompanying
-	// prompt. "document" is Claude's native PDF content block (no image
-	// conversion or OCR step needed - it reads the PDF directly).
+	// Attachment before text - Anthropic's recommended order.
 	const content = message.attachment
 		? [
 				{

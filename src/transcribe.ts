@@ -1,16 +1,11 @@
-// Speech-to-text for audio captures. Transcription is a separate step from
-// enrichment: the audio becomes plain text first, then flows through the
-// normal text-enrichment path - which is what makes voice capture work in
-// every execution mode (including CLI, where the claude binary itself can't
-// read audio). Anthropic has no audio API, so transcription always goes
-// through Gemini (native audio input) or OpenAI (dedicated transcription
-// endpoint), whichever key is available.
+// Speech-to-text for audio captures. Audio becomes plain text first, then
+// flows through normal text enrichment - so voice works in every mode.
+// Anthropic has no audio API; transcription uses Gemini or OpenAI.
 
 import type { HttpPost, HttpResponse } from "./anthropic.ts";
 import { LlmApiError } from "./llmProvider.ts";
 
-// Same injected-transport pattern as HttpPost, but with a binary body -
-// OpenAI's transcription endpoint takes multipart/form-data, not JSON.
+// Like HttpPost but with a binary body (multipart uploads).
 export type HttpPostBinary = (
 	url: string,
 	headers: Record<string, string>,
@@ -27,9 +22,7 @@ export function audioMimeType(extension: string): string {
 const TRANSCRIBE_PROMPT =
 	"Transcribe this audio recording verbatim. Output only the transcript text - no preamble, no timestamps, no speaker labels unless multiple speakers are clearly distinguishable (then label them Speaker 1, Speaker 2, ...). Transcribe in the language spoken.";
 
-// Fixed inexpensive default rather than the user's configured chat model -
-// transcription doesn't benefit from a bigger model, and the configured one
-// may not accept audio at all.
+// Fixed cheap defaults - the user's chat model may not accept audio at all.
 export const GEMINI_TRANSCRIBE_MODEL = "gemini-2.5-flash";
 export const OPENAI_TRANSCRIBE_MODEL = "whisper-1";
 
@@ -71,10 +64,8 @@ export async function transcribeWithGemini(
 	return text;
 }
 
-// Minimal multipart/form-data encoder - just what the transcription endpoint
-// needs (text fields + one binary file part), portable across Electron,
-// mobile webview, and Node's test runner (no FormData/Blob dependency, which
-// Obsidian's requestUrl can't serialize anyway).
+// Minimal multipart encoder - Obsidian's requestUrl can't serialize
+// FormData, and this stays portable across Electron/mobile/Node.
 export function buildMultipartBody(
 	boundary: string,
 	fields: Record<string, string>,
