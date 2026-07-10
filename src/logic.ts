@@ -29,6 +29,12 @@ export const HEIC_EXTENSIONS = ["heic", "heif"];
 // support it through this plugin - see the guard in openaiCompatible.ts.
 export const PDF_EXTENSIONS = ["pdf"];
 
+// What Obsidian's built-in Audio recorder core plugin produces (webm on
+// desktop, m4a on iOS) plus the common formats a user might drop in by hand.
+// Audio is transcribed first (see transcribe.ts), then enriched as text - so
+// unlike images/PDFs this works in every execution mode, including CLI.
+export const AUDIO_EXTENSIONS = ["m4a", "webm", "mp3", "wav", "ogg", "flac"];
+
 export function isCaptureFile(extension: string): boolean {
 	const ext = extension.toLowerCase();
 	return (
@@ -36,7 +42,8 @@ export function isCaptureFile(extension: string): boolean {
 		ext === "txt" ||
 		IMAGE_EXTENSIONS.includes(ext) ||
 		HEIC_EXTENSIONS.includes(ext) ||
-		PDF_EXTENSIONS.includes(ext)
+		PDF_EXTENSIONS.includes(ext) ||
+		AUDIO_EXTENSIONS.includes(ext)
 	);
 }
 
@@ -125,7 +132,7 @@ export function firstSentence(text: string): string {
 
 export interface CapturedAttachment {
 	filename: string;
-	kind: "image" | "document";
+	kind: "image" | "document" | "audio";
 }
 
 export function buildMeetingMarkdown(
@@ -174,6 +181,11 @@ export function buildMeetingMarkdown(
 
 	if (capturedAttachment?.kind === "document") {
 		bodyParts.push(`## Captured document\n\n![[${capturedAttachment.filename}]]`);
+	} else if (capturedAttachment?.kind === "audio") {
+		// Audio keeps both: the transcript (searchable, feeds wikis) and the
+		// original recording, playable inline.
+		bodyParts.push(`## Transcript\n\n${rawTranscript.trim()}`);
+		bodyParts.push(`## Captured audio\n\n![[${capturedAttachment.filename}]]`);
 	} else if (capturedAttachment) {
 		bodyParts.push(`## Captured image\n\n![[${capturedAttachment.filename}]]`);
 	} else {

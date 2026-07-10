@@ -32,6 +32,12 @@ import {
 	wikiUserMessage,
 } from "./src/prompts";
 import * as logic from "./src/logic";
+import {
+	audioMimeType,
+	transcribeWithGemini,
+	transcribeWithOpenAi,
+	type HttpPostBinary,
+} from "./src/transcribe";
 import { augmentedPath, buildEnrichArgs, buildQueryArgs, buildWikiArgs, summarizeLogLines } from "./src/cliRunner";
 import type { CliExec } from "./src/cliRunner";
 import { meetingEnricherSkill, vaultQuerySkill, wikiBuilderSkill } from "./src/skillTemplates";
@@ -71,6 +77,22 @@ export default class CortexPlugin extends Plugin {
 			callback: () => new QueryModal(this.app, (question) => void this.runVaultQuery(question)).open(),
 		});
 
+		this.addCommand({
+			id: "quick-capture",
+			name: "Quick capture",
+			callback: () => new QuickCaptureModal(this.app, this).open(),
+		});
+
+		this.addRibbonIcon("plus-circle", "Cortex quick capture", () => {
+			new QuickCaptureModal(this.app, this).open();
+		});
+
+		this.addCommand({
+			id: "setup-wizard",
+			name: "Open setup wizard",
+			callback: () => new OnboardingModal(this.app, this).open(),
+		});
+
 		if (this.settings.autoProcessOnCreate) {
 			this.registerEvent(
 				this.app.vault.on("create", (file) => {
@@ -91,11 +113,23 @@ export default class CortexPlugin extends Plugin {
 		// Catch up on anything that arrived while Obsidian was closed - this is
 		// the plugin's substitute for the bash version's daily launchd run,
 		// since a plugin only runs while Obsidian is open.
-		this.app.workspace.onLayoutReady(() => void this.processInbox());
+		this.app.workspace.onLayoutReady(() => {
+			if (!this.settings.onboarded) {
+				new OnboardingModal(this.app, this).open();
+			} else {
+				void this.processInbox();
+			}
+		});
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const data = (await this.loadData()) as Partial<CortexSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+		// Installs that predate the wizard already have settings on disk -
+		// don't greet a configured vault with a first-run welcome.
+		if (data && data.onboarded === undefined) {
+			this.settings.onboarded = true;
+		}
 	}
 
 	async saveSettings() {
@@ -106,6 +140,30 @@ export default class CortexPlugin extends Plugin {
 		const res = await requestUrl({ url, method: "POST", headers, body, throw: false });
 		return { status: res.status, text: res.text };
 	};
+
+	private httpPostBinary: HttpPostBinary = async (url, headers, body) => {
+		const res = await requestUrl({ url, method: "POST", headers, body, throw: false });
+		return { status: res.status, text: res.text };
+	};
+
+	// Audio -> text. Independent of execution mode and chosen provider:
+	// Anthropic has no audio API and the claude CLI can't read audio, so
+	// transcription uses whichever of Gemini/OpenAI has a key configured
+	// (preferring the active provider's own key when it's one of those two).
+	async transcribeAudio(extension: string, binary: ArrayBuffer, filename: string): Promise<string> {
+		const keys = this.settings.apiKeys;
+		const mediaType = audioMimeType(extension);
+		const preferOpenAi = this.settings.apiProvider === "openai" && !!keys.openai;
+		if (keys.gemini && !preferOpenAi) {
+			return transcribeWithGemini(this.httpPost, keys.gemini, mediaType, logic.arrayBufferToBase64(binary));
+		}
+		if (keys.openai) {
+			return transcribeWithOpenAi(this.httpPostBinary, keys.openai, mediaType, new Uint8Array(binary), filename);
+		}
+		throw new Error(
+			"Audio capture needs a Gemini or OpenAI API key for transcription (Settings → Cortex). The key is only used to turn speech into text - enrichment still runs in your chosen mode."
+		);
+	}
 
 	private getLlmProvider(): LlmProvider {
 		const provider: ApiProvider = this.settings.apiProvider;
@@ -300,6 +358,39 @@ export default class CortexPlugin extends Plugin {
 		await this.app.vault.create(path, logic.buildTagFileContent(tagName, today));
 	}
 
+	async ensureCoreFolders() {
+		const s = this.settings;
+		for (const folder of [s.inboxFolder, s.meetingsFolder, s.tagsFolder, s.wikisFolder]) {
+			await this.ensureFolderExists(folder);
+		}
+	}
+
+	// A believable first capture, so the wizard's "watch it happen" moment
+	// shows real tagging/summarizing rather than a lorem-ipsum non-event.
+	async createSampleNote() {
+		const path = `${this.settings.inboxFolder}/Try me.md`;
+		if (await this.app.vault.adapter.exists(path)) return;
+		await this.app.vault.create(
+			path,
+			"Quick thought after today's kickoff with the new client: they want the reporting dashboard live before the end of next quarter, but their data quality is a mess - half the customer records are missing regions. Maria offered to run a cleanup sprint first. I should sketch the dashboard wireframe this week and check whether we can reuse the ETL setup from the last project.\n"
+		);
+		new Notice("Cortex: sample note dropped in the inbox - watch it get enriched.");
+	}
+
+	async quickCapture(text: string, attached: File | null) {
+		await this.ensureFolderExists(this.settings.inboxFolder);
+		const stamp = window.moment().format("YYYY-MM-DD HH.mm.ss");
+		if (attached) {
+			const bytes = await attached.arrayBuffer();
+			await this.app.vault.createBinary(`${this.settings.inboxFolder}/${stamp} ${attached.name}`, bytes);
+		}
+		if (text.trim()) {
+			await this.app.vault.create(`${this.settings.inboxFolder}/${stamp}.md`, text.trim() + "\n");
+		}
+		new Notice("Cortex: captured to inbox.");
+		if (!this.settings.autoProcessOnCreate) void this.processInbox();
+	}
+
 	private async moveToDuplicates(file: TFile) {
 		const dupFolder = `${this.settings.inboxFolder}/duplicates`;
 		if (!(await this.app.vault.adapter.exists(dupFolder))) {
@@ -378,7 +469,39 @@ export default class CortexPlugin extends Plugin {
 		}
 	}
 
+	// CLI mode can't hand audio to the claude binary, so the plugin transcribes
+	// each recording itself (Gemini/OpenAI key) and leaves a plain-text note in
+	// the inbox for the CLI enricher to pick up like any typed capture. The
+	// recording moves to the notes folder and stays embedded in that note.
+	private async transcribeInboxAudioForCli(): Promise<void> {
+		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
+		if (!folder) return;
+		const audioFiles = folder.children.filter(
+			(f): f is TFile => f instanceof TFile && logic.AUDIO_EXTENSIONS.includes(f.extension.toLowerCase())
+		);
+		for (const file of audioFiles) {
+			try {
+				const binary = await this.app.vault.readBinary(file);
+				if (binary.byteLength === 0) continue;
+				const transcript = await this.transcribeAudio(file.extension.toLowerCase(), binary, file.name);
+				const notePath = `${this.settings.inboxFolder}/${file.basename} (voice).md`;
+				const audioDest = `${this.settings.meetingsFolder}/${file.name}`;
+				await this.app.vault.create(
+					notePath,
+					`${transcript.trim()}\n\n![[${file.name}]]\n`
+				);
+				await this.app.fileManager.renameFile(file, audioDest);
+				await this.appendLog(`TRANSCRIBED: ${file.name} -> ${notePath}`);
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				new Notice(`Cortex: could not transcribe "${file.name}" - ${msg}`, 10000);
+				await this.appendLog(`ERROR: ${file.name} - transcription failed: ${msg}`);
+			}
+		}
+	}
+
 	private async runInboxCli(basePath: string) {
+		await this.transcribeInboxAudioForCli();
 		await this.ensureSkillsInstalled();
 		const before = await this.readLogLineCount();
 		const env = this.cliEnv();
@@ -539,6 +662,7 @@ export default class CortexPlugin extends Plugin {
 			const isHeic = logic.HEIC_EXTENSIONS.includes(ext);
 			const isImage = isHeic || logic.IMAGE_EXTENSIONS.includes(ext);
 			const isPdf = logic.PDF_EXTENSIONS.includes(ext);
+			const isAudio = logic.AUDIO_EXTENSIONS.includes(ext);
 			let raw = "";
 			let attachment: { kind: "image" | "document"; mediaType: string; base64Data: string } | undefined;
 			let convertedBinary: ArrayBuffer | undefined;
@@ -585,6 +709,12 @@ export default class CortexPlugin extends Plugin {
 					mediaType: this.mimeTypeForExtension(ext),
 					base64Data: logic.arrayBufferToBase64(binary),
 				};
+			} else if (isAudio) {
+				const binary = await this.app.vault.readBinary(file);
+				if (binary.byteLength === 0) return false;
+				// Transcribe first; the transcript then goes through the normal
+				// text-enrichment path (no attachment sent to the enrich model).
+				raw = await this.transcribeAudio(ext, binary, file.name);
 			} else {
 				raw = await this.app.vault.read(file);
 				if (raw.trim().length === 0) return false;
@@ -645,6 +775,16 @@ export default class CortexPlugin extends Plugin {
 				} else {
 					await this.app.fileManager.renameFile(file, `${this.settings.meetingsFolder}/${attachmentFilename}`);
 				}
+			} else if (isAudio) {
+				// Keep the recording: transcript in the note body, audio embedded
+				// underneath and moved alongside the other note attachments.
+				const attachmentFilename = logic.meetingAttachmentFilename(result.date, result.title, ext);
+				const markdown = logic.buildMeetingMarkdown(result, raw, enrichedAt, existingWikiLink, {
+					filename: attachmentFilename,
+					kind: "audio",
+				});
+				await this.app.vault.create(destPath, markdown);
+				await this.app.fileManager.renameFile(file, `${this.settings.meetingsFolder}/${attachmentFilename}`);
 			} else {
 				const markdown = logic.buildMeetingMarkdown(result, raw, enrichedAt, existingWikiLink);
 				await this.app.vault.create(destPath, markdown);
@@ -1080,6 +1220,226 @@ class CortexSettingTab extends PluginSettingTab {
 		folderSetting("wikisFolder", "Wikis folder");
 		folderSetting("tagsFolder", "Tags folder");
 		folderSetting("queriesFolder", "Queries folder");
+	}
+}
+
+// First-run setup: pick how Cortex thinks, prove it works, and watch a first
+// note get enriched - all before the user ever sees the settings page.
+class OnboardingModal extends Modal {
+	constructor(app: App, private plugin: CortexPlugin) {
+		super(app);
+	}
+
+	onOpen() {
+		this.renderWelcome();
+	}
+
+	private clear() {
+		this.contentEl.empty();
+	}
+
+	private renderWelcome() {
+		this.clear();
+		this.setTitle("Welcome to Cortex");
+		this.contentEl.createEl("p", {
+			text: "Capture anything - a thought, a meeting, a photo, a voice memo - and Cortex turns it into a tagged, linked knowledge graph. One choice to make: how should Cortex think?",
+		});
+
+		new Setting(this.contentEl)
+			.setName("I have a Claude subscription (Pro/Max)")
+			.setDesc("Uses Claude Code - no separate billing. Desktop only.")
+			.addButton((b) =>
+				b.setButtonText("Use Claude Code").setCta().onClick(async () => {
+					this.plugin.settings.executionMode = "cli";
+					await this.plugin.saveSettings();
+					this.renderTest();
+				})
+			);
+
+		new Setting(this.contentEl)
+			.setName("I have an API key")
+			.setDesc("Anthropic, OpenAI, Gemini, or a local model. Works on mobile too.")
+			.addButton((b) =>
+				b.setButtonText("Use an API key").onClick(async () => {
+					this.plugin.settings.executionMode = "api";
+					await this.plugin.saveSettings();
+					this.renderApiSetup();
+				})
+			);
+
+		new Setting(this.contentEl)
+			.setName("Not now")
+			.setDesc("You can rerun this anytime: command palette → \"Cortex: Open setup wizard\".")
+			.addButton((b) =>
+				b.setButtonText("Skip").onClick(async () => {
+					this.plugin.settings.onboarded = true;
+					await this.plugin.saveSettings();
+					this.close();
+				})
+			);
+	}
+
+	private renderApiSetup() {
+		this.clear();
+		this.setTitle("Connect a provider");
+
+		const provider = () => this.plugin.settings.apiProvider;
+
+		new Setting(this.contentEl).setName("Provider").addDropdown((dropdown) => {
+			dropdown
+				.addOption("anthropic", "Anthropic")
+				.addOption("openai", "OpenAI")
+				.addOption("gemini", "Gemini")
+				.addOption("local", "Local (e.g. Ollama)")
+				.setValue(provider())
+				.onChange(async (value) => {
+					this.plugin.settings.apiProvider = value as ApiProvider;
+					await this.plugin.saveSettings();
+					this.renderApiSetup();
+				});
+		});
+
+		if (provider() === "local") {
+			new Setting(this.contentEl)
+				.setName("Base URL")
+				.setDesc("Your OpenAI-compatible endpoint.")
+				.addText((text) =>
+					text.setValue(this.plugin.settings.localBaseUrl).onChange(async (value) => {
+						this.plugin.settings.localBaseUrl = value.trim() || DEFAULT_SETTINGS.localBaseUrl;
+						await this.plugin.saveSettings();
+					})
+				);
+		} else {
+			new Setting(this.contentEl)
+				.setName("API key")
+				.setDesc("Stored locally in this vault, never sent anywhere except your provider.")
+				.addText((text) => {
+					text.inputEl.type = "password";
+					text.inputEl.autocomplete = "off";
+					text.setPlaceholder("Paste your key").onChange(async (value) => {
+						this.plugin.settings.apiKeys[provider()] = value.trim();
+						await this.plugin.saveSettings();
+					});
+				});
+		}
+
+		new Setting(this.contentEl)
+			.addButton((b) => b.setButtonText("Back").onClick(() => this.renderWelcome()))
+			.addButton((b) => b.setButtonText("Continue").setCta().onClick(() => this.renderTest()));
+	}
+
+	private renderTest() {
+		this.clear();
+		this.setTitle("Check the connection");
+		const isCli = this.plugin.settings.executionMode === "cli";
+		this.contentEl.createEl("p", {
+			text: isCli
+				? "Cortex will check that Claude Code is installed and reachable. If you haven't installed it yet: docs.claude.com/claude-code (a one-time step)."
+				: "Cortex will make one tiny API call to confirm your key and model work.",
+		});
+		const status = this.contentEl.createEl("p", { text: "" });
+
+		new Setting(this.contentEl)
+			.addButton((b) => b.setButtonText("Back").onClick(() => (isCli ? this.renderWelcome() : this.renderApiSetup())))
+			.addButton((b) =>
+				b.setButtonText("Test").setCta().onClick(async () => {
+					b.setButtonText("Testing…").setDisabled(true);
+					try {
+						status.setText(`✓ ${await this.plugin.testConnection()}`);
+						b.setButtonText("Test").setDisabled(false);
+						this.renderFinish();
+					} catch (e) {
+						const msg = e instanceof Error ? e.message : String(e);
+						status.setText(`✗ ${msg}`);
+						b.setButtonText("Test").setDisabled(false);
+					}
+				})
+			)
+			.addButton((b) => b.setButtonText("Skip test").onClick(() => this.renderFinish()));
+	}
+
+	private renderFinish() {
+		this.clear();
+		this.setTitle("You're set");
+		this.contentEl.createEl("p", {
+			text: `Drop anything into "${this.plugin.settings.inboxFolder}" - text, images, PDFs, voice memos - and it comes out tagged, summarized, and linked in "${this.plugin.settings.meetingsFolder}".`,
+		});
+		this.contentEl.createEl("p", {
+			text: "Want to see it happen right now? Cortex can drop a sample note into the inbox and enrich it while you watch.",
+		});
+
+		new Setting(this.contentEl)
+			.addButton((b) =>
+				b.setButtonText("Finish").onClick(async () => {
+					await this.finish(false);
+				})
+			)
+			.addButton((b) =>
+				b.setButtonText("Finish + try a sample note").setCta().onClick(async () => {
+					await this.finish(true);
+				})
+			);
+	}
+
+	private async finish(withSample: boolean) {
+		this.plugin.settings.onboarded = true;
+		await this.plugin.saveSettings();
+		await this.plugin.ensureCoreFolders();
+		this.close();
+		if (withSample) {
+			await this.plugin.createSampleNote();
+		}
+		void this.plugin.processInbox();
+	}
+}
+
+// One-stop capture: type or paste, or attach an image/PDF/voice memo -
+// lands in the inbox without the user ever thinking about folders.
+class QuickCaptureModal extends Modal {
+	private text = "";
+	private attachedFile: File | null = null;
+
+	constructor(app: App, private plugin: CortexPlugin) {
+		super(app);
+	}
+
+	onOpen() {
+		this.setTitle("Quick capture");
+		const input = this.contentEl.createEl("textarea", {
+			attr: { rows: "5", placeholder: "Type or paste anything… (Enter to save, Shift+Enter for a new line)" },
+		});
+		input.style.width = "100%";
+		input.addEventListener("input", () => {
+			this.text = input.value;
+		});
+		input.addEventListener("keydown", (e) => {
+			if (e.key === "Enter" && !e.shiftKey) {
+				e.preventDefault();
+				void submit();
+			}
+		});
+
+		const fileLabel = this.contentEl.createEl("p", { text: "" });
+		const picker = this.contentEl.createEl("input", {
+			attr: { type: "file", accept: ".png,.jpg,.jpeg,.webp,.heic,.heif,.pdf,.m4a,.webm,.mp3,.wav,.ogg,.flac" },
+		});
+		picker.style.display = "none";
+		picker.addEventListener("change", () => {
+			this.attachedFile = picker.files?.[0] ?? null;
+			fileLabel.setText(this.attachedFile ? `Attached: ${this.attachedFile.name}` : "");
+		});
+
+		const submit = async () => {
+			if (!this.text.trim() && !this.attachedFile) return;
+			this.close();
+			await this.plugin.quickCapture(this.text, this.attachedFile);
+		};
+
+		new Setting(this.contentEl)
+			.addButton((b) => b.setButtonText("Attach image / PDF / audio").onClick(() => picker.click()))
+			.addButton((b) => b.setButtonText("Capture").setCta().onClick(() => void submit()));
+
+		input.focus();
 	}
 }
 

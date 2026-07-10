@@ -20,6 +20,8 @@ export interface CortexSettings {
 	wikiThreshold: number;
 	autoProcessOnCreate: boolean;
 	dedupLookback: number;
+	// First-run onboarding wizard has been completed or dismissed.
+	onboarded: boolean;
 }
 
 // Curated model choices shown in the settings dropdown, so users pick from a
@@ -65,6 +67,7 @@ export const DEFAULT_SETTINGS: CortexSettings = {
 	wikiThreshold: 4,
 	autoProcessOnCreate: true,
 	dedupLookback: 50,
+	onboarded: false,
 };
 
 // Compact index entry for an existing meeting note - passed to the model for
