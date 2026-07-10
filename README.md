@@ -116,6 +116,15 @@ the two variables at the top. Note that setting is usually all-or-nothing:
 once on, the app stops typing transcripts into other apps.
 </details>
 
+### Record meetings (macOS)
+
+Calls with other people need system-audio capture, which no Obsidian plugin
+can do — so this one lives just outside the plugin: press **⌥M** when the
+meeting starts, again when it ends, and a speaker-labeled transcript lands
+in your inbox and comes out enriched. Fully local (free open-source recorder
+plus on-device Whisper — no API key, nothing uploaded). One-time setup in
+[`examples/meeting-capture/`](examples/meeting-capture/).
+
 Want Cortex to use a specific tag — a client, a project? Add a file with
 that name in **`20-Tags`** and it'll prefer it over inventing its own.
 

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Watches the recordings folder and runs meeting-transcribe.sh whenever a
+  finished recording appears (plus a periodic sweep as a fallback).
+
+  1. Copy meeting-transcribe.sh somewhere permanent, edit VAULT (and
+     INBOX_FOLDER if yours differs), `chmod +x` it.
+  2. Edit the two paths below (script location + your recordings folder).
+  3. Copy this file to ~/Library/LaunchAgents/ and run:
+       launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.example.meetingtranscribe.plist
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.example.meetingtranscribe</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>/full/path/to/meeting-transcribe.sh</string>
+    </array>
+    <key>WatchPaths</key>
+    <array>
+        <string>/Users/yourname/Movies/MeetingRecordings</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>120</integer>
+</dict>
+</plist>
