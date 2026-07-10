@@ -178,6 +178,12 @@ process_item() {
   fi
 
   out="$INBOX/$stamp Meeting transcript.md"
+  # Two recordings ending the same minute must not overwrite each other.
+  local n=2
+  while [ -e "$out" ]; do
+    out="$INBOX/$stamp Meeting transcript $n.md"
+    n=$((n + 1))
+  done
   printf 'Meeting recording from %s, transcribed automatically (Me = my mic, Them = everyone else on the call).\n\n%s\n' \
     "$stamp" "$transcript" > "$out"
   mv "$item" "$PROCESSED/"

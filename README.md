@@ -138,6 +138,47 @@ Command palette → **"Cortex: Query vault"** — ask in plain language ("what
 did we decide about the Q3 roadmap?") and get a direct, cited answer saved
 to `40-Queries`. Needs CLI execution mode.
 
+## How it works
+
+The slightly technical version of what happens between dropping a capture
+and seeing a linked note. (Full detail:
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and
+[`docs/TECHNICAL.md`](docs/TECHNICAL.md).)
+
+1. **Watch.** The plugin listens for file-create events in `00-Inbox` (plus
+   a catch-up scan when Obsidian opens, since plugins only run while
+   Obsidian does). New files get a 2-second settle delay — dictation and
+   sync tools often create-then-rewrite.
+
+2. **Normalize by type.** Markdown/text is read as-is. Images and PDFs are
+   base64-encoded into vision/document content blocks (HEIC is converted to
+   JPEG first via macOS's `sips`). Audio is **transcribed first** — Gemini's
+   native audio input or OpenAI's `whisper-1` — and the transcript re-enters
+   the text path, which is why voice works in every execution mode.
+
+3. **Enrich — one structured call, no free-form generation.** The model is
+   forced to answer via a single `enrich_note` tool call returning JSON:
+   type (meeting/note), date, title, summary, key points, decisions, action
+   items, 1–4 tags drawn from the controlled vocabulary in `20-Tags` (new
+   tags need justification), plus a duplicate check and related-note picks
+   against an index of your recent notes. In CLI mode this step instead
+   shells out to `claude -p` with a generated SKILL.md, letting Claude Code
+   read the inbox itself — same contract, agentic execution.
+
+4. **Assemble deterministically.** Plugin code — not the model — builds the
+   note from that JSON: frontmatter, sections, wikilinks, your original
+   text/image/recording preserved inside. The file moves to `10-Notes`;
+   detected duplicates are parked in `00-Inbox/duplicates` instead of
+   deleted.
+
+5. **Synthesize.** After each run, notes are clustered by tag. Any tag
+   reaching 4+ substantial notes gets a wiki page in `30-Wikis` (a second
+   structured call writes the narrative; timeline and source lists are built
+   deterministically from note metadata) — updated, not appended, as new
+   notes arrive.
+
+Every step is logged to `.cortex/pipeline.log` in the vault.
+
 ## If something breaks
 
 - **Nothing happened?** Command palette → "Cortex: Process inbox now" and
