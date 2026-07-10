@@ -124,8 +124,13 @@ process_item() {
   local item="$1" base stamp tmp out transcript
   base="$(basename "$item")"
 
-  # Still being written? QuickRecorder keeps the files open until you stop.
+  # Still being written? lsof alone misses QuickRecorder's write pattern,
+  # so also require a minute of quiet - the periodic sweep retries until
+  # the recording has settled.
   if lsof +D "$item" >/dev/null 2>&1 || lsof "$item" >/dev/null 2>&1; then
+    return 0
+  fi
+  if [ -n "$(find "$item" -mmin -1 -print -quit 2>/dev/null)" ]; then
     return 0
   fi
 
