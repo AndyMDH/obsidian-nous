@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="180" viewBox="0 0 800 180" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="va" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" fill="#8250df"/>
+    </marker>
+  </defs>
+
+  <!-- start -->
+  <rect x="16" y="60" width="168" height="60" rx="30" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="44" y="97" font-size="20">🎙️</text>
+  <text x="74" y="86" font-size="12.5" font-weight="650" fill="#1f2328">Click to start</text>
+  <text x="74" y="102" font-size="11" fill="#57606a">talk, no waiting</text>
+
+  <path d="M184 90 h34" stroke="#8250df" stroke-width="1.8" fill="none" marker-end="url(#va)"/>
+
+  <!-- recording state -->
+  <rect x="226" y="68" width="150" height="44" rx="22" fill="#ede1fd"/>
+  <circle cx="248" cy="90" r="5" fill="#c4287c"/>
+  <text x="262" y="94" font-size="12.5" font-weight="650" fill="#6639ba">Recording…</text>
+
+  <path d="M376 90 h34" stroke="#8250df" stroke-width="1.8" fill="none" marker-end="url(#va)"/>
+
+  <!-- stop -->
+  <rect x="418" y="60" width="168" height="60" rx="30" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
+  <text x="446" y="97" font-size="20">🎙️</text>
+  <text x="476" y="86" font-size="12.5" font-weight="650" fill="#1f2328">Click to stop</text>
+  <text x="476" y="102" font-size="11" fill="#57606a">same button</text>
+
+  <path d="M586 90 h34" stroke="#8250df" stroke-width="1.8" fill="none" marker-end="url(#va)"/>
+
+  <!-- result -->
+  <rect x="628" y="40" width="156" height="100" rx="16" fill="#fbf7ff" stroke="#8250df" stroke-width="1.5"/>
+  <text x="648" y="70" font-size="13" font-weight="700" fill="#1f2328">Voice note</text>
+  <text x="648" y="92" font-size="11" fill="#57606a">Tagged, summarized,</text>
+  <text x="648" y="107" font-size="11" fill="#57606a">audio kept inside</text>
+  <text x="648" y="126" font-size="11" fill="#8250df">📥 lands in your inbox</text>
+</svg>
