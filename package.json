@@ -1,6 +1,6 @@
 {
   "name": "obsidian-noggin",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Turn dictated or pasted notes into a linked, tagged knowledge graph, right inside Obsidian - uses Claude Code (your subscription) or a direct API key from Anthropic, OpenAI, Gemini, or a local model, your choice.",
   "main": "main.js",
   "type": "module",
