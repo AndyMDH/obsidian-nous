@@ -1,7 +1,7 @@
 {
   "id": "nous",
   "name": "Nous",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "minAppVersion": "1.5.7",
   "description": "Turn dictated or pasted notes into a linked, tagged knowledge graph - uses Claude Code (your subscription) or a direct API key from Anthropic, OpenAI, Gemini, or a local model, your choice.",
   "author": "Andy Ho",
