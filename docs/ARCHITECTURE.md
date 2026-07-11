@@ -59,7 +59,7 @@ type: meeting        # or "note"
 date: YYYY-MM-DD
 title: <concise title>
 attendees: [...]     # omitted for type: note
-source: handy        # handy | pasted | photo | document
+source: voice        # voice | pasted | photo | document
 project: <project or "internal">
 tags: [tag-a, tag-b]
 status: enriched

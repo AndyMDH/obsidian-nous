@@ -99,7 +99,7 @@ export interface EnrichResult {
 	date: string;
 	title: string;
 	attendees: string[];
-	source: "handy" | "pasted" | "photo" | "document";
+	source: "voice" | "pasted" | "photo" | "document";
 	project: string;
 	tags: string[];
 	new_tag: { name: string; justification: string } | null;

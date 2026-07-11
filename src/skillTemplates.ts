@@ -86,7 +86,7 @@ Otherwise read the full transcript. Decide:
   tag in addition to any other applicable tag(s). Images and PDFs are never
   fragments purely for being an image/PDF - judge by how much content is
   actually in them.
-- **source**: \`handy\` if it reads like raw dictation (first-person, informal,
+- **source**: \`voice\` if it reads like raw dictation (first-person, informal,
   no clear multi-speaker turn-taking); \`pasted\` if it has clear speaker labels
   or formatting suggesting it was copied from Teams/Zoom/Granola; \`photo\` if
   the file is an image; \`document\` if the file is a PDF.
@@ -101,7 +101,7 @@ type: meeting               # or "note" per Step 1
 date: YYYY-MM-DD
 title: <inferred concise title>
 attendees: [<names found in transcript>]   # omit this field entirely for type: note
-source: handy                # or "pasted"
+source: voice                # or "pasted"
 project: <inferred client/project or "internal">
 tags: [<from registry only - see Step 3>]
 status: enriched

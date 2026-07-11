@@ -8,7 +8,7 @@ export function enrichSystemPrompt(tagRegistry: string[]): string {
 ## Classify
 - type: "meeting" if the text reads like a conversation/discussion between people, "note" if it's a single-person idea, reflection, or fragment with no attendees/decisions/actions structure.
 - is_fragment: true if the body is under ~50 words, regardless of type. Fragments still get enriched normally but are excluded from wiki-eligibility counting by the caller.
-- source: "handy" if it reads like raw dictation (first-person, informal, no clear multi-speaker turn-taking), "pasted" if it has clear speaker labels or formatting suggesting it was copied from Teams/Zoom/Granola, "photo" if you were given an image instead of text, "document" if you were given a PDF instead of text.
+- source: "voice" if it reads like raw dictation (first-person, informal, no clear multi-speaker turn-taking), "pasted" if it has clear speaker labels or formatting suggesting it was copied from Teams/Zoom/Granola, "photo" if you were given an image instead of text, "document" if you were given a PDF instead of text.
 
 ## If given an image instead of text
 Describe what's visible (whiteboard notes, a diagram, a screenshot, etc.) and enrich based on that description - classify/tag/summarize the same as you would a transcript covering the same content. Always set source: "photo" and type based on what the image actually shows (a whiteboard from a meeting is usually "meeting"; a screenshot of an article or a personal sketch is usually "note"). Two photos are essentially never an exact duplicate of each other or of a text capture - only set is_duplicate true if this is clearly a repeat of the exact same image/whiteboard state already captured, per the existing notes index below.
@@ -136,7 +136,7 @@ export const ENRICH_TOOL = {
 				items: { type: "string" },
 				description: "Empty array for type: note",
 			},
-			source: { type: "string", enum: ["handy", "pasted", "photo", "document"] },
+			source: { type: "string", enum: ["voice", "pasted", "photo", "document"] },
 			project: { type: "string" },
 			tags: { type: "array", items: { type: "string" } },
 			new_tag: {
