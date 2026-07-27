@@ -116,6 +116,10 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Settings** show just the essentials by default — CLI/whisper paths,
   folder names, and tuning thresholds are one click away under **Advanced
   settings**, since defaults work for almost everyone.
+- **Doubles as AI context** — Nous's tidy, structured output (real titles,
+  controlled tags, linked wikis) is also great context for AI coding
+  assistants like Claude Code: point it at your vault and it can search your
+  notes the same way it searches any other folder, no extra setup.
 
 ## Documentation
 
