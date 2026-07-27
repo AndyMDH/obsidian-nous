@@ -123,6 +123,9 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Privacy**: only your captured notes and tag names are ever sent to the
   provider you chose. Local mode sends nothing anywhere. No telemetry, ever.
 - **Mobile**: use Direct API key mode — Claude Code CLI is desktop-only.
+- **Hotkeys**: every capture action (voice, meeting, quick capture, process
+  inbox now, ...) is a real Obsidian command, not just a ribbon icon —
+  **Settings → Hotkeys**, search "Nous", bind whichever ones you use often.
 - **Settings** show just the essentials by default — CLI/whisper paths,
   folder names, and tuning thresholds are one click away under **Advanced
   settings**, since defaults work for almost everyone.
