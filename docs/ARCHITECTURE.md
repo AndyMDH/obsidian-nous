@@ -207,6 +207,6 @@ User input
 - In **API mode**, captures, tag names, and recent note titles are sent to the chosen provider.
 - In **CLI mode**, the same data is processed by the Claude Code CLI under its own terms.
 - In **Local mode**, nothing leaves the machine.
-- API keys are stored in Obsidian's plugin data file (`data.json`) inside the vault, in plain text. Do not sync the vault to untrusted locations.
+- API keys: on Obsidian 1.11.4+, keys are stored via `App.secretStorage` (Obsidian's own secret store), not in the plugin's `data.json` - the plugin's own data file only ever holds a blank string for each key field on those versions. On older Obsidian (no `secretStorage` API), keys fall back to the plugin's `data.json` in plain text, as before - do not sync the vault to untrusted locations in that case. Upgrading from an older install migrates any already-saved plaintext key into `secretStorage` automatically on the next load.
 - No telemetry is collected by the plugin.
 - **Live voice transcription (beta)** is opt-in and off by default. When enabled, it sends microphone audio to OpenAI's Realtime API over a WebSocket - the same OpenAI network surface (and the same `apiKeys.openai` key) already used for Gemini/OpenAI batch transcription fallback, not a new one. Users who leave it off, or who have no OpenAI key, see no behavior change and no new network surface at all.

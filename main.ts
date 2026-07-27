@@ -9,6 +9,7 @@ import {
 	Setting,
 	TFile,
 	requestUrl,
+	requireApiVersion,
 	setIcon,
 	type SettingDefinitionItem,
 	type SettingGroup,
@@ -45,6 +46,10 @@ import type { SkillFolders } from "./src/skillTemplates";
 
 const LOG_FOLDER = ".nous";
 const LOG_FILE = `${LOG_FOLDER}/pipeline.log`;
+
+// "local" never has a key (it's a reachable-server URL, not a credential) -
+// excluded from secretStorage handling in loadSettings()/saveSettings().
+const API_KEY_PROVIDERS: Exclude<ApiProvider, "local">[] = ["anthropic", "openai", "gemini", "glm"];
 const DEFAULT_CLAUDE_CLI_BIN = "claude";
 const DEFAULT_WHISPER_CLI_BIN = "whisper-cli";
 // afconvert (CoreAudio) can read AIFF/WAV/CAF/M4A/MP3 but not WebM/Opus, so
@@ -251,10 +256,55 @@ export default class NousPlugin extends Plugin {
 		if (data && data.onboarded === undefined) {
 			this.settings.onboarded = true;
 		}
+
+		if (requireApiVersion("1.11.4") && this.app.secretStorage) {
+			let migratedAnyPlaintextKey = false;
+			for (const provider of API_KEY_PROVIDERS) {
+				const stored = this.app.secretStorage.getSecret(this.secretId(provider));
+				if (stored) {
+					this.settings.apiKeys[provider] = stored;
+				} else if (this.settings.apiKeys[provider]) {
+					// Upgrading from a pre-1.11.4 install: this key was saved
+					// to plain-text data.json before secretStorage existed.
+					// Move it over now; saveSettings() below blanks the
+					// plaintext copy out of data.json.
+					this.app.secretStorage.setSecret(this.secretId(provider), this.settings.apiKeys[provider]);
+					migratedAnyPlaintextKey = true;
+				}
+			}
+			if (migratedAnyPlaintextKey) await this.saveSettings();
+		}
+	}
+
+	// API keys go through Obsidian's own secretStorage (App.secretStorage,
+	// 1.11.4+) instead of the plugin's plain-text data.json, once available -
+	// see docs/ARCHITECTURE.md's "Privacy and security model". Older
+	// Obsidian has no such API, so those installs keep today's plain-text
+	// behavior; nothing here is desktop/mobile-gated, secretStorage is a
+	// plain App property on both.
+	//
+	// The `requireApiVersion("1.11.4") && this.app.secretStorage` guard is
+	// deliberately inlined at each call site (loadSettings()/saveSettings()
+	// below) rather than factored into a shared helper - obsidianmd/
+	// no-unsupported-api only recognizes a literal requireApiVersion(...)
+	// check as an ancestor of the guarded call, not one hidden behind a
+	// method call, so factoring it out would silently bring back the lint
+	// error it's meant to satisfy.
+	private secretId(provider: ApiProvider): string {
+		return `nous-apikey-${provider}`;
 	}
 
 	async saveSettings() {
-		await this.saveData(this.settings);
+		if (requireApiVersion("1.11.4") && this.app.secretStorage) {
+			const toPersist: NousSettings = { ...this.settings, apiKeys: { ...this.settings.apiKeys } };
+			for (const provider of API_KEY_PROVIDERS) {
+				this.app.secretStorage.setSecret(this.secretId(provider), this.settings.apiKeys[provider]);
+				toPersist.apiKeys[provider] = "";
+			}
+			await this.saveData(toPersist);
+		} else {
+			await this.saveData(this.settings);
+		}
 	}
 
 	private httpPost: HttpPost = async (url, headers, body) => {
