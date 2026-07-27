@@ -10,6 +10,13 @@
 </p>
 
 <p align="center">
+  Most similar tools make you trigger tagging, linking, or wiki-building by
+  hand, one step at a time. Nous runs the whole pipeline live in the
+  background as you capture — tagging, linking, and synthesizing a
+  self-updating wiki page once a topic earns one, no command to run.
+</p>
+
+<p align="center">
   <a href="https://obsidian.md/plugins?id=nous"><img alt="Get it from Obsidian" src="https://img.shields.io/badge/Obsidian-Get%20the%20plugin-7C3AED?logo=obsidian&logoColor=white"></a>
   <img alt="Obsidian downloads" src="https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%237C3AED&label=downloads&query=%24%5B%22nous%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-7C3AED"></a>
