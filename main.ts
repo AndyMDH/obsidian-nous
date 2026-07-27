@@ -524,16 +524,23 @@ export default class NousPlugin extends Plugin {
 			wikis: this.settings.wikisFolder,
 			tags: this.settings.tagsFolder,
 		};
-		await this.writeSkillIfMissing(
-			".claude/skills/meeting-enricher/SKILL.md",
-			meetingEnricherSkill(folders)
-		);
-		await this.writeSkillIfMissing(".claude/skills/wiki-builder/SKILL.md", wikiBuilderSkill(folders));
-		await this.writeSkillIfMissing(".claude/skills/vault-query/SKILL.md", vaultQuerySkill(folders));
+		// Regenerate on every version bump, not just when a file is missing -
+		// otherwise an installed SKILL.md silently drifts from what the
+		// current plugin source actually produces (e.g. it kept referencing
+		// the old .cortex/pipeline.log path for two weeks after the plugin
+		// itself was renamed to Nous).
+		const stale = this.settings.skillsVersion !== this.manifest.version;
+		await this.writeSkill(".claude/skills/meeting-enricher/SKILL.md", meetingEnricherSkill(folders), stale);
+		await this.writeSkill(".claude/skills/wiki-builder/SKILL.md", wikiBuilderSkill(folders), stale);
+		await this.writeSkill(".claude/skills/vault-query/SKILL.md", vaultQuerySkill(folders), stale);
+		if (stale) {
+			this.settings.skillsVersion = this.manifest.version;
+			await this.saveSettings();
+		}
 	}
 
-	private async writeSkillIfMissing(path: string, content: string) {
-		if (await this.app.vault.adapter.exists(path)) return;
+	private async writeSkill(path: string, content: string, forceRewrite: boolean) {
+		if (!forceRewrite && (await this.app.vault.adapter.exists(path))) return;
 		const dir = path.substring(0, path.lastIndexOf("/"));
 		await this.ensureFolderExists(dir);
 		await this.app.vault.adapter.write(path, content);

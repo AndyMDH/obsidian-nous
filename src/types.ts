@@ -33,6 +33,11 @@ export interface NousSettings {
 	dedupLookback: number;
 	// First-run onboarding wizard has been completed or dismissed.
 	onboarded: boolean;
+	// Plugin version that last (re)wrote .claude/skills/*/SKILL.md. Compared
+	// against the running manifest version so CLI-mode skill files get
+	// regenerated on update instead of silently going stale forever - see
+	// ensureSkillsInstalled() in main.ts.
+	skillsVersion: string;
 }
 
 // Model choices for the settings dropdown; first entry is the default.
@@ -87,6 +92,7 @@ export const DEFAULT_SETTINGS: NousSettings = {
 	autoProcessOnCreate: true,
 	dedupLookback: 50,
 	onboarded: false,
+	skillsVersion: "",
 };
 
 // Compact index entry for an existing meeting note - passed to the model for

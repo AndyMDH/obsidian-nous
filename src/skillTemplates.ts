@@ -44,9 +44,22 @@ applies once they've already been turned into a note in \`${f.meetings}/\` -
 at that point the original file is gone from \`${f.inbox}/\`, so there's
 nothing left to re-skip.)
 
-## Step 0 — Duplicate check
+## Step 0 — Duplicates
 
-Skip this step entirely for image and PDF files - two photos or two documents
+### Purge stale duplicates
+
+Before anything else, once per run: list files directly in
+\`${f.inbox}/duplicates/\` (skip this entirely if the folder doesn't exist or
+is empty). For each one, check its last-modified time (\`stat\`). If it's
+older than 14 days, delete it and append to \`.nous/pipeline.log\`:
+\`<ISO timestamp> PURGED DUPLICATE: <filename> - older than 14 days\`
+Leave anything 14 days old or newer in place - that window exists so a
+duplicate is still there to double-check against if needed, it isn't meant to
+be a permanent holding pen.
+
+### Duplicate check
+
+Skip this part entirely for image and PDF files - two photos or two documents
 are essentially never an exact duplicate of each other, and there's no
 transcript body to compare.
 
