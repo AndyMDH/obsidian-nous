@@ -1,3 +1,4 @@
+import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 import obsidianmd from "eslint-plugin-obsidianmd";
 import { DEFAULT_BRANDS } from "eslint-plugin-obsidianmd/dist/lib/rules/ui/brands.js";
@@ -12,7 +13,7 @@ const PROJECT_ACRONYMS = [...DEFAULT_ACRONYMS, "HEIC"];
 // copy-paste or inconsistent with the dropdown option they're quoting.
 const PROJECT_IGNORE_WORDS = ["claude", "whisper-cli", "Local"];
 
-export default tseslint.config(
+export default defineConfig(
 	{
 		ignores: ["main.js", "node_modules/**", "examples/**"],
 	},
