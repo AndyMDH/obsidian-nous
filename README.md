@@ -31,7 +31,7 @@ No coding, nothing to configure by hand. Everything happens inside Obsidian.
 
 **Works on:** Desktop (macOS, Windows, Linux) and Mobile (API-key or local-model
 mode). Meeting capture is macOS-only; live voice transcription (beta) is
-desktop-only — see [Limitations](#how-it-works-briefly) below.
+desktop-only.
 
 ## Features
 
@@ -55,8 +55,15 @@ Or jump straight to [Nous's page on Obsidian's site](https://obsidian.md/plugins
 ## Quickstart
 
 **1. Enable Nous** — a setup wizard opens automatically and asks one
-question: Claude subscription, an API key, or a local model? Pick one, it
-tests the connection, done.
+question: a Claude subscription, a free local model, or an API key? Pick
+one, it tests the connection, done.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/settings-nav-dark.svg">
+    <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav-light.svg">
+  </picture>
+</p>
 
 **2. Capture something.** Four ways in, all in the left sidebar — 🎙️ and
 📞 both click to start, talk, click the same button again to stop:
