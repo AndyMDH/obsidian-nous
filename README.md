@@ -41,6 +41,9 @@ desktop-only.
 - 📖 **Self-updating wikis** — once a topic has enough notes, Nous writes a
   hub page pulling them together
 - 🎙️ **Live voice transcription** (beta) — watch text appear as you talk
+- 🤖 **Great context for AI coding assistants** — real tags and linked wikis
+  beat a pile of raw notes; point Claude Code's global `CLAUDE.md` at your
+  vault and every project gets that context automatically
 - 🔒 **Local-first** — Claude Code CLI, local whisper.cpp, and Ollama send
   nothing off your machine; direct API keys are opt-in
 - 📱 **Works on mobile** — with a direct API key
@@ -116,12 +119,10 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Settings** show just the essentials by default — CLI/whisper paths,
   folder names, and tuning thresholds are one click away under **Advanced
   settings**, since defaults work for almost everyone.
-- **Doubles as AI context** — Nous's tidy, structured output (real titles,
-  controlled tags, linked wikis) is also great context for AI coding
-  assistants like Claude Code. Add a line pointing at your vault to Claude
-  Code's global `~/.claude/CLAUDE.md` (e.g. "My notes live in `~/path/to/vault`
-  — check `10-Notes`/`20-Tags`/`30-Wikis` for relevant background") and every
-  project gets that context automatically, no extra setup per-project.
+- **AI context, concretely**: add a line to Claude Code's global
+  `~/.claude/CLAUDE.md` (e.g. "My notes live in `~/path/to/vault` — check
+  `10-Notes`/`20-Tags`/`30-Wikis` for relevant background") and every project
+  gets that context automatically, no extra setup per-project.
 
 ## Documentation
 
