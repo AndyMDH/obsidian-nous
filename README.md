@@ -118,8 +118,10 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
   settings**, since defaults work for almost everyone.
 - **Doubles as AI context** — Nous's tidy, structured output (real titles,
   controlled tags, linked wikis) is also great context for AI coding
-  assistants like Claude Code: point it at your vault and it can search your
-  notes the same way it searches any other folder, no extra setup.
+  assistants like Claude Code. Add a line pointing at your vault to Claude
+  Code's global `~/.claude/CLAUDE.md` (e.g. "My notes live in `~/path/to/vault`
+  — check `10-Notes`/`20-Tags`/`30-Wikis` for relevant background") and every
+  project gets that context automatically, no extra setup per-project.
 
 ## Documentation
 
