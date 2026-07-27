@@ -40,6 +40,13 @@ rest runs itself.
 3. Pick one, the wizard tests it, and offers to drop a sample note in your
    inbox so you can watch the whole thing happen once, live.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../assets/settings-nav-dark.svg">
+    <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="../assets/settings-nav-light.svg">
+  </picture>
+</p>
+
 If you skip that sample note or want to redo setup later: command palette
 (`Cmd/Ctrl+P`) → "Nous: Open setup wizard."
 
@@ -76,6 +83,13 @@ Once a tag accumulates 4+ notes, Nous also writes a **wiki page** in
 `30-Wikis` pulling them all together — you'll see this happen naturally as
 you use it more, nothing to trigger yourself.
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../assets/pipeline-dark.svg">
+    <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="../assets/pipeline-light.svg">
+  </picture>
+</p>
+
 ## Step 4: your first voice note
 
 1. Click the **🎙️ mic icon** in Obsidian's left sidebar.
@@ -83,6 +97,16 @@ you use it more, nothing to trigger yourself.
 3. Click the mic icon again to stop.
 4. Same as before — check `10-Notes` in a few seconds. The note now also has
    your original recording embedded and playable inside it.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../assets/capture-scenario-dark.svg">
+    <img alt="Click the mic or phone icon to start recording, talk, click it again to stop — a tagged note with the audio or transcript inside lands in your inbox." src="../assets/capture-scenario-light.svg">
+  </picture>
+</p>
+
+The same click-to-start, click-to-stop gesture is used for meeting capture
+in Step 6 below — just the phone icon instead of the mic.
 
 Prefer to see the words appear *while* you're still talking, Siri-style,
 rather than only after you stop? Settings → Nous → turn on **Advanced
