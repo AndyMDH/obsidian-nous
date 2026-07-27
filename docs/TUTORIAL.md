@@ -33,10 +33,10 @@ rest runs itself.
    - **Claude subscription** — if you already pay for Claude Pro/Max and have
      [Claude Code](https://docs.claude.com/claude-code) installed, this is
      free (no separate billing).
+   - **A local model** (e.g. [Ollama](https://ollama.com)) — free, ~2 min
+     setup, and nothing ever leaves your machine.
    - **An API key** — Anthropic, OpenAI, Gemini, or Z.ai. Billed separately,
      but works on mobile too.
-   - **A local model** (e.g. [Ollama](https://ollama.com)) — free, and
-     nothing ever leaves your machine.
 3. Pick one, the wizard tests it, and offers to drop a sample note in your
    inbox so you can watch the whole thing happen once, live.
 

@@ -1954,8 +1954,20 @@ class OnboardingModal extends Modal {
 			);
 
 		new Setting(this.contentEl)
+			.setName("I want a free local model")
+			.setDesc("E.g. Ollama - nothing leaves your machine, no billing, no account. ~2 min setup.")
+			.addButton((b) =>
+				b.setButtonText("Use a local model").onClick(async () => {
+					this.plugin.settings.executionMode = "api";
+					this.plugin.settings.apiProvider = "local";
+					await this.plugin.saveSettings();
+					this.renderApiSetup();
+				})
+			);
+
+		new Setting(this.contentEl)
 			.setName("I have an API key")
-			.setDesc("Anthropic, OpenAI, Gemini, or a local model. Works on mobile too.")
+			.setDesc("Anthropic, OpenAI, Gemini, or Z.ai. Billed separately, works on mobile too.")
 			.addButton((b) =>
 				b.setButtonText("Use an API key").onClick(async () => {
 					this.plugin.settings.executionMode = "api";

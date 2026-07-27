@@ -5,7 +5,8 @@
 <h1 align="center">Nous</h1>
 
 <p align="center">
-  Capture anything. Get a tagged, linked knowledge graph back — automatically.
+  <em>Nous</em> — Greek <em>νοῦς</em>, "mind." Capture anything. Get a tagged,
+  linked knowledge graph back — automatically.
 </p>
 
 <p align="center">
@@ -27,6 +28,10 @@
 A typed thought, a voice memo, a call, a photo, a PDF — Nous turns whatever
 you capture into a summarized, tagged note, linked to everything related.
 No coding, nothing to configure by hand. Everything happens inside Obsidian.
+
+**Works on:** Desktop (macOS, Windows, Linux) and Mobile (API-key or local-model
+mode). Meeting capture is macOS-only; live voice transcription (beta) is
+desktop-only — see [Limitations](#how-it-works-briefly) below.
 
 ## Features
 
@@ -74,6 +79,10 @@ tests the connection, done.
 linked to related notes in **`10-Notes`** — original text, image, or
 recording kept inside. Topics with 4+ notes get their own wiki page in
 **`30-Wikis`** automatically.
+
+*Already have a vault structure?* `00-Inbox`/`10-Notes`/`20-Tags`/`30-Wikis`
+are just defaults — every folder name is configurable in Settings → Nous, so
+Nous can point at folders you already use instead.
 
 ## How it works, briefly
 
