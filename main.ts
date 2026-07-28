@@ -553,12 +553,22 @@ export default class NousPlugin extends Plugin {
 			: null;
 	}
 
+	// Named allowlist rather than spreading all of process.env - the CLI only
+	// needs PATH/HOME to resolve and locale/auth vars to behave normally, and
+	// forwarding the whole parent environment into a spawned process needlessly
+	// exposes things like USER/LOGNAME/HOSTNAME to it.
 	private cliEnv(): Record<string, string> {
 		const home = process.env.HOME ?? "";
-		return {
-			...(process.env as Record<string, string>),
-			PATH: augmentedPath(process.env.PATH ?? "", home, null),
-		};
+		const env: Record<string, string> = { HOME: home };
+		for (const key of ["LANG", "LC_ALL", "TERM", "TMPDIR", "SHELL"]) {
+			const value = process.env[key];
+			if (value) env[key] = value;
+		}
+		for (const [key, value] of Object.entries(process.env)) {
+			if (value && (key.startsWith("ANTHROPIC_") || key.startsWith("CLAUDE_"))) env[key] = value;
+		}
+		env.PATH = augmentedPath(process.env.PATH ?? "", home, null);
+		return env;
 	}
 
 	private async ensureFolderExists(dirPath: string) {
