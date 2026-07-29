@@ -116,6 +116,14 @@ Nous can point at folders you already use instead.
 
 Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
+## Ecosystem
+
+- **[Obsidian LLM Wiki](https://github.com/green-dalii/obsidian-llm-wiki)** —
+  lists Nous as a companion plugin in its
+  [Ecosystem section](https://github.com/green-dalii/obsidian-llm-wiki#-ecosystem)
+  for local voice memo and meeting capture. Independent of that plugin — both
+  can share the same vault without coupling.
+
 ## Good to know
 
 - **Obsidian must be open** for captures to process — they wait in
