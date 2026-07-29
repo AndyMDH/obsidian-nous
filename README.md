@@ -18,7 +18,10 @@
 
 <p align="center">
   <a href="https://obsidian.md/plugins?id=nous"><img alt="Get it from Obsidian" src="https://img.shields.io/badge/Obsidian-Get%20the%20plugin-7C3AED?logo=obsidian&logoColor=white"></a>
-  <img alt="Obsidian downloads" src="https://img.shields.io/badge/dynamic/json?logo=obsidian&color=%237C3AED&label=downloads&query=%24%5B%22nous%22%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json">
+  <!-- TODO: swap back to the dynamic downloads badge once "nous" has an
+       entry in obsidianmd/obsidian-releases community-plugin-stats.json -
+       it doesn't yet, so the dynamic query badge renders broken. -->
+  <img alt="New Obsidian plugin" src="https://img.shields.io/badge/Obsidian-new%20plugin-7C3AED?logo=obsidian&logoColor=white">
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-7C3AED"></a>
   <a href="https://github.com/AndyMDH/obsidian-nous/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/AndyMDH/obsidian-nous?color=7C3AED&label=version"></a>
   <a href="https://github.com/AndyMDH/obsidian-nous/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/AndyMDH/obsidian-nous/actions/workflows/ci.yml/badge.svg"></a>

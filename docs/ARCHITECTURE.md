@@ -143,7 +143,7 @@ The same layer model is implemented through two different execution engines.
 
 The plugin calls a remote or local LLM API directly.
 
-- **Providers**: Anthropic, OpenAI, Gemini, or any OpenAI-compatible local server.
+- **Providers**: Anthropic, OpenAI, Gemini, GLM (Z.ai), or any OpenAI-compatible local server.
 - **Model invocation**: one tool-call request per file or wiki topic.
 - **Pros**: works on mobile (except Local), no external CLI dependency, deterministic prompts.
 - **Cons**: requires an API key; audio transcription falls back to Gemini or OpenAI (even if enrichment uses another provider) whenever local whisper.cpp isn't installed.

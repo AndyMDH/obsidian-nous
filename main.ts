@@ -1518,10 +1518,11 @@ class NousSettingTab extends PluginSettingTab {
 	}
 
 	// Obsidian's declarative getSettingDefinitions() API (below) only exists
-	// since 1.13.0 - manifest.json's minAppVersion says 1.13.0, but BRAT
-	// installs skip that check, and 1.13.0 is a preview/insider release as of
-	// mid-2026 (1.12.7 is current stable), so most installs are still on a
-	// runtime that has no working SettingTab.display()/update() at all and
+	// since 1.13.0 - manifest.json's minAppVersion is kept at 1.6.6 (not
+	// bumped to 1.13.0) specifically so pre-1.13.0 installs stay supported,
+	// and 1.13.0 is a preview/insider release as of mid-2026 (1.12.7 is
+	// current stable), so most installs are still on a runtime that has no
+	// working SettingTab.display()/update() at all and
 	// throws "e.display is not a function" the moment the tab opens. This
 	// display() is a plain fallback that renders the same definitions
 	// imperatively. On 1.13.0+, per Obsidian's own docs, display() is simply
