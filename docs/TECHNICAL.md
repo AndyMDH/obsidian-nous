@@ -192,7 +192,11 @@ retry from that managed path. If the helper is still unavailable, Nous falls
 back to the older QuickRecorder AppleScript path. When the native helper
 stops, the plugin transcribes `sys.m4a` as `Them:` and `mic.m4a` as `Me:`,
 writes a Markdown transcript to the inbox, then lets the normal enrichment
-pipeline handle it.
+pipeline handle it. If speech-to-text is not ready, the plugin writes a
+pending native recording note into the inbox. API mode retries it in
+`processFile()`. CLI mode retries it before running the Claude skill. The
+skill template also skips pending native recording notes so Claude does not
+enrich a placeholder.
 
 ### `cliRunner.ts`
 
@@ -245,10 +249,11 @@ Folder names are interpolated from settings so the skills match the user's confi
 
 1. Guard: desktop only.
 2. Transcribe any audio files in the inbox first (the `claude` binary cannot read audio).
-3. Ensure skills are installed in `.claude/skills/`.
-4. Run `claude -p "Use the meeting-enricher skill..." --allowedTools Read,Write,Edit,Glob,Grep,Bash --permission-mode acceptEdits`.
-5. Run the wiki-builder skill similarly.
-6. Parse `.nous/pipeline.log` to report results.
+3. Transcribe any pending native recorder notes that can now be processed.
+4. Ensure skills are installed in `.claude/skills/`.
+5. Run `claude -p "Use the meeting-enricher skill..." --allowedTools Read,Write,Edit,Glob,Grep,Bash --permission-mode acceptEdits`.
+6. Run the wiki-builder skill similarly.
+7. Parse `.nous/pipeline.log` to report results.
 
 ## Settings and configuration
 

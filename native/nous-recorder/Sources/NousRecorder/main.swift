@@ -13,6 +13,7 @@ enum RecorderError: Error, CustomStringConvertible {
 	case usage(String)
 	case noDisplay
 	case screenCaptureUnavailable
+	case captureStart(String)
 	case writer(String)
 
 	var description: String {
@@ -23,6 +24,8 @@ enum RecorderError: Error, CustomStringConvertible {
 			return "No display is available for ScreenCaptureKit audio capture."
 		case .screenCaptureUnavailable:
 			return "ScreenCaptureKit is unavailable on this macOS version."
+		case .captureStart(let message):
+			return message
 		case .writer(let message):
 			return message
 		}
@@ -215,7 +218,13 @@ struct NousRecorderCLI {
 			throw RecorderError.screenCaptureUnavailable
 		}
 		let recorder = try MeetingRecorder(outputFolder: output)
-		try await recorder.start()
+		do {
+			try await recorder.start()
+		} catch {
+			throw RecorderError.captureStart(
+				"Could not start meeting capture. Allow microphone and screen/audio recording permissions in macOS Privacy & Security for Obsidian and the Nous recorder helper, then try again. Underlying error: \(error)"
+			)
+		}
 		let trap = SignalTrap()
 		await trap.wait()
 		await recorder.stop()

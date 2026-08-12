@@ -2,8 +2,10 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import {
 	NATIVE_RECORDER_ASSET,
+	buildPendingNativeRecordingNote,
 	nativeRecorderArgs,
 	nativeRecorderReleaseAssetUrl,
+	parsePendingNativeRecordingNote,
 	parseNativeRecorderChecksum,
 	parseNativeRecorderStatus,
 } from "../src/nativeRecorder.ts";
@@ -43,4 +45,21 @@ test("parseNativeRecorderChecksum accepts shasum-style output for the recorder a
 	assert.equal(parseNativeRecorderChecksum(`${checksum}  ${NATIVE_RECORDER_ASSET}\n`), checksum);
 	assert.equal(parseNativeRecorderChecksum(`ignored\n${checksum}  *${NATIVE_RECORDER_ASSET}\n`), checksum);
 	assert.equal(parseNativeRecorderChecksum(`${checksum}  something-else\n`), null);
+});
+
+test("pending native recording notes round-trip recording metadata", () => {
+	const note = buildPendingNativeRecordingNote(
+		"/Users/andy/Movies/NousRecordings/2026-08-12 10.00 Meeting recording.qma",
+		"2026-08-12 10.00"
+	);
+	assert.deepEqual(parsePendingNativeRecordingNote(note), {
+		recordingDir: "/Users/andy/Movies/NousRecordings/2026-08-12 10.00 Meeting recording.qma",
+		recordedAt: "2026-08-12 10.00",
+	});
+	assert.match(note, /Process inbox now/);
+});
+
+test("parsePendingNativeRecordingNote ignores ordinary notes", () => {
+	assert.equal(parsePendingNativeRecordingNote("---\ntype: meeting\n---\nbody"), null);
+	assert.equal(parsePendingNativeRecordingNote("plain text"), null);
 });

@@ -111,11 +111,12 @@ Nous can point at folders you already use instead.
   your Mac; voice never leaves it. Without that, add a Gemini/OpenAI key used
   only for speech-to-text.
 - **Meetings** are captured with the native `nous-recorder` helper on macOS:
-  setup can install it from the matching Nous release, verify its checksum,
-  and use it directly from the phone button. It records system audio (`Them`)
-  and your mic (`Me`) separately, then Nous transcribes both into a
-  speaker-labeled note. The older [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)
-  setup still works as a fallback; QuickRecorder is not part of macOS.
+  setup can install it for you, then the phone button uses it directly. It
+  records system audio (`Them`) and your mic (`Me`) separately, then Nous
+  turns both into a speaker-labeled note. If speech-to-text is not ready yet,
+  the recording is still saved and waits in the inbox until you finish setup.
+  Already use [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)?
+  Nous can still use it as a legacy fallback. New users do not need it.
 - **Limitation**: group calls lump every other participant into one `Them:`
   speaker — there's no per-person diarization.
 - **Limitation**: meeting capture is macOS-only; live voice transcription

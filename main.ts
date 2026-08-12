@@ -40,8 +40,10 @@ import {
 } from "./src/transcribe";
 import {
 	DEFAULT_NATIVE_RECORDER_BIN,
+	buildPendingNativeRecordingNote,
 	nativeRecorderArgs,
 	nativeRecorderReleaseAssetUrl,
+	parsePendingNativeRecordingNote,
 	parseNativeRecorderChecksum,
 	parseNativeRecorderStatus,
 	type NativeRecorderStatus,
@@ -910,18 +912,10 @@ export default class NousPlugin extends Plugin {
 			}
 			const stopped = parseNativeRecorderStatus(result.stdout);
 			this.setMeetingRecordingIndicator(false);
-			new Notice("Nous: meeting recording stopped. Transcribing now...");
+			new Notice("Nous: meeting recording stopped. Preparing transcript...");
 			if (stopped.output) {
 				void this.ingestNativeMeetingRecording(stopped.output);
 			}
-			return;
-		}
-
-		if (!(await this.hasAudioTranscriptionBackend())) {
-			new Notice(
-				"Nous: native meeting capture needs speech-to-text setup first - install local whisper.cpp on macOS, or add a Gemini/OpenAI key in Settings -> Nous. No recording started.",
-				12000
-			);
 			return;
 		}
 
@@ -935,8 +929,9 @@ export default class NousPlugin extends Plugin {
 		const next = await this.nativeRecorderStatus();
 		if (!next.available || !next.recording) {
 			this.setMeetingRecordingIndicator(false);
+			const detail = await this.nativeRecorderLogTail();
 			new Notice(
-				"Nous: native recorder stopped immediately - allow microphone and screen recording permissions for Obsidian/the helper, then try again.",
+				`Nous: native recorder stopped immediately - allow microphone and screen/audio recording permissions in macOS Privacy & Security, then try again.${detail ? ` Details: ${detail}` : ""}`,
 				12000
 			);
 			return;
@@ -1014,10 +1009,24 @@ export default class NousPlugin extends Plugin {
 			await fs.unlink(tmp).catch(() => {});
 			throw e;
 		}
+		await this.clearMacQuarantine(target);
+		const check = await this.cliExec(target, ["version"], { cwd: path.dirname(target), env: this.cliEnv() });
+		if (check.code !== 0) {
+			throw new Error(`installed helper could not run: ${(check.stderr || check.stdout).trim().slice(0, 200)}`);
+		}
 
 		this.settings.nativeRecorderPath = DEFAULT_NATIVE_RECORDER_BIN;
 		await this.saveSettings();
 		return target;
+	}
+
+	private async clearMacQuarantine(filePath: string): Promise<void> {
+		if (!Platform.isMacOS) return;
+		const { os } = await loadNodeModules();
+		await this.cliExec("xattr", ["-d", "com.apple.quarantine", filePath], {
+			cwd: os.homedir(),
+			env: this.cliEnv(),
+		});
 	}
 
 	private async sha256Hex(buffer: ArrayBuffer): Promise<string> {
@@ -1030,7 +1039,48 @@ export default class NousPlugin extends Plugin {
 		return path.join(os.homedir(), "Movies", "NousRecordings");
 	}
 
+	private async nativeRecorderLogTail(): Promise<string> {
+		const { fs, path } = await loadNodeModules();
+		const logPath = path.join(await this.nativeRecorderWatchDir(), ".nous-recorder.log");
+		try {
+			const raw = await fs.readFile(logPath, "utf8");
+			return raw
+				.split(/\r?\n/)
+				.map((line) => line.trim())
+				.filter((line) => line.length > 0)
+				.slice(-3)
+				.join(" ")
+				.slice(0, 300);
+		} catch {
+			return "";
+		}
+	}
+
 	private async ingestNativeMeetingRecording(recordingDir: string): Promise<void> {
+		const { path } = await loadNodeModules();
+		try {
+			if (!(await this.hasAudioTranscriptionBackend())) {
+				await this.createPendingNativeMeetingRecording(recordingDir);
+				return;
+			}
+
+			const transcript = await this.transcribeNativeMeetingRecording(recordingDir);
+			if (!transcript) return;
+
+			await this.ensureFolderExists(this.settings.inboxFolder);
+			const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${transcript.stamp} Meeting transcript.md`);
+			await this.app.vault.create(notePath, transcript.content);
+			await this.appendLog(`TRANSCRIBED: ${path.basename(recordingDir)} -> ${notePath}`);
+			new Notice(`Nous: meeting transcript saved to inbox: ${path.basename(notePath)}`);
+			if (!this.settings.autoProcessOnCreate) void this.processInbox();
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			new Notice(`Nous: native recording transcription failed - ${msg}`, 10000);
+			await this.appendLog(`ERROR: native recording transcription failed: ${msg}`);
+		}
+	}
+
+	private async transcribeNativeMeetingRecording(recordingDir: string): Promise<{ stamp: string; content: string } | null> {
 		const { fs, path } = await loadNodeModules();
 		try {
 			const sysPath = path.join(recordingDir, "sys.m4a");
@@ -1056,24 +1106,31 @@ export default class NousPlugin extends Plugin {
 			if (parts.length === 0) {
 				new Notice("Nous: native recording had no transcribable audio.", 10000);
 				await this.appendLog(`SKIPPED: ${path.basename(recordingDir)} produced no transcript`);
-				return;
+				return null;
 			}
 
-			await this.ensureFolderExists(this.settings.inboxFolder);
 			const stamp = this.meetingStampFromRecordingDir(recordingDir);
-			const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${stamp} Meeting transcript.md`);
-			await this.app.vault.create(
-				notePath,
-				`Meeting recording from ${stamp}, transcribed automatically (Me = my mic, Them = everyone else on the call).\n\n${parts.join("\n\n")}\n`
-			);
-			await this.appendLog(`TRANSCRIBED: ${path.basename(recordingDir)} -> ${notePath}`);
-			new Notice(`Nous: meeting transcript saved to inbox: ${path.basename(notePath)}`);
-			if (!this.settings.autoProcessOnCreate) void this.processInbox();
+			return {
+				stamp,
+				content: `Meeting recording from ${stamp}, transcribed automatically (Me = my mic, Them = everyone else on the call).\n\n${parts.join("\n\n")}\n`,
+			};
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
-			new Notice(`Nous: native recording transcription failed - ${msg}`, 10000);
-			await this.appendLog(`ERROR: native recording transcription failed: ${msg}`);
+			throw new Error(`native recording transcription failed: ${msg}`);
 		}
+	}
+
+	private async createPendingNativeMeetingRecording(recordingDir: string): Promise<void> {
+		const { path } = await loadNodeModules();
+		await this.ensureFolderExists(this.settings.inboxFolder);
+		const stamp = this.meetingStampFromRecordingDir(recordingDir);
+		const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${stamp} Meeting recording needs transcription.md`);
+		await this.app.vault.create(notePath, buildPendingNativeRecordingNote(recordingDir, stamp));
+		await this.appendLog(`PENDING: ${path.basename(recordingDir)} needs speech-to-text setup -> ${notePath}`);
+		new Notice(
+			"Nous: meeting recording saved. Set up speech-to-text later, then run 'Nous: Process inbox now' to finish it.",
+			12000
+		);
 	}
 
 	private async transcribeExternalAudio(filePath: string, filename: string): Promise<string> {
@@ -1310,8 +1367,45 @@ export default class NousPlugin extends Plugin {
 		}
 	}
 
+	private async transcribePendingNativeRecordingsForCli(): Promise<void> {
+		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
+		if (!folder) return;
+		const files = folder.children.filter(
+			(f): f is TFile => f instanceof TFile && ["md", "txt"].includes(f.extension.toLowerCase())
+		);
+		let warnedMissingBackend = false;
+		for (const file of files) {
+			const content = await this.app.vault.read(file);
+			const pending = parsePendingNativeRecordingNote(content);
+			if (!pending) continue;
+
+			if (!(await this.hasAudioTranscriptionBackend())) {
+				if (!warnedMissingBackend) {
+					new Notice(
+						"Nous: one or more meeting recordings are waiting for speech-to-text setup. Add local whisper.cpp or a Gemini/OpenAI key, then process inbox again.",
+						12000
+					);
+					warnedMissingBackend = true;
+				}
+				continue;
+			}
+
+			try {
+				const transcript = await this.transcribeNativeMeetingRecording(pending.recordingDir);
+				if (!transcript) continue;
+				await this.app.vault.modify(file, transcript.content);
+				await this.appendLog(`TRANSCRIBED: ${file.name} pending recording -> ${file.path}`);
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				new Notice(`Nous: could not transcribe pending recording "${file.name}" - ${msg}`, 10000);
+				await this.appendLog(`ERROR: ${file.name} - pending native recording transcription failed: ${msg}`);
+			}
+		}
+	}
+
 	private async runInboxCli(basePath: string) {
 		await this.transcribeInboxAudioForCli();
+		await this.transcribePendingNativeRecordingsForCli();
 		await this.ensureSkillsInstalled();
 		const before = await this.readLogLineCount();
 		const env = this.cliEnv();
@@ -1528,6 +1622,22 @@ export default class NousPlugin extends Plugin {
 			} else {
 				raw = await this.app.vault.read(file);
 				if (raw.trim().length === 0) return false;
+				const pendingNativeRecording = parsePendingNativeRecordingNote(raw);
+				if (pendingNativeRecording) {
+					if (!(await this.hasAudioTranscriptionBackend())) {
+						new Notice(
+							`Nous: "${file.name}" is waiting for speech-to-text setup. Add local whisper.cpp or a Gemini/OpenAI key, then process inbox again.`,
+							12000
+						);
+						return false;
+					}
+					const transcript = await this.transcribeNativeMeetingRecording(pendingNativeRecording.recordingDir);
+					if (!transcript) return false;
+					raw = transcript.content;
+					await this.app.vault.modify(file, raw);
+					await this.appendLog(`TRANSCRIBED: ${file.name} pending recording -> ${file.path}`);
+					new Notice(`Nous: transcribed pending meeting recording "${file.name}".`);
+				}
 			}
 
 			const tagRegistry = await this.listTagRegistry();
@@ -2127,7 +2237,7 @@ class NousSettingTab extends PluginSettingTab {
 			render: (setting) => {
 				setting
 					.setDesc(
-						"On macOS, the phone button uses the native Nous recorder helper when available. If it is not installed yet, install it here; Nous can still use the older QuickRecorder setup as a fallback."
+						"On macOS, the phone button uses the native Nous recorder helper. If it is not installed yet, install it here. QuickRecorder is only a legacy fallback if you already use that setup."
 					)
 					.setClass("setting-item-description");
 			},

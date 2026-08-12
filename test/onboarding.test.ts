@@ -29,16 +29,17 @@ test("new-user copy says voice notes need speech-to-text setup", () => {
 	assert.match(VOICE_TRANSCRIPTION_SETUP_NOTICE, /No recording started/);
 });
 
-test("new-user copy says meeting capture prefers the native recorder with QuickRecorder fallback", () => {
+test("new-user copy sends meeting capture to the native recorder first", () => {
 	for (const text of [
 		ONBOARDING_PREREQUISITES_TEXT,
 		ONBOARDING_FINISH_PREREQUISITES_TEXT,
 		MEETING_RECORDER_MISSING_NOTICE,
 	]) {
 		assert.match(text, /native|nous-recorder|Nous Recorder/);
-		assert.match(text, /QuickRecorder/);
-		assert.match(text, /fallback|not part of macOS/i);
+		assert.doesNotMatch(text, /QuickRecorder/);
 	}
+	assert.match(ONBOARDING_PREREQUISITES_TEXT, /saves the recording|finishes it later/);
+	assert.match(MEETING_RECORDER_MISSING_NOTICE, /click Install/i);
 });
 
 test("capture prerequisite checklist marks missing optional capture setup", () => {
@@ -52,14 +53,20 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 		]
 	);
 	assert.match(items[1].desc, /will not start recording/);
-	assert.match(items[2].desc, /native nous-recorder helper/);
-	assert.match(items[2].desc, /QuickRecorder is not part of macOS/);
+	assert.match(items[2].desc, /native Nous Recorder/);
+	assert.match(items[2].desc, /Click Install/);
+	assert.doesNotMatch(items[2].desc, /QuickRecorder/);
 });
 
 test("capture prerequisite checklist distinguishes native recorder from QuickRecorder fallback", () => {
 	const nativeItems = capturePrerequisiteItems({ voiceReady: true, meeting: "ready-native" });
 	assert.equal(nativeItems[2].warning, false);
 	assert.match(nativeItems[2].desc, /native Nous Recorder/);
+
+	const nativeNoTranscriptionItems = capturePrerequisiteItems({ voiceReady: false, meeting: "ready-native" });
+	assert.equal(nativeNoTranscriptionItems[2].warning, false);
+	assert.match(nativeNoTranscriptionItems[2].desc, /Ready to record/);
+	assert.match(nativeNoTranscriptionItems[2].desc, /wait in the inbox/);
 
 	const quickRecorderItems = capturePrerequisiteItems({ voiceReady: true, meeting: "ready-quickrecorder" });
 	assert.equal(quickRecorderItems[2].warning, false);

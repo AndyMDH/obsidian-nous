@@ -131,11 +131,11 @@ mic recorder cannot hear. Nous prefers a small native macOS helper,
 directly without depending on QuickRecorder.
 
 If the helper is missing, the setup wizard and Settings → Nous → Meeting
-capture show an **Install** button. It downloads the helper from the matching
-Nous GitHub release, verifies the SHA-256 checksum published with that
-release, installs it into this vault's plugin folder, and uses it
-automatically. If you put your own helper somewhere else, open Settings →
-Nous → Advanced settings and set **Nous Recorder path** to the full path.
+capture show an **Install** button. Click it once. Nous downloads its recorder,
+checks that the file matches the release, puts it in this vault's plugin
+folder, checks that it can run, and uses it automatically. If you put your own
+helper somewhere else, open Settings → Nous → Advanced settings and set
+**Nous Recorder path** to the full path.
 
 Then click the **📞 phone icon** in the left sidebar (or command palette →
 "Nous: Toggle meeting capture") when the meeting starts, and click it again
@@ -145,10 +145,14 @@ button again if macOS interrupted the first capture. A speaker-labeled
 transcript lands in your inbox and comes out enriched. `Me:` is your mic;
 `Them:` is system audio from the call.
 
-If the native helper is unavailable and you do not install it, Nous can fall
-back to the older [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)
-setup. QuickRecorder is not part of macOS; install it only if you want that
-fallback. The one-time setup remains in
+If speech-to-text is not ready yet, Nous still records the meeting. When you
+stop, it leaves a "Meeting recording needs transcription" note in the inbox.
+Add local `whisper.cpp` or a Gemini/OpenAI key later, then run command palette
+→ "Nous: Process inbox now". Nous will finish that saved recording.
+
+Already use [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)?
+Nous can still use it as a legacy fallback. New users do not need it. The
+one-time setup remains in
 [`../examples/meeting-capture/`](../examples/meeting-capture/).
 
 Want Nous to use a specific tag — a client, a project? Add a file with
@@ -205,6 +209,9 @@ Every step is logged to `.nous/pipeline.log` in the vault.
 
 - **Nothing happened?** Command palette → "Nous: Process inbox now" and
   watch for an error notification.
+- **Meeting says it needs transcription?** The audio was saved. Add local
+  `whisper.cpp` or a Gemini/OpenAI key in Settings → Nous, then run
+  "Nous: Process inbox now".
 - **"Claude not found" (CLI mode)?** Run `which claude` in Terminal, then
   Obsidian's Nous settings → turn on **Advanced settings** → paste the
   result into **Claude CLI path**.

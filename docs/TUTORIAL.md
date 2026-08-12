@@ -146,9 +146,14 @@ small native helper for this.
    when it ends. A speaker-labeled transcript lands in your inbox and comes
    back enriched, same as everything else.
 
-If you do not install the native helper, Nous can still use the older
-QuickRecorder fallback. QuickRecorder is not included with macOS; the fallback
-setup is documented in [`../examples/meeting-capture/`](../examples/meeting-capture/).
+If speech-to-text is not ready yet, Nous still saves the recording. It leaves
+a note in `00-Inbox` called "Meeting recording needs transcription." Later,
+add local `whisper.cpp` or a Gemini/OpenAI key, then run command palette →
+"Nous: Process inbox now." Nous will finish that saved recording.
+
+Already use QuickRecorder? Nous can still use it as a legacy fallback. New
+users do not need it. The fallback setup is documented in
+[`../examples/meeting-capture/`](../examples/meeting-capture/).
 
 ## Where to go from here
 

@@ -37,8 +37,11 @@ time, fully, before moving to the next** — read, enrich, move, log, then
 proceed.
 
 Skip a file if its frontmatter already contains \`status: enriched\` — it's
-already been processed. This is the idempotency guard; it means it's always
-safe to re-run this skill over an inbox that partially succeeded before.
+already been processed. Also skip a file whose frontmatter contains
+\`nous_pending_native_recording: true\`; the plugin itself must transcribe
+that native recorder placeholder before this skill can enrich it. These are
+the idempotency guards; they mean it's always safe to re-run this skill over
+an inbox that partially succeeded before.
 (Image and PDF files never have frontmatter of their own, so this guard only
 applies once they've already been turned into a note in \`${f.meetings}/\` -
 at that point the original file is gone from \`${f.inbox}/\`, so there's
