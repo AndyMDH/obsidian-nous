@@ -30,15 +30,16 @@ and use is identical.
 
 ## Set up
 
-**A setup wizard opens the first time you enable Nous** — it walks you
-through the one choice below, checks the connection, and can drop a sample
-note into your inbox so you watch your first enrichment happen. (Rerun it
-anytime: command palette → "Nous: Open setup wizard".)
+**A setup wizard opens the first time you enable Nous** — it helps you choose
+how Nous writes notes, checks the connection, checks optional voice and meeting
+setup, and can drop a sample note into your inbox so you watch your first
+enrichment happen. (Rerun it anytime: command palette → "Nous: Open setup
+wizard".)
 
-Prefer doing it by hand? All settings live inside Obsidian (nothing to
-configure on your computer itself). Open **Obsidian's settings** — the gear
-icon bottom-left, or `Cmd/Ctrl+,` — and click **Nous** in the left
-sidebar. One choice to make:
+Prefer doing it by hand? Start in **Obsidian's settings** — the gear icon
+bottom-left, or `Cmd/Ctrl+,` — and click **Nous** in the left sidebar. Choose
+how Nous writes notes first; voice notes and meeting recording have their own
+setup rows below that.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="../assets/settings-nav-dark.svg">
@@ -46,12 +47,13 @@ sidebar. One choice to make:
 </picture>
 
 - **Claude subscription (Pro/Max)?** Set **Execution mode** to
-  "Claude Code CLI". Done.
+  "Claude Code CLI", then run **Test connection**.
 - **API key instead?** Set it to "Direct API key", pick your **Provider**,
-  and paste your key (or your base URL, for a local model). Done.
+  and paste your key (or your base URL, for a local model), then run
+  **Test connection**.
 
-Everything else has a sensible default, and a **Test connection** button in
-the same panel confirms your choice works before you capture anything.
+After that, text and file capture are ready. Voice notes and meeting recording
+show their own setup rows in the same settings panel.
 Rarely-touched fields — CLI/recorder/whisper paths, folder names, tuning thresholds —
 are hidden behind an **Advanced settings** toggle at the bottom of the panel.
 
@@ -132,9 +134,9 @@ directly without depending on QuickRecorder.
 
 If the helper is missing, the setup wizard and Settings → Nous → Meeting
 capture show an **Install** button. Click it once. Nous downloads its recorder,
-checks that the file matches the release, puts it in this vault's plugin
-folder, checks that it can run, and uses it automatically. If you put your own
-helper somewhere else, open Settings → Nous → Advanced settings and set
+checks the download, puts it in this vault's plugin folder, checks that it can
+run, and uses it automatically. If you put your own helper somewhere else,
+open Settings → Nous → Advanced settings and set
 **Nous Recorder path** to the full path.
 
 Then click the **📞 phone icon** in the left sidebar (or command palette →

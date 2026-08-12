@@ -2,12 +2,17 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import {
 	MEETING_RECORDER_MISSING_NOTICE,
-	ONBOARDING_FINISH_PREREQUISITES_TEXT,
 	ONBOARDING_PREREQUISITES_TEXT,
 	VOICE_CAPTURE_SETTINGS_DESC,
 	VOICE_TRANSCRIPTION_SETUP_NOTICE,
+	capturePrerequisitesContinueText,
 	capturePrerequisiteItems,
 	hasGeminiOrOpenAiTranscriptionKey,
+	nativeRecorderReadinessText,
+	onboardingFinishIntro,
+	onboardingFinishNextActions,
+	onboardingFinishTitle,
+	shouldOfferNativeRecorderInstall,
 } from "../src/onboarding.ts";
 
 test("voice transcription fallback accepts only Gemini or OpenAI keys", () => {
@@ -20,7 +25,6 @@ test("voice transcription fallback accepts only Gemini or OpenAI keys", () => {
 test("new-user copy says voice notes need speech-to-text setup", () => {
 	for (const text of [
 		ONBOARDING_PREREQUISITES_TEXT,
-		ONBOARDING_FINISH_PREREQUISITES_TEXT,
 		VOICE_CAPTURE_SETTINGS_DESC,
 		VOICE_TRANSCRIPTION_SETUP_NOTICE,
 	]) {
@@ -32,7 +36,6 @@ test("new-user copy says voice notes need speech-to-text setup", () => {
 test("new-user copy sends meeting capture to the native recorder first", () => {
 	for (const text of [
 		ONBOARDING_PREREQUISITES_TEXT,
-		ONBOARDING_FINISH_PREREQUISITES_TEXT,
 		MEETING_RECORDER_MISSING_NOTICE,
 	]) {
 		assert.match(text, /native|nous-recorder|Nous Recorder/);
@@ -54,7 +57,7 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 	);
 	assert.match(items[1].desc, /will not start recording/);
 	assert.match(items[2].desc, /native Nous Recorder/);
-	assert.match(items[2].desc, /Click Install/);
+	assert.match(items[2].desc, /Click Install below/);
 	assert.doesNotMatch(items[2].desc, /QuickRecorder/);
 });
 
@@ -69,8 +72,26 @@ test("capture prerequisite checklist distinguishes native recorder from QuickRec
 	assert.match(nativeNoTranscriptionItems[2].desc, /wait in the inbox/);
 
 	const quickRecorderItems = capturePrerequisiteItems({ voiceReady: true, meeting: "ready-quickrecorder" });
-	assert.equal(quickRecorderItems[2].warning, false);
-	assert.match(quickRecorderItems[2].desc, /QuickRecorder fallback/);
+	assert.equal(quickRecorderItems[2].warning, true);
+	assert.match(quickRecorderItems[2].desc, /Legacy QuickRecorder fallback/);
+	assert.match(quickRecorderItems[2].desc, /native Nous Recorder/);
+});
+
+test("native recorder install stays offered when only the legacy fallback is ready", () => {
+	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "needs-recorder" }), true);
+	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "ready-quickrecorder" }), true);
+	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "ready-native" }), false);
+	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "unsupported" }), false);
+
+	assert.equal(
+		capturePrerequisitesContinueText({ voiceReady: true, meeting: "needs-recorder" }),
+		"Continue without meeting capture"
+	);
+	assert.equal(
+		capturePrerequisitesContinueText({ voiceReady: true, meeting: "ready-quickrecorder" }),
+		"Continue without native recorder"
+	);
+	assert.equal(capturePrerequisitesContinueText({ voiceReady: true, meeting: "ready-native" }), "Continue");
 });
 
 test("capture prerequisite checklist treats non-macOS meeting capture as unavailable, not broken", () => {
@@ -79,4 +100,51 @@ test("capture prerequisite checklist treats non-macOS meeting capture as unavail
 	assert.match(items[1].desc, /Ready/);
 	assert.equal(items[2].warning, false);
 	assert.match(items[2].desc, /macOS only/);
+});
+
+test("finish screen stays truthful when optional capture setup is missing", () => {
+	const missingBoth = { voiceReady: false, meeting: "needs-recorder" } as const;
+	assert.equal(onboardingFinishTitle(missingBoth), "Text capture is ready");
+	assert.match(onboardingFinishIntro(missingBoth, "00-Inbox", "10-Notes"), /Text, images, and PDFs are ready/);
+	assert.doesNotMatch(onboardingFinishIntro(missingBoth, "00-Inbox", "10-Notes"), /voice notes, or meeting recordings/);
+	assert.deepEqual(
+		onboardingFinishNextActions(missingBoth).map((item) => [item.name, item.warning]),
+		[
+			["Voice notes", true],
+			["Meeting capture", true],
+		]
+	);
+
+	const ready = { voiceReady: true, meeting: "ready-native" } as const;
+	assert.equal(onboardingFinishTitle(ready), "Nous is ready");
+	assert.match(onboardingFinishIntro(ready, "00-Inbox", "10-Notes"), /voice notes, or meeting recordings/);
+	assert.deepEqual(onboardingFinishNextActions(ready), []);
+
+	const legacy = { voiceReady: true, meeting: "ready-quickrecorder" } as const;
+	assert.equal(onboardingFinishTitle(legacy), "Text and voice capture are ready");
+	assert.deepEqual(
+		onboardingFinishNextActions(legacy).map((item) => [item.name, item.warning]),
+		[["Meeting capture", true]]
+	);
+});
+
+test("native recorder readiness text exposes status and next action", () => {
+	assert.match(
+		nativeRecorderReadinessText({
+			state: "missing",
+			command: "nous-recorder",
+			version: null,
+			detail: "",
+		}),
+		/Not installed.*Click Install/
+	);
+	assert.match(
+		nativeRecorderReadinessText({
+			state: "needs-permission",
+			command: "/vault/.obsidian/plugins/nous/bin/nous-recorder",
+			version: "nous-recorder 0.1.0",
+			detail: "Allow microphone and screen/audio recording permissions.",
+		}),
+		/last start failed.*Try the phone button again/
+	);
 });

@@ -37,7 +37,8 @@
 
 A typed thought, a voice memo, a call, a photo, a PDF — Nous turns whatever
 you capture into a summarized, tagged note, linked to everything related.
-No coding, nothing to configure by hand. Everything happens inside Obsidian.
+Text, images, and PDFs work after the connection check. Voice notes and calls
+may ask for speech-to-text or macOS recorder setup.
 
 **Works on:** Desktop (macOS, Windows, Linux) and Mobile (API-key or local-model
 mode). Meeting capture is macOS-only; live voice transcription (beta) is
@@ -67,9 +68,9 @@ Or jump straight to [Nous's page on Obsidian's site](https://obsidian.md/plugins
 
 ## Quickstart
 
-**1. Enable Nous** — a setup wizard opens automatically and asks one
-question: a Claude subscription, a free local model, or an API key? Pick
-one, it tests the connection, done.
+**1. Enable Nous** — a setup wizard opens automatically. First, choose how
+Nous should write notes: a Claude subscription, a free local model, or an API
+key. Then the wizard checks the optional voice and meeting setup.
 
 <p align="center">
   <picture>

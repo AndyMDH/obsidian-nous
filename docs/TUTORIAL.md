@@ -28,8 +28,8 @@ rest runs itself.
 
 1. Settings → Community plugins → turn on community plugins if you haven't
    already → **Browse** → search "Nous" → **Install** → **Enable**.
-2. A setup wizard opens by itself the first time. It asks exactly one
-   question: how should Nous think? Three options:
+2. A setup wizard opens by itself the first time. First, choose how Nous
+   should write and organize notes:
    - **Claude subscription** — if you already pay for Claude Pro/Max and have
      [Claude Code](https://docs.claude.com/claude-code) installed, this is
      free (no separate billing).
@@ -37,8 +37,9 @@ rest runs itself.
      setup, and nothing ever leaves your machine.
    - **An API key** — Anthropic, OpenAI, Gemini, or Z.ai. Billed separately,
      but works on mobile too.
-3. Pick one, the wizard tests it, and offers to drop a sample note in your
-   inbox so you can watch the whole thing happen once, live.
+3. The wizard tests that choice, checks optional voice and meeting recording
+   setup, then offers to drop a sample note in your inbox so you can watch the
+   whole thing happen once, live.
 
 <p align="center">
   <picture>
@@ -140,8 +141,8 @@ that Obsidian's browser mic recorder cannot provide by itself. Nous uses a
 small native helper for this.
 
 1. If the setup wizard says the native recorder is missing, click
-   **Install**. Nous downloads the helper from the matching release, verifies
-   its checksum, and stores it in this vault's plugin folder.
+   **Install**. Nous downloads the recorder, checks it, and stores it in this
+   vault's plugin folder.
 2. After that: click the **📞 phone icon** when a call starts, click it again
    when it ends. A speaker-labeled transcript lands in your inbox and comes
    back enriched, same as everything else.

@@ -11,6 +11,7 @@ import {
 	requestUrl,
 	requireApiVersion,
 	setIcon,
+	type ButtonComponent,
 	type SettingDefinitionItem,
 	type SettingGroup,
 } from "obsidian";
@@ -50,13 +51,19 @@ import {
 } from "./src/nativeRecorder";
 import {
 	type CapturePrerequisiteStatus,
-	ONBOARDING_FINISH_PREREQUISITES_TEXT,
+	type NativeRecorderReadiness,
 	ONBOARDING_PREREQUISITES_TEXT,
 	MEETING_RECORDER_MISSING_NOTICE,
+	NATIVE_RECORDER_INSTALL_DESC,
 	VOICE_CAPTURE_SETTINGS_DESC,
-	VOICE_TRANSCRIPTION_SETUP_NOTICE,
+	capturePrerequisitesContinueText,
 	capturePrerequisiteItems,
 	hasGeminiOrOpenAiTranscriptionKey,
+	nativeRecorderReadinessText,
+	onboardingFinishIntro,
+	onboardingFinishNextActions,
+	onboardingFinishTitle,
+	shouldOfferNativeRecorderInstall,
 } from "./src/onboarding";
 import { RealtimeTranscriber, type RealtimeSocket } from "./src/realtimeTranscribe";
 import { augmentedPath, buildEnrichArgs, buildQueryArgs, buildWikiArgs, summarizeLogLines } from "./src/cliRunner";
@@ -162,6 +169,7 @@ export default class NousPlugin extends Plugin {
 	private meetingRibbonEl: HTMLElement | null = null;
 	private meetingStatusBarEl: HTMLElement | null = null;
 	private meetingPollInterval: number | null = null;
+	private nativeRecorderLastProblem: string | null = null;
 	// Live transcripts already known by the time a voice recording is saved
 	// (see saveVoiceRecording()) - checked by processFile()/
 	// transcribeInboxAudioForCli() so a known transcript skips the batch
@@ -529,6 +537,52 @@ export default class NousPlugin extends Plugin {
 		return { voiceReady, meeting };
 	}
 
+	async getNativeRecorderReadiness(): Promise<NativeRecorderReadiness> {
+		if (!Platform.isMacOS) {
+			return {
+				state: "unsupported",
+				command: null,
+				version: null,
+				detail: "Meeting recording needs macOS.",
+			};
+		}
+
+		const { os } = await loadNodeModules();
+		const command = await this.nativeRecorderCommand();
+		const versionResult = await this.cliExec(command, ["version"], { cwd: os.homedir(), env: this.cliEnv() });
+		const statusResult = await this.runNativeRecorder("status");
+		const version = versionResult.code === 0 ? versionResult.stdout.trim().slice(0, 80) : null;
+		const failedOutput = (statusResult.stderr || statusResult.stdout || versionResult.stderr || versionResult.stdout)
+			.trim()
+			.slice(0, 240);
+
+		if (statusResult.code !== 0) {
+			const state = versionResult.code === 0 ? "error" : "missing";
+			return {
+				state,
+				command,
+				version,
+				detail: failedOutput || "The helper command did not run.",
+			};
+		}
+
+		const status = parseNativeRecorderStatus(statusResult.stdout);
+		if (this.nativeRecorderLastProblem) {
+			return {
+				state: "needs-permission",
+				command,
+				version,
+				detail: this.nativeRecorderLastProblem,
+			};
+		}
+		return {
+			state: status.recording ? "recording" : "installed",
+			command,
+			version,
+			detail: status.output ?? "",
+		};
+	}
+
 	private getLlmProvider(): LlmProvider {
 		const provider: ApiProvider = this.settings.apiProvider;
 		const apiKey = this.settings.apiKeys[provider];
@@ -781,7 +835,7 @@ export default class NousPlugin extends Plugin {
 			return;
 		}
 		if (!(await this.hasAudioTranscriptionBackend())) {
-			new Notice(VOICE_TRANSCRIPTION_SETUP_NOTICE, 12000);
+			new VoiceCaptureSetupModal(this.app, this).open();
 			return;
 		}
 		try {
@@ -921,7 +975,9 @@ export default class NousPlugin extends Plugin {
 
 		const result = await this.runNativeRecorder("start");
 		if (result.code !== 0) {
-			new Notice(`Nous: native recorder failed to start - ${(result.stderr || result.stdout).slice(0, 200)}`, 10000);
+			const detail = (result.stderr || result.stdout).trim().slice(0, 240);
+			this.nativeRecorderLastProblem = detail || "The helper could not start.";
+			new Notice(`Nous: native recorder failed to start - ${detail.slice(0, 200)}`, 10000);
 			return;
 		}
 		new Notice("Nous: starting meeting recording...");
@@ -930,12 +986,14 @@ export default class NousPlugin extends Plugin {
 		if (!next.available || !next.recording) {
 			this.setMeetingRecordingIndicator(false);
 			const detail = await this.nativeRecorderLogTail();
+			this.nativeRecorderLastProblem = `Allow microphone and screen/audio recording permissions in macOS Privacy & Security, then try again.${detail ? ` Details: ${detail}` : ""}`;
 			new Notice(
 				`Nous: native recorder stopped immediately - allow microphone and screen/audio recording permissions in macOS Privacy & Security, then try again.${detail ? ` Details: ${detail}` : ""}`,
 				12000
 			);
 			return;
 		}
+		this.nativeRecorderLastProblem = null;
 		this.setMeetingRecordingIndicator(true);
 		new Notice("Nous: meeting recording started.");
 	}
@@ -1015,6 +1073,7 @@ export default class NousPlugin extends Plugin {
 			throw new Error(`installed helper could not run: ${(check.stderr || check.stdout).trim().slice(0, 200)}`);
 		}
 
+		this.nativeRecorderLastProblem = null;
 		this.settings.nativeRecorderPath = DEFAULT_NATIVE_RECORDER_BIN;
 		await this.saveSettings();
 		return target;
@@ -2237,7 +2296,7 @@ class NousSettingTab extends PluginSettingTab {
 			render: (setting) => {
 				setting
 					.setDesc(
-						"On macOS, the phone button uses the native Nous recorder helper. If it is not installed yet, install it here. QuickRecorder is only a legacy fallback if you already use that setup."
+						"On macOS, the phone button uses the native Nous recorder. Install it here. QuickRecorder is only a legacy fallback if you already use that setup."
 					)
 					.setClass("setting-item-description");
 			},
@@ -2245,12 +2304,39 @@ class NousSettingTab extends PluginSettingTab {
 
 		if (Platform.isMacOS) {
 			items.push({
+				name: "Native recorder status",
+				render: (setting) => {
+					const refreshStatus = async (button?: ButtonComponent) => {
+						button?.setButtonText("Checking...").setDisabled(true);
+						setting.setDesc("Checking native recorder status...");
+						try {
+							const status = await this.plugin.getNativeRecorderReadiness();
+							setting.setDesc(nativeRecorderReadinessText(status));
+							button?.setButtonText(status.state === "needs-permission" ? "Recheck after retrying phone button" : "Refresh");
+							setting.settingEl.toggleClass(
+								"mod-warning",
+								status.state === "missing" || status.state === "needs-permission" || status.state === "error"
+							);
+						} catch (e) {
+							const msg = e instanceof Error ? e.message : String(e);
+							setting.setDesc(`Could not check the native recorder: ${msg}`);
+							setting.settingEl.toggleClass("mod-warning", true);
+						} finally {
+							button?.setDisabled(false);
+						}
+					};
+
+					setting
+						.setDesc("Checking native recorder status...")
+						.addButton((button) => button.setButtonText("Refresh").onClick(() => void refreshStatus(button)));
+					void refreshStatus();
+				},
+			});
+			items.push({
 				name: "Native recorder helper",
 				render: (setting) => {
 					setting
-						.setDesc(
-							"Downloads the helper from this Nous release, verifies its SHA-256 checksum, and installs it into this vault's plugin folder."
-						)
+						.setDesc(NATIVE_RECORDER_INSTALL_DESC)
 						.addButton((button) =>
 							button.setButtonText("Install/update").onClick(async () => {
 								button.setButtonText("Installing...").setDisabled(true);
@@ -2442,8 +2528,44 @@ class NousSettingTab extends PluginSettingTab {
 	}
 }
 
-// First-run setup: pick a mode, prove it works, watch a first enrichment.
+class VoiceCaptureSetupModal extends Modal {
+	constructor(app: App, private plugin: NousPlugin) {
+		super(app);
+	}
+
+	onOpen() {
+		this.setTitle("Set up voice notes");
+		this.contentEl.createEl("p", {
+			text: "Voice notes need speech-to-text before Nous can start recording.",
+		});
+		this.contentEl.createEl("p", {
+			text: "Choose one path: install local whisper.cpp on macOS for private transcription, or add a Gemini/OpenAI key in Settings -> Nous. Gemini/OpenAI keys are used only to turn speech into text.",
+		});
+
+		new Setting(this.contentEl)
+			.setName("Private option")
+			.setDesc("Install whisper.cpp, then set the model path in settings -> Nous -> advanced settings -> voice capture.");
+
+		new Setting(this.contentEl)
+			.setName("Cloud option")
+			.setDesc("Add a Gemini or OpenAI key in settings -> Nous. You can still use Claude, GLM, or a local model for the note-writing step.");
+
+		new Setting(this.contentEl)
+			.addButton((button) =>
+				button.setButtonText("Open setup wizard").setCta().onClick(() => {
+					this.close();
+					new OnboardingModal(this.app, this.plugin).open();
+				})
+			)
+			.addButton((button) => button.setButtonText("Close").onClick(() => this.close()));
+	}
+}
+
+// First-run setup: pick how notes are written, prove it works, then show
+// the optional voice/meeting setup state before the user leaves the wizard.
 class OnboardingModal extends Modal {
+	private lastCaptureStatus: CapturePrerequisiteStatus | null = null;
+
 	constructor(app: App, private plugin: NousPlugin) {
 		super(app);
 	}
@@ -2460,7 +2582,7 @@ class OnboardingModal extends Modal {
 		this.clear();
 		this.setTitle("Welcome to Nous");
 		this.contentEl.createEl("p", {
-			text: "Capture anything - a thought, a meeting, a photo, a voice memo - and Nous turns it into a tagged, linked knowledge graph. One choice to make: how should Nous think?",
+			text: "First, choose how Nous should write and organize your notes. After that, the wizard checks optional voice and meeting recording setup.",
 		});
 		this.contentEl.createEl("p", {
 			text: ONBOARDING_PREREQUISITES_TEXT,
@@ -2621,18 +2743,45 @@ class OnboardingModal extends Modal {
 		});
 		const statusEl = this.contentEl.createDiv();
 		statusEl.createEl("p", { text: "Checking capture setup..." });
+		let continueButton: ButtonComponent | null = null;
 		void this.plugin
 			.getCapturePrerequisiteStatus()
 			.then((status) => {
+				this.lastCaptureStatus = status;
 				statusEl.empty();
 				for (const item of capturePrerequisiteItems(status)) {
 					const setting = new Setting(statusEl).setName(item.name).setDesc(item.desc);
 					if (item.warning) setting.setClass("mod-warning");
 				}
-				if (Platform.isMacOS && status.meeting === "needs-recorder") {
+				if (Platform.isMacOS) {
+					const recorderStatusSetting = new Setting(statusEl)
+						.setName("Native recorder status")
+						.setDesc("Checking native recorder status...");
+					void this.plugin
+						.getNativeRecorderReadiness()
+						.then((readiness) => {
+							recorderStatusSetting.setDesc(nativeRecorderReadinessText(readiness));
+							recorderStatusSetting.settingEl.toggleClass(
+								"mod-warning",
+								readiness.state === "missing" ||
+									readiness.state === "needs-permission" ||
+									readiness.state === "error"
+							);
+						})
+						.catch((e) => {
+							const msg = e instanceof Error ? e.message : String(e);
+							recorderStatusSetting.setDesc(`Could not check the native recorder: ${msg}`);
+							recorderStatusSetting.settingEl.toggleClass("mod-warning", true);
+						});
+				}
+				if (Platform.isMacOS && shouldOfferNativeRecorderInstall(status)) {
 					new Setting(statusEl)
-						.setName("Install native recorder")
-						.setDesc("Downloads the helper from this Nous release and verifies its checksum before installing it.")
+						.setName(
+							status.meeting === "ready-quickrecorder"
+								? "Install native recorder (recommended)"
+								: "Install native recorder"
+						)
+						.setDesc(NATIVE_RECORDER_INSTALL_DESC)
 						.addButton((button) =>
 							button.setButtonText("Install").setCta().onClick(async () => {
 								button.setButtonText("Installing...").setDisabled(true);
@@ -2648,26 +2797,41 @@ class OnboardingModal extends Modal {
 							})
 						);
 				}
+				continueButton?.setButtonText(capturePrerequisitesContinueText(status)).setDisabled(false);
 			})
 			.catch((e) => {
 				const msg = e instanceof Error ? e.message : String(e);
 				statusEl.setText(`Could not check capture setup: ${msg}`);
+				continueButton?.setButtonText("Continue anyway").setDisabled(false);
 			});
 
 		new Setting(this.contentEl)
 			.addButton((b) => b.setButtonText("Back").onClick(() => this.renderTest()))
-			.addButton((b) => b.setButtonText("Continue").setCta().onClick(() => this.renderFinish()));
+			.addButton((b) => {
+				continueButton = b;
+				b.setButtonText("Checking...").setCta().setDisabled(true).onClick(() => this.renderFinish());
+			});
 	}
 
 	private renderFinish() {
 		this.clear();
-		this.setTitle("You're set");
+		const status = this.lastCaptureStatus;
+		this.setTitle(status ? onboardingFinishTitle(status) : "Text capture is ready");
 		this.contentEl.createEl("p", {
-			text: `Drop anything into "${this.plugin.settings.inboxFolder}" - text, images, PDFs, voice memos - and it comes out tagged, summarized, and linked in "${this.plugin.settings.meetingsFolder}".`,
+			text: status
+				? onboardingFinishIntro(status, this.plugin.settings.inboxFolder, this.plugin.settings.meetingsFolder)
+				: `Text, images, and PDFs are ready now. Drop them into "${this.plugin.settings.inboxFolder}" and they come out tagged, summarized, and linked in "${this.plugin.settings.meetingsFolder}".`,
 		});
-		this.contentEl.createEl("p", {
-			text: ONBOARDING_FINISH_PREREQUISITES_TEXT,
-		});
+		if (status) {
+			const nextActions = onboardingFinishNextActions(status);
+			if (nextActions.length > 0) {
+				this.contentEl.createEl("p", { text: "Optional next steps:" });
+				for (const item of nextActions) {
+					const setting = new Setting(this.contentEl).setName(item.name).setDesc(item.desc);
+					if (item.warning) setting.setClass("mod-warning");
+				}
+			}
+		}
 		this.contentEl.createEl("p", {
 			text: "Want to see it happen right now? Nous can drop a sample note into the inbox and enrich it while you watch.",
 		});
