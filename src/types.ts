@@ -16,10 +16,13 @@ export interface NousSettings {
 	// in main.ts. Falls back to the Gemini/OpenAI key below when unavailable.
 	whisperCliPath: string;
 	whisperModelPath: string;
+	// Native macOS meeting recorder helper. If unavailable, macOS meeting
+	// capture falls back to QuickRecorder.
+	nativeRecorderPath: string;
 	// Opt-in, desktop-only live/streaming dictation via OpenAI's Realtime
 	// API (see src/realtimeTranscribe.ts) - reuses apiKeys.openai, no
 	// separate key. Solo voice-note capture only; meeting capture
-	// (QuickRecorder-based) is unaffected. Default off: this is strictly
+	// is unaffected. Default off: this is strictly
 	// additive on top of the existing local-whisper/batch pipeline, which
 	// stays the safety net whenever this is off, unavailable, or fails.
 	liveTranscriptionEnabled: boolean;
@@ -82,6 +85,7 @@ export const DEFAULT_SETTINGS: NousSettings = {
 	claudeCliPath: "claude",
 	whisperCliPath: "whisper-cli",
 	whisperModelPath: "",
+	nativeRecorderPath: "nous-recorder",
 	liveTranscriptionEnabled: false,
 	inboxFolder: "00-Inbox",
 	meetingsFolder: "10-Notes",

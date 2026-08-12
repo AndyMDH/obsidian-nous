@@ -38,6 +38,24 @@ import {
 	transcribeWithOpenAi,
 	type HttpPostBinary,
 } from "./src/transcribe";
+import {
+	DEFAULT_NATIVE_RECORDER_BIN,
+	nativeRecorderArgs,
+	nativeRecorderReleaseAssetUrl,
+	parseNativeRecorderChecksum,
+	parseNativeRecorderStatus,
+	type NativeRecorderStatus,
+} from "./src/nativeRecorder";
+import {
+	type CapturePrerequisiteStatus,
+	ONBOARDING_FINISH_PREREQUISITES_TEXT,
+	ONBOARDING_PREREQUISITES_TEXT,
+	MEETING_RECORDER_MISSING_NOTICE,
+	VOICE_CAPTURE_SETTINGS_DESC,
+	VOICE_TRANSCRIPTION_SETUP_NOTICE,
+	capturePrerequisiteItems,
+	hasGeminiOrOpenAiTranscriptionKey,
+} from "./src/onboarding";
 import { RealtimeTranscriber, type RealtimeSocket } from "./src/realtimeTranscribe";
 import { augmentedPath, buildEnrichArgs, buildQueryArgs, buildWikiArgs, summarizeLogLines } from "./src/cliRunner";
 import type { CliExec } from "./src/cliRunner";
@@ -72,11 +90,12 @@ declare global {
 	}
 }
 
-// child_process/fs/os/path aren't available on mobile, so they can't be
+// child_process/crypto/fs/os/path aren't available on mobile, so they can't be
 // static imports (that would break the plugin bundle on load, everywhere,
 // not just where these are used) - loaded on demand instead, only from the
 // desktop/macOS-gated code paths that actually need them.
 type NodeModules = {
+	crypto: typeof import("crypto");
 	execFile: typeof import("child_process").execFile;
 	fs: typeof import("fs").promises;
 	os: typeof import("os");
@@ -103,10 +122,11 @@ function loadNodeModules(): Promise<NodeModules> {
 		nodeModulesPromise = Promise.resolve().then(() => {
 			const req = window.require;
 			const cp = req("child_process") as typeof import("child_process");
+			const crypto = req("crypto") as typeof import("crypto");
 			const fs = req("fs") as typeof import("fs");
 			const os = req("os") as typeof import("os");
 			const path = req("path") as typeof import("path");
-			return { execFile: cp.execFile, fs: fs.promises, os, path };
+			return { crypto, execFile: cp.execFile, fs: fs.promises, os, path };
 		});
 	}
 	return nodeModulesPromise;
@@ -204,7 +224,7 @@ export default class NousPlugin extends Plugin {
 		if (Platform.isMacOS) {
 			this.addCommand({
 				id: "toggle-meeting-capture",
-				name: "Toggle meeting capture (start/stop QuickRecorder)",
+				name: "Toggle meeting capture (start/stop recording)",
 				callback: () => void this.toggleMeetingCapture(),
 			});
 
@@ -214,12 +234,11 @@ export default class NousPlugin extends Plugin {
 			this.meetingStatusBarEl = this.addStatusBarItem();
 			this.meetingStatusBarEl.hide();
 
-			// QuickRecorder's own ⌥M hotkey can start/stop a recording outside
-			// Nous entirely (that's by design - see toggleMeetingCapture), so the
-			// button-press-time update alone can go stale. Poll lightly to catch
-			// that case instead of leaving the indicator lying about state.
+			// A recording can start/stop outside Nous too (native helper CLI or
+			// QuickRecorder's own ⌥M fallback), so the button-press-time update
+			// alone can go stale. Poll lightly to keep the indicator honest.
 			this.meetingPollInterval = window.setInterval(() => {
-				void this.isQuickRecorderRecording().then((recording) => this.setMeetingRecordingIndicator(recording));
+				void this.updateMeetingRecordingIndicator();
 			}, 5000);
 			this.register(() => {
 				if (this.meetingPollInterval !== null) window.clearInterval(this.meetingPollInterval);
@@ -336,8 +355,12 @@ export default class NousPlugin extends Plugin {
 		}
 		const localHint = local && "failure" in local ? ` Local attempt failed: ${local.failure}` : "";
 		throw new Error(
-			`Audio capture needs local whisper-cli (Settings → Nous → Local voice transcription) or a Gemini/OpenAI API key. A key is only used to turn speech into text - enrichment still runs in your chosen mode.${localHint}`
+			`Audio capture needs local whisper-cli (Settings → Nous → Voice capture) or a Gemini/OpenAI API key. A key is only used to turn speech into text - enrichment still runs in your chosen mode.${localHint}`
 		);
+	}
+
+	private hasCloudAudioTranscription(): boolean {
+		return hasGeminiOrOpenAiTranscriptionKey(this.settings.apiKeys);
 	}
 
 	// Display-only default path (used synchronously by the settings tab), so
@@ -470,6 +493,38 @@ export default class NousPlugin extends Plugin {
 		} finally {
 			await Promise.all(cleanupPaths.map((p) => fsPromises.unlink(p).catch(() => {})));
 		}
+	}
+
+	private async canUseLocalAudioTranscription(): Promise<boolean> {
+		if (!Platform.isMacOS) return false;
+
+		const modelPath = this.settings.whisperModelPath.trim() || this.defaultWhisperModelPath();
+		if (!(await NousPlugin.fileExists(modelPath))) return false;
+
+		const { os } = await loadNodeModules();
+		const whisperCli = this.settings.whisperCliPath.trim() || DEFAULT_WHISPER_CLI_BIN;
+		const result = await this.cliExec(whisperCli, ["--help"], { cwd: os.tmpdir(), env: this.cliEnv() });
+		return result.code === 0;
+	}
+
+	private async hasAudioTranscriptionBackend(): Promise<boolean> {
+		return this.hasCloudAudioTranscription() || (await this.canUseLocalAudioTranscription());
+	}
+
+	async getCapturePrerequisiteStatus(): Promise<CapturePrerequisiteStatus> {
+		const voiceReady = await this.hasAudioTranscriptionBackend();
+		let meeting: CapturePrerequisiteStatus["meeting"] = "unsupported";
+		if (Platform.isMacOS) {
+			const nativeStatus = await this.nativeRecorderStatus();
+			if (nativeStatus.available) {
+				meeting = "ready-native";
+			} else if (await this.isQuickRecorderInstalled()) {
+				meeting = "ready-quickrecorder";
+			} else {
+				meeting = "needs-recorder";
+			}
+		}
+		return { voiceReady, meeting };
 	}
 
 	private getLlmProvider(): LlmProvider {
@@ -723,6 +778,10 @@ export default class NousPlugin extends Plugin {
 			this.voiceRecorder.stop();
 			return;
 		}
+		if (!(await this.hasAudioTranscriptionBackend())) {
+			new Notice(VOICE_TRANSCRIPTION_SETUP_NOTICE, 12000);
+			return;
+		}
 		try {
 			this.voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		} catch {
@@ -801,20 +860,23 @@ export default class NousPlugin extends Plugin {
 
 	// One button for full meeting capture (both sides of a call). Obsidian's
 	// own mic access (toggleVoiceCapture above) can never hear the other
-	// participant - that needs a real macOS screen/audio-recording
-	// entitlement, which only a signed native app gets. QuickRecorder has
-	// that entitlement and exposes a genuine AppleScript verb for it
-	// ("record system audio"), so this remote-controls QuickRecorder instead
-	// of trying to duplicate it. The same command call toggles start/stop -
-	// state here is read from the filesystem (an open file handle in the
-	// watch folder) rather than tracked in the plugin, so it stays correct
-	// even if the recording was started with the Opt+M hotkey instead of
-	// this button. The recording + transcription itself is unchanged: it
-	// still flows through the existing local whisper.cpp pipeline and lands
-	// in the vault inbox on its own, same as today.
+	// participant, so macOS meeting capture prefers the signed native
+	// nous-recorder helper and falls back to the older QuickRecorder
+	// AppleScript setup when the helper is unavailable.
 	async toggleMeetingCapture() {
 		if (!Platform.isMacOS) {
-			new Notice("Nous: meeting capture needs QuickRecorder, macOS only.");
+			new Notice("Nous: meeting capture needs macOS.");
+			return;
+		}
+
+		const nativeStatus = await this.nativeRecorderStatus();
+		if (nativeStatus.available) {
+			await this.toggleNativeMeetingCapture(nativeStatus);
+			return;
+		}
+
+		if (!(await this.isQuickRecorderInstalled())) {
+			new Notice(MEETING_RECORDER_MISSING_NOTICE, 15000);
 			return;
 		}
 		const wasRecording = await this.isQuickRecorderRecording();
@@ -837,6 +899,209 @@ export default class NousPlugin extends Plugin {
 		}, 800);
 		this.setMeetingRecordingIndicator(!wasRecording);
 		new Notice(wasRecording ? "Nous: meeting recording stopped." : "Nous: meeting recording started.");
+	}
+
+	private async toggleNativeMeetingCapture(status: NativeRecorderStatus) {
+		if (status.recording) {
+			const result = await this.runNativeRecorder("stop");
+			if (result.code !== 0) {
+				new Notice(`Nous: native recorder failed to stop - ${(result.stderr || result.stdout).slice(0, 200)}`, 10000);
+				return;
+			}
+			const stopped = parseNativeRecorderStatus(result.stdout);
+			this.setMeetingRecordingIndicator(false);
+			new Notice("Nous: meeting recording stopped. Transcribing now...");
+			if (stopped.output) {
+				void this.ingestNativeMeetingRecording(stopped.output);
+			}
+			return;
+		}
+
+		if (!(await this.hasAudioTranscriptionBackend())) {
+			new Notice(
+				"Nous: native meeting capture needs speech-to-text setup first - install local whisper.cpp on macOS, or add a Gemini/OpenAI key in Settings -> Nous. No recording started.",
+				12000
+			);
+			return;
+		}
+
+		const result = await this.runNativeRecorder("start");
+		if (result.code !== 0) {
+			new Notice(`Nous: native recorder failed to start - ${(result.stderr || result.stdout).slice(0, 200)}`, 10000);
+			return;
+		}
+		new Notice("Nous: starting meeting recording...");
+		await new Promise((resolve) => window.setTimeout(resolve, 1500));
+		const next = await this.nativeRecorderStatus();
+		if (!next.available || !next.recording) {
+			this.setMeetingRecordingIndicator(false);
+			new Notice(
+				"Nous: native recorder stopped immediately - allow microphone and screen recording permissions for Obsidian/the helper, then try again.",
+				12000
+			);
+			return;
+		}
+		this.setMeetingRecordingIndicator(true);
+		new Notice("Nous: meeting recording started.");
+	}
+
+	private async nativeRecorderStatus(): Promise<NativeRecorderStatus & { available: boolean }> {
+		if (!Platform.isMacOS) return { available: false, recording: false, output: null };
+		const result = await this.runNativeRecorder("status");
+		if (result.code !== 0) return { available: false, recording: false, output: null };
+		return { available: true, ...parseNativeRecorderStatus(result.stdout) };
+	}
+
+	private async runNativeRecorder(command: "status" | "start" | "stop") {
+		const { os } = await loadNodeModules();
+		const recordingsDir = await this.nativeRecorderWatchDir();
+		const recorder = await this.nativeRecorderCommand();
+		return this.cliExec(recorder, nativeRecorderArgs(command, recordingsDir), {
+			cwd: os.homedir(),
+			env: this.cliEnv(),
+		});
+	}
+
+	private async nativeRecorderCommand(): Promise<string> {
+		const configured = this.settings.nativeRecorderPath.trim() || DEFAULT_NATIVE_RECORDER_BIN;
+		if (configured !== DEFAULT_NATIVE_RECORDER_BIN) return configured;
+
+		const managed = await this.managedNativeRecorderPath();
+		if (managed && (await NousPlugin.fileExists(managed))) return managed;
+		return DEFAULT_NATIVE_RECORDER_BIN;
+	}
+
+	private async managedNativeRecorderPath(): Promise<string | null> {
+		const basePath = this.getVaultBasePath();
+		if (!basePath) return null;
+		const { path } = await loadNodeModules();
+		const pluginDir = this.manifest.dir ?? path.join(this.app.vault.configDir, "plugins", this.manifest.id);
+		return path.join(basePath, pluginDir, "bin", DEFAULT_NATIVE_RECORDER_BIN);
+	}
+
+	async installNativeRecorderFromRelease(): Promise<string> {
+		if (!Platform.isMacOS) throw new Error("Native meeting capture is macOS-only.");
+		const target = await this.managedNativeRecorderPath();
+		if (!target) throw new Error("Could not resolve this vault's plugin directory.");
+
+		const assetUrl = nativeRecorderReleaseAssetUrl(this.manifest.version);
+		const checksumUrl = `${assetUrl}.sha256`;
+		const checksumResponse = await requestUrl({ url: checksumUrl, method: "GET", throw: false });
+		if (checksumResponse.status >= 400) {
+			throw new Error(`could not download checksum (${checksumResponse.status})`);
+		}
+		const expectedChecksum = parseNativeRecorderChecksum(checksumResponse.text);
+		if (!expectedChecksum) throw new Error("release checksum was missing or malformed");
+
+		const assetResponse = await requestUrl({ url: assetUrl, method: "GET", throw: false });
+		if (assetResponse.status >= 400) {
+			throw new Error(`could not download helper (${assetResponse.status})`);
+		}
+		const actualChecksum = await this.sha256Hex(assetResponse.arrayBuffer);
+		if (actualChecksum !== expectedChecksum) {
+			throw new Error("downloaded helper checksum did not match the release checksum");
+		}
+
+		const { fs, path } = await loadNodeModules();
+		const dir = path.dirname(target);
+		const tmp = `${target}.tmp-${Date.now().toString(36)}`;
+		await fs.mkdir(dir, { recursive: true });
+		try {
+			await fs.writeFile(tmp, Buffer.from(assetResponse.arrayBuffer));
+			await fs.chmod(tmp, 0o755);
+			await fs.rename(tmp, target);
+		} catch (e) {
+			await fs.unlink(tmp).catch(() => {});
+			throw e;
+		}
+
+		this.settings.nativeRecorderPath = DEFAULT_NATIVE_RECORDER_BIN;
+		await this.saveSettings();
+		return target;
+	}
+
+	private async sha256Hex(buffer: ArrayBuffer): Promise<string> {
+		const { crypto } = await loadNodeModules();
+		return crypto.createHash("sha256").update(Buffer.from(buffer)).digest("hex");
+	}
+
+	private async nativeRecorderWatchDir(): Promise<string> {
+		const { os, path } = await loadNodeModules();
+		return path.join(os.homedir(), "Movies", "NousRecordings");
+	}
+
+	private async ingestNativeMeetingRecording(recordingDir: string): Promise<void> {
+		const { fs, path } = await loadNodeModules();
+		try {
+			const sysPath = path.join(recordingDir, "sys.m4a");
+			const micPath = path.join(recordingDir, "mic.m4a");
+			const sysExists = await fs
+				.access(sysPath)
+				.then(() => true)
+				.catch(() => false);
+			const micExists = await fs
+				.access(micPath)
+				.then(() => true)
+				.catch(() => false);
+
+			const parts: string[] = [];
+			if (sysExists) {
+				const sysTranscript = await this.transcribeExternalAudio(sysPath, "sys.m4a");
+				if (sysTranscript.trim()) parts.push(`Them: ${sysTranscript.trim()}`);
+			}
+			if (micExists) {
+				const micTranscript = await this.transcribeExternalAudio(micPath, "mic.m4a");
+				if (micTranscript.trim()) parts.push(`Me: ${micTranscript.trim()}`);
+			}
+			if (parts.length === 0) {
+				new Notice("Nous: native recording had no transcribable audio.", 10000);
+				await this.appendLog(`SKIPPED: ${path.basename(recordingDir)} produced no transcript`);
+				return;
+			}
+
+			await this.ensureFolderExists(this.settings.inboxFolder);
+			const stamp = this.meetingStampFromRecordingDir(recordingDir);
+			const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${stamp} Meeting transcript.md`);
+			await this.app.vault.create(
+				notePath,
+				`Meeting recording from ${stamp}, transcribed automatically (Me = my mic, Them = everyone else on the call).\n\n${parts.join("\n\n")}\n`
+			);
+			await this.appendLog(`TRANSCRIBED: ${path.basename(recordingDir)} -> ${notePath}`);
+			new Notice(`Nous: meeting transcript saved to inbox: ${path.basename(notePath)}`);
+			if (!this.settings.autoProcessOnCreate) void this.processInbox();
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			new Notice(`Nous: native recording transcription failed - ${msg}`, 10000);
+			await this.appendLog(`ERROR: native recording transcription failed: ${msg}`);
+		}
+	}
+
+	private async transcribeExternalAudio(filePath: string, filename: string): Promise<string> {
+		const { fs } = await loadNodeModules();
+		const bytes = await fs.readFile(filePath);
+		const copy = new Uint8Array(bytes.byteLength);
+		copy.set(bytes);
+		return this.transcribeAudio("m4a", copy.buffer, filename);
+	}
+
+	private meetingStampFromRecordingDir(recordingDir: string): string {
+		const base = recordingDir.split(/[\\/]/).pop() ?? "";
+		const match = base.match(/^(\d{4}-\d{2}-\d{2} \d{2}\.\d{2})/);
+		return match ? match[1] : window.moment().format("YYYY-MM-DD HH.mm");
+	}
+
+	private async uniqueVaultPath(basePath: string): Promise<string> {
+		if (!(await this.app.vault.adapter.exists(basePath))) return basePath;
+		const dot = basePath.lastIndexOf(".");
+		const stem = dot === -1 ? basePath : basePath.slice(0, dot);
+		const ext = dot === -1 ? "" : basePath.slice(dot);
+		let n = 2;
+		let candidate = `${stem} ${n}${ext}`;
+		while (await this.app.vault.adapter.exists(candidate)) {
+			n++;
+			candidate = `${stem} ${n}${ext}`;
+		}
+		return candidate;
 	}
 
 	private setMeetingRecordingIndicator(recording: boolean) {
@@ -868,6 +1133,15 @@ export default class NousPlugin extends Plugin {
 		});
 	}
 
+	private async isQuickRecorderInstalled(): Promise<boolean> {
+		try {
+			await this.runAppleScript('id of application "QuickRecorder"');
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
 	private async quickRecorderWatchDir(): Promise<string> {
 		const { execFile, os, path } = await loadNodeModules();
 		const home = os.homedir();
@@ -897,6 +1171,15 @@ export default class NousPlugin extends Plugin {
 				resolve(stdout.includes("QuickRecorder"));
 			});
 		});
+	}
+
+	private async updateMeetingRecordingIndicator(): Promise<void> {
+		const nativeStatus = await this.nativeRecorderStatus();
+		if (nativeStatus.available) {
+			this.setMeetingRecordingIndicator(nativeStatus.recording);
+			return;
+		}
+		this.setMeetingRecordingIndicator(await this.isQuickRecorderRecording());
 	}
 
 	async quickCapture(text: string, attached: File | null) {
@@ -1530,6 +1813,10 @@ class NousSettingTab extends PluginSettingTab {
 	// this sits inert there and the native declarative rendering (search,
 	// keyboard nav) is untouched.
 	display(): void {
+		this.renderLegacySettings();
+	}
+
+	private renderLegacySettings(): void {
 		this.containerEl.empty();
 		// None of this class's render callbacks use the group param below -
 		// avoid constructing a real SettingGroup (Obsidian 1.11.0+ only) so
@@ -1554,7 +1841,7 @@ class NousSettingTab extends PluginSettingTab {
 		if (typeof inherited === "function") {
 			inherited.call(this);
 		} else {
-			this.display();
+			this.renderLegacySettings();
 		}
 	}
 
@@ -1601,7 +1888,7 @@ class NousSettingTab extends PluginSettingTab {
 			name: "Advanced settings",
 			render: (setting) => {
 				setting
-					.setDesc("CLI/whisper paths, folder names, and tuning thresholds - defaults work for almost everyone.")
+					.setDesc("CLI/recorder/whisper paths, folder names, and tuning thresholds - defaults work for almost everyone.")
 					.addToggle((toggle) =>
 						toggle.setValue(this.showAdvanced).onChange((value) => {
 							this.showAdvanced = value;
@@ -1825,9 +2112,74 @@ class NousSettingTab extends PluginSettingTab {
 							await this.plugin.saveSettings();
 							new Notice("Reload the plugin (or restart Obsidian) for this change to take effect.");
 						})
-					);
+				);
 			},
 		});
+
+		items.push({
+			name: "Meeting capture",
+			render: (setting) => {
+				setting.setHeading();
+			},
+		});
+		items.push({
+			name: "",
+			render: (setting) => {
+				setting
+					.setDesc(
+						"On macOS, the phone button uses the native Nous recorder helper when available. If it is not installed yet, install it here; Nous can still use the older QuickRecorder setup as a fallback."
+					)
+					.setClass("setting-item-description");
+			},
+		});
+
+		if (Platform.isMacOS) {
+			items.push({
+				name: "Native recorder helper",
+				render: (setting) => {
+					setting
+						.setDesc(
+							"Downloads the helper from this Nous release, verifies its SHA-256 checksum, and installs it into this vault's plugin folder."
+						)
+						.addButton((button) =>
+							button.setButtonText("Install/update").onClick(async () => {
+								button.setButtonText("Installing...").setDisabled(true);
+								try {
+									const installedPath = await this.plugin.installNativeRecorderFromRelease();
+									new Notice(`Nous: native recorder installed at ${installedPath}`);
+									this.update();
+								} catch (e) {
+									const msg = e instanceof Error ? e.message : String(e);
+									new Notice(`Nous: native recorder install failed - ${msg}`, 12000);
+								} finally {
+									button.setButtonText("Install/update").setDisabled(false);
+								}
+							})
+						);
+				},
+			});
+		}
+
+		if (this.showAdvanced && Platform.isMacOS) {
+			items.push({
+				name: "Nous Recorder path",
+				render: (setting) => {
+					setting
+						.setDesc(
+							"Command or full path to the native meeting recorder helper. The default works when the helper is installed in ~/.local/bin or another path directory."
+						)
+						.addText((text) =>
+							text
+								.setPlaceholder(DEFAULT_NATIVE_RECORDER_BIN)
+								.setValue(this.plugin.settings.nativeRecorderPath)
+								.onChange(async (value) => {
+									this.plugin.settings.nativeRecorderPath = value.trim() || DEFAULT_NATIVE_RECORDER_BIN;
+									await this.plugin.saveSettings();
+								})
+						);
+				},
+			});
+		}
 
 		if (this.showAdvanced) {
 			items.push({
@@ -1880,9 +2232,7 @@ class NousSettingTab extends PluginSettingTab {
 			name: "",
 			render: (setting) => {
 				setting
-					.setDesc(
-						"Voice memos transcribe on-device by default via whisper.cpp - free, private, no API key. Falls back to the Gemini/OpenAI key above if that's not installed."
-					)
+					.setDesc(VOICE_CAPTURE_SETTINGS_DESC)
 					.setClass("setting-item-description");
 			},
 		});
@@ -2001,6 +2351,9 @@ class OnboardingModal extends Modal {
 		this.setTitle("Welcome to Nous");
 		this.contentEl.createEl("p", {
 			text: "Capture anything - a thought, a meeting, a photo, a voice memo - and Nous turns it into a tagged, linked knowledge graph. One choice to make: how should Nous think?",
+		});
+		this.contentEl.createEl("p", {
+			text: ONBOARDING_PREREQUISITES_TEXT,
 		});
 
 		new Setting(this.contentEl)
@@ -2139,7 +2492,7 @@ class OnboardingModal extends Modal {
 					try {
 						status.setText(`✓ ${await this.plugin.testConnection()}`);
 						b.setButtonText("Test").setDisabled(false);
-						this.renderFinish();
+						this.renderCapturePrerequisites();
 					} catch (e) {
 						const msg = e instanceof Error ? e.message : String(e);
 						status.setText(`✗ ${msg}`);
@@ -2147,7 +2500,53 @@ class OnboardingModal extends Modal {
 					}
 				})
 			)
-			.addButton((b) => b.setButtonText("Skip test").onClick(() => this.renderFinish()));
+			.addButton((b) => b.setButtonText("Skip test").onClick(() => this.renderCapturePrerequisites()));
+	}
+
+	private renderCapturePrerequisites() {
+		this.clear();
+		this.setTitle("Capture prerequisites");
+		this.contentEl.createEl("p", {
+			text: "Your first text capture is ready. These optional capture buttons need a little more system setup:",
+		});
+		const statusEl = this.contentEl.createDiv();
+		statusEl.createEl("p", { text: "Checking capture setup..." });
+		void this.plugin
+			.getCapturePrerequisiteStatus()
+			.then((status) => {
+				statusEl.empty();
+				for (const item of capturePrerequisiteItems(status)) {
+					const setting = new Setting(statusEl).setName(item.name).setDesc(item.desc);
+					if (item.warning) setting.setClass("mod-warning");
+				}
+				if (Platform.isMacOS && status.meeting === "needs-recorder") {
+					new Setting(statusEl)
+						.setName("Install native recorder")
+						.setDesc("Downloads the helper from this Nous release and verifies its checksum before installing it.")
+						.addButton((button) =>
+							button.setButtonText("Install").setCta().onClick(async () => {
+								button.setButtonText("Installing...").setDisabled(true);
+								try {
+									await this.plugin.installNativeRecorderFromRelease();
+									new Notice("Nous: native recorder installed.");
+									this.renderCapturePrerequisites();
+								} catch (e) {
+									const msg = e instanceof Error ? e.message : String(e);
+									new Notice(`Nous: native recorder install failed - ${msg}`, 12000);
+									button.setButtonText("Install").setDisabled(false);
+								}
+							})
+						);
+				}
+			})
+			.catch((e) => {
+				const msg = e instanceof Error ? e.message : String(e);
+				statusEl.setText(`Could not check capture setup: ${msg}`);
+			});
+
+		new Setting(this.contentEl)
+			.addButton((b) => b.setButtonText("Back").onClick(() => this.renderTest()))
+			.addButton((b) => b.setButtonText("Continue").setCta().onClick(() => this.renderFinish()));
 	}
 
 	private renderFinish() {
@@ -2155,6 +2554,9 @@ class OnboardingModal extends Modal {
 		this.setTitle("You're set");
 		this.contentEl.createEl("p", {
 			text: `Drop anything into "${this.plugin.settings.inboxFolder}" - text, images, PDFs, voice memos - and it comes out tagged, summarized, and linked in "${this.plugin.settings.meetingsFolder}".`,
+		});
+		this.contentEl.createEl("p", {
+			text: ONBOARDING_FINISH_PREREQUISITES_TEXT,
 		});
 		this.contentEl.createEl("p", {
 			text: "Want to see it happen right now? Nous can drop a sample note into the inbox and enrich it while you watch.",

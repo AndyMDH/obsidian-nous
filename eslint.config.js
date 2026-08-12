@@ -48,7 +48,7 @@ export default defineConfig(
 	{
 		// Build tooling (esbuild/version-bump scripts, this file) isn't part of
 		// tsconfig's "**/*.ts" project, so type-aware rules can't run on it.
-		files: ["*.mjs", "*.js"],
+		files: ["*.mjs", "*.js", "scripts/*.mjs"],
 		extends: [tseslint.configs.disableTypeChecked],
 	},
 	{
@@ -57,7 +57,7 @@ export default defineConfig(
 		// (main.ts + src/**). Tests run under Node via `node --test`, and the
 		// *.mjs files are esbuild/version-bump build tooling - neither ever
 		// runs inside Obsidian.
-		files: ["test/**", "*.mjs"],
+		files: ["test/**", "*.mjs", "scripts/*.mjs"],
 		rules: Object.fromEntries(Object.keys(obsidianmd.rules).map((name) => [`obsidianmd/${name}`, "off"])),
 	},
 	{

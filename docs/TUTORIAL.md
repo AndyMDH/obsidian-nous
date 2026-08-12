@@ -92,6 +92,11 @@ you use it more, nothing to trigger yourself.
 
 ## Step 4: your first voice note
 
+Voice notes need speech-to-text first. On macOS, install local `whisper.cpp`
+for private on-device transcription; otherwise add a Gemini/OpenAI key in
+Nous settings. If neither is set up, Nous will show a setup message and will
+not start recording.
+
 1. Click the **🎙️ mic icon** in Obsidian's left sidebar.
 2. Talk for a few seconds.
 3. Click the mic icon again to stop.
@@ -131,14 +136,19 @@ falling back to a Gemini/OpenAI key otherwise.
 
 This one needs a tiny bit of one-time setup, because capturing *both sides*
 of a call (not just your own mic) needs a real macOS recording permission
-that only a signed app can get — Nous remote-controls a free one
-(QuickRecorder) instead of trying to duplicate it.
+that Obsidian's browser mic recorder cannot provide by itself. Nous uses a
+small native helper for this.
 
-1. One-time setup: [`../examples/meeting-capture/`](../examples/meeting-capture/)
-   walks through installing QuickRecorder and wiring it up.
+1. If the setup wizard says the native recorder is missing, click
+   **Install**. Nous downloads the helper from the matching release, verifies
+   its checksum, and stores it in this vault's plugin folder.
 2. After that: click the **📞 phone icon** when a call starts, click it again
    when it ends. A speaker-labeled transcript lands in your inbox and comes
    back enriched, same as everything else.
+
+If you do not install the native helper, Nous can still use the older
+QuickRecorder fallback. QuickRecorder is not included with macOS; the fallback
+setup is documented in [`../examples/meeting-capture/`](../examples/meeting-capture/).
 
 ## Where to go from here
 

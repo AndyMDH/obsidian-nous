@@ -17,8 +17,12 @@ obsidian-nous/
 │   ├── gemini.ts           # Gemini API adapter
 │   ├── transcribe.ts       # Cloud audio transcription fallback (Gemini/OpenAI)
 │   ├── realtimeTranscribe.ts # Live/streaming dictation (OpenAI Realtime API, beta, opt-in)
+│   ├── nativeRecorder.ts   # Argument/status helpers for the macOS meeting recorder
+│   ├── onboarding.ts       # First-run capture-prerequisite copy and checklist helpers
 │   ├── cliRunner.ts        # Claude CLI arg builders, PATH helpers, log parsing
 │   └── skillTemplates.ts   # SKILL.md templates injected into .claude/skills/
+├── native/
+│   └── nous-recorder/      # SwiftPM native macOS meeting recorder helper
 ├── test/                   # Node test-runner tests (no live API calls)
 ├── docs/
 │   ├── ARCHITECTURE.md     # Conceptual layer model
@@ -59,7 +63,7 @@ obsidian-nous/
 | `query-vault` | `runVaultQuery()` — CLI-only natural-language search. |
 | `quick-capture` | Opens `QuickCaptureModal`. |
 | `toggle-voice-capture` | Records from microphone; stops on second invocation (or opens `LiveVoiceCaptureModal` instead, if live transcription is on). |
-| `toggle-meeting-capture` | Remote-controls QuickRecorder to start/stop a system-audio + mic recording (macOS only). |
+| `toggle-meeting-capture` | Starts/stops the native `nous-recorder` helper when available; falls back to QuickRecorder (macOS only). |
 | `setup-wizard` | Opens `OnboardingModal`. |
 
 ### Auto-processing
@@ -170,6 +174,26 @@ Kept DOM-free and network-free at this level (no `WebSocket` import) so it's uni
 
 This is strictly a safety-net-backed addition: `LiveVoiceCaptureModal` always starts the existing, unmodified `MediaRecorder` first, and only layers the Realtime connection on top of it. Any live-transcription failure (connect timeout, mid-stream drop, no key, mobile) tears down just the WS/AudioWorklet/AudioContext side; the recording itself is untouched and falls through to the unchanged batch `transcribeAudio()` path below on stop.
 
+### `nativeRecorder.ts` and `native/nous-recorder`
+
+Native meeting capture is split deliberately:
+
+- `src/nativeRecorder.ts` is pure TypeScript: it builds the CLI arguments for
+  `status` / `start` / `stop` and parses the helper's JSON status output.
+- `native/nous-recorder` is a SwiftPM executable. It uses ScreenCaptureKit to
+  record system audio and microphone audio into a timestamped `.qma` folder
+  containing `sys.m4a` and `mic.m4a`, plus a small state file in
+  `~/Movies/NousRecordings`.
+
+`main.ts` prefers the native helper for the phone button. If `status` cannot
+run, the setup wizard/settings can download the matching release asset,
+verify its SHA-256 sidecar, install it into the vault's plugin folder, and
+retry from that managed path. If the helper is still unavailable, Nous falls
+back to the older QuickRecorder AppleScript path. When the native helper
+stops, the plugin transcribes `sys.m4a` as `Them:` and `mic.m4a` as `Me:`,
+writes a Markdown transcript to the inbox, then lets the normal enrichment
+pipeline handle it.
+
 ### `cliRunner.ts`
 
 Pure helpers for CLI mode. No Obsidian dependency.
@@ -240,6 +264,7 @@ Settings are persisted by Obsidian via `this.loadData()` / `this.saveData()` int
 | `localBaseUrl` | Endpoint for local OpenAI-compatible servers. |
 | `claudeCliPath` | Path or command for the `claude` CLI. |
 | `whisperCliPath` / `whisperModelPath` | Local whisper.cpp binary/model paths for voice transcription (macOS). |
+| `nativeRecorderPath` | Path or command for the native macOS meeting recorder helper. |
 | `liveTranscriptionEnabled` | Opt-in, desktop-only live/streaming dictation via OpenAI's Realtime API. |
 | `inboxFolder` / `meetingsFolder` / `wikisFolder` / `tagsFolder` / `queriesFolder` | Folder names for each layer - see `ARCHITECTURE.md`. |
 | `wikiThreshold` | Minimum non-fragment notes before a wiki is created. |
@@ -249,7 +274,7 @@ Settings are persisted by Obsidian via `this.loadData()` / `this.saveData()` int
 
 The settings UI in `NousSettingTab` is built dynamically: it shows/hides fields
 based on execution mode and provider, includes a **Test connection** button,
-and hides rarely-touched fields (CLI/whisper paths, folder names, thresholds)
+and hides rarely-touched fields (CLI/recorder/whisper paths, folder names, thresholds)
 behind an **Advanced settings** toggle - only the essentials show by default.
 
 ## Testing strategy

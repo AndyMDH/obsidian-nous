@@ -1,6 +1,6 @@
 {
   "name": "obsidian-nous",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "Nous (Greek for 'mind') turns meeting recordings, voice memos, photos, and PDFs into a tagged, linked knowledge graph, right inside Obsidian - auto-summarized, cross-linked, and organized into wiki pages. Works with Claude, GPT, Gemini, GLM, a local model, or your Claude subscription.",
   "main": "main.js",
   "type": "module",
@@ -10,6 +10,10 @@
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "build:recorder": "swift build -c release --package-path native/nous-recorder",
+    "build:recorder:universal": "swift build -c release --package-path native/nous-recorder --arch arm64 --arch x86_64",
+    "package:recorder": "node scripts/package-recorder.mjs",
+    "install:recorder": "mkdir -p \"$HOME/.local/bin\" && cp native/nous-recorder/.build/release/nous-recorder \"$HOME/.local/bin/nous-recorder\"",
     "test": "node --experimental-strip-types --test test/*.test.ts",
     "lint": "eslint .",
     "version": "node version-bump.mjs && git add manifest.json versions.json"

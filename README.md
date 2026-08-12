@@ -85,7 +85,7 @@ one, it tests the connection, done.
 |---|---|---|
 | ➕ | Type, paste, or attach a file | command palette → "Nous: Quick capture" |
 | 🎙️ | Voice note | click the mic |
-| 📞 | Meeting (macOS) | click the phone, or ⌥M — [one-time setup](examples/meeting-capture/) |
+| 📞 | Meeting (macOS) | click the phone — setup installs the native Nous recorder helper when needed |
 | 📥 | Anything else | drop it straight into `00-Inbox` |
 
 <p align="center">
@@ -106,12 +106,16 @@ Nous can point at folders you already use instead.
 
 ## How it works, briefly
 
-- **Transcription is local by default** — [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
-  runs on your Mac; voice never leaves it. Falls back to a Gemini/OpenAI key
-  if that's not installed.
-- **Meetings** are captured via [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)
-  recording system audio and your mic as two separate tracks, transcribed
-  independently, then interleaved by timestamp into `Me:` / `Them:` dialogue.
+- **Voice transcription needs one extra backend** —
+  [whisper.cpp](https://github.com/ggml-org/whisper.cpp) runs locally on
+  your Mac; voice never leaves it. Without that, add a Gemini/OpenAI key used
+  only for speech-to-text.
+- **Meetings** are captured with the native `nous-recorder` helper on macOS:
+  setup can install it from the matching Nous release, verify its checksum,
+  and use it directly from the phone button. It records system audio (`Them`)
+  and your mic (`Me`) separately, then Nous transcribes both into a
+  speaker-labeled note. The older [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)
+  setup still works as a fallback; QuickRecorder is not part of macOS.
 - **Limitation**: group calls lump every other participant into one `Them:`
   speaker — there's no per-person diarization.
 - **Limitation**: meeting capture is macOS-only; live voice transcription
@@ -137,7 +141,7 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Hotkeys**: every capture action (voice, meeting, quick capture, process
   inbox now, ...) is a real Obsidian command, not just a ribbon icon —
   **Settings → Hotkeys**, search "Nous", bind whichever ones you use often.
-- **Settings** show just the essentials by default — CLI/whisper paths,
+- **Settings** show just the essentials by default — CLI/recorder/whisper paths,
   folder names, and tuning thresholds are one click away under **Advanced
   settings**, since defaults work for almost everyone.
 - **AI context, concretely**: add a line to Claude Code's global
@@ -158,10 +162,12 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ```bash
 npm install && npm run build && npm test
+npm run build:recorder
+npm run build:recorder:universal && npm run package:recorder
 ```
 
 Core logic lives in `src/` with no Obsidian dependency; `main.ts` wires it
-to the app.
+to the app. The native macOS meeting helper lives in `native/nous-recorder/`.
 
 ## License
 

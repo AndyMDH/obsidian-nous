@@ -52,7 +52,7 @@ sidebar. One choice to make:
 
 Everything else has a sensible default, and a **Test connection** button in
 the same panel confirms your choice works before you capture anything.
-Rarely-touched fields — CLI/whisper paths, folder names, tuning thresholds —
+Rarely-touched fields — CLI/recorder/whisper paths, folder names, tuning thresholds —
 are hidden behind an **Advanced settings** toggle at the bottom of the panel.
 
 ## Every way to capture
@@ -74,6 +74,12 @@ Click the **🎙️ mic icon** in the left sidebar (or command palette →
 "Nous: Toggle voice capture") to start recording, click it again to stop.
 That's the whole thing — the recording drops into the inbox and comes back
 as a tagged, summarized note with the audio still playable inside.
+
+Voice notes need speech-to-text before they can become notes. On macOS, Nous
+can use local `whisper.cpp` if `whisper-cli` and a model are installed. If
+not, add a Gemini or OpenAI API key; that key is used only for transcription
+when your main enrichment mode is Claude, GLM, Anthropic, or local. If neither
+path is available, Nous shows a setup message and does not start recording.
 
 Prefer a hotkey? **Settings → Hotkeys**, search "Nous: Toggle voice
 capture", give it a key — same command, your choice which trigger you use.
@@ -119,14 +125,30 @@ all-or-nothing: once on, the app stops typing transcripts into other apps.
 
 ### Meeting capture, in depth (macOS)
 
-Calls with other people need system-audio capture, which no Obsidian plugin
-can do on its own — so this one remote-controls a free open-source recorder
-(QuickRecorder) instead of trying to duplicate it. Click the **📞 phone icon**
-in the left sidebar (or command palette → "Nous: Toggle meeting capture")
-when the meeting starts, again when it ends — or use QuickRecorder's own
-**⌥M** hotkey directly, same result either way. A speaker-labeled transcript
-lands in your inbox and comes out enriched. Fully local (on-device Whisper —
-no API key, nothing uploaded). One-time setup in
+Calls with other people need system-audio capture, which Obsidian's browser
+mic recorder cannot hear. Nous prefers a small native macOS helper,
+`nous-recorder`, so the phone button can start and stop a meeting recording
+directly without depending on QuickRecorder.
+
+If the helper is missing, the setup wizard and Settings → Nous → Meeting
+capture show an **Install** button. It downloads the helper from the matching
+Nous GitHub release, verifies the SHA-256 checksum published with that
+release, installs it into this vault's plugin folder, and uses it
+automatically. If you put your own helper somewhere else, open Settings →
+Nous → Advanced settings and set **Nous Recorder path** to the full path.
+
+Then click the **📞 phone icon** in the left sidebar (or command palette →
+"Nous: Toggle meeting capture") when the meeting starts, and click it again
+when it ends. First run may trigger macOS microphone and screen/system-audio
+permission prompts for Obsidian or the helper; allow them, then try the
+button again if macOS interrupted the first capture. A speaker-labeled
+transcript lands in your inbox and comes out enriched. `Me:` is your mic;
+`Them:` is system audio from the call.
+
+If the native helper is unavailable and you do not install it, Nous can fall
+back to the older [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)
+setup. QuickRecorder is not part of macOS; install it only if you want that
+fallback. The one-time setup remains in
 [`../examples/meeting-capture/`](../examples/meeting-capture/).
 
 Want Nous to use a specific tag — a client, a project? Add a file with

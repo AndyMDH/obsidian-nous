@@ -28,6 +28,7 @@ npm run dev      # esbuild watch mode
 npm run lint
 npm test
 npm run build     # typecheck + production bundle
+npm run build:recorder
 ```
 
 All three (`lint`, `test`, `build`) run in CI (`.github/workflows/ci.yml`)
@@ -39,7 +40,11 @@ on every push and PR.
    (bumps `package.json`, runs `version-bump.mjs` to sync `manifest.json`/
    `versions.json`, commits, and tags).
 2. `git push origin main --follow-tags`.
-3. Pushing the tag triggers `.github/workflows/release.yml`, which builds
-   `main.js`, attaches build provenance attestation, and publishes a GitHub
-   Release with `main.js`, `manifest.json`, and `styles.css` as assets - the
-   files the Obsidian community plugin store expects.
+3. Pushing the tag triggers `.github/workflows/release.yml` on macOS. It
+   builds `main.js`, builds/packages the universal `nous-recorder` helper,
+   attaches build provenance attestation, and publishes a GitHub Release with
+   `main.js`, `manifest.json`, `styles.css`,
+   `nous-recorder-macos-universal`, and
+   `nous-recorder-macos-universal.sha256`. The first three files are what the
+   Obsidian community plugin store expects; the helper assets are what the
+   in-plugin meeting recorder installer downloads.

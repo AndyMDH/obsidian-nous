@@ -1,18 +1,23 @@
-# Record meetings with one hotkey (macOS)
+# QuickRecorder fallback meeting capture (macOS)
 
 Press a hotkey when a meeting starts, press it again when it ends — a
 speaker-labeled transcript ("Me:" / "Them:") lands in your Nous inbox and
 comes out as an enriched note. Everything runs on your Mac: the recording
 never leaves your machine, and no API key is used for transcription.
 
-This is the setup for **calls with other people** (Teams/Zoom/Meet — it
-captures system audio *and* your mic). For solo voice notes, the plugin's
-built-in voice-capture button (or hotkey) is all you need.
+This is the older fallback setup for **calls with other people**
+(Teams/Zoom/Meet — it captures system audio *and* your mic). The preferred
+path is the native `nous-recorder` helper, which the plugin can control
+directly from the phone button. Use this QuickRecorder path if the native
+helper is not installed or does not work on your Mac yet. For solo voice
+notes, the plugin's built-in voice-capture button (or hotkey) is all you
+need.
 
 Once this is set up, Nous's own **📞 phone icon** in the left sidebar (or
-command palette → "Nous: Toggle meeting capture") remote-controls
-QuickRecorder the same way ⌥M does — use whichever trigger you prefer, both
-toggle the same recording.
+command palette → "Nous: Toggle meeting capture") will use QuickRecorder when
+the native helper is unavailable. QuickRecorder's own ⌥M hotkey still works
+too — use whichever trigger you prefer, both toggle the same fallback
+recording.
 
 > Recording is silent to other participants — treat it as personal
 > note-taking and follow your workplace/client norms and local law.
@@ -22,6 +27,7 @@ toggle the same recording.
 **1. QuickRecorder** (free, open source) — records system audio + your mic:
 
 ```bash
+# QuickRecorder is not bundled with macOS.
 # Download from https://github.com/lihaoyun6/QuickRecorder/releases
 # drag QuickRecorder.app into /Applications, then preconfigure it:
 mkdir -p ~/Movies/MeetingRecordings
