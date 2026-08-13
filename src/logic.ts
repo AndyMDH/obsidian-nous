@@ -92,6 +92,37 @@ export function extractEnrichedSections(noteContent: string): string {
 	return afterFrontmatter.slice(0, end).trim();
 }
 
+export interface ManualNotesSplit {
+	manualNotes: string;
+	transcript: string;
+}
+
+export function splitManualNotesFromTranscript(rawText: string): ManualNotesSplit {
+	const transcriptHeading = /^## Transcript\s*$/m.exec(rawText);
+	if (!transcriptHeading) return { manualNotes: "", transcript: rawText };
+
+	const beforeTranscript = rawText.slice(0, transcriptHeading.index).trim();
+	const transcriptBody = rawText.slice(transcriptHeading.index + transcriptHeading[0].length).trim();
+	const manualStart = findFirstHeading(beforeTranscript, [
+		"Questions to ask",
+		"Live notes",
+		"Notes taken during meeting",
+	]);
+	if (manualStart === -1) {
+		return {
+			manualNotes: "",
+			transcript: [beforeTranscript, transcriptBody].filter(Boolean).join("\n\n"),
+		};
+	}
+
+	const intro = beforeTranscript.slice(0, manualStart).trim();
+	const manualNotes = beforeTranscript.slice(manualStart).trim();
+	return {
+		manualNotes,
+		transcript: [intro, transcriptBody].filter(Boolean).join("\n\n"),
+	};
+}
+
 // Summary paragraph only, so firstSentence() gets prose, not a heading.
 export function extractSummaryText(noteContent: string): string {
 	const idx = noteContent.indexOf("## Summary");
@@ -120,7 +151,8 @@ export function buildMeetingMarkdown(
 	rawTranscript: string,
 	enrichedAt: string,
 	existingWikiLink: string | null,
-	capturedAttachment?: CapturedAttachment
+	capturedAttachment?: CapturedAttachment,
+	manualNotes?: string
 ): string {
 	const fmLines = [
 		"---",
@@ -159,6 +191,10 @@ export function buildMeetingMarkdown(
 		);
 	}
 
+	if (!capturedAttachment && manualNotes?.trim()) {
+		bodyParts.push(`## Notes taken during meeting\n\n${demoteSecondLevelHeadings(manualNotes.trim())}`);
+	}
+
 	if (capturedAttachment?.kind === "document") {
 		bodyParts.push(`## Captured document\n\n![[${capturedAttachment.filename}]]`);
 	} else if (capturedAttachment?.kind === "audio") {
@@ -178,6 +214,24 @@ export function buildMeetingMarkdown(
 	bodyParts.push(`## Related\n\n${relatedLines.join("\n")}`);
 
 	return fmLines.join("\n") + "\n" + bodyParts.join("\n\n") + "\n";
+}
+
+function findFirstHeading(markdown: string, headings: string[]): number {
+	const indexes = headings
+		.map((heading) => {
+			const match = new RegExp(`^##\\s+${escapeRegExp(heading)}\\s*$`, "m").exec(markdown);
+			return match ? match.index : -1;
+		})
+		.filter((idx) => idx >= 0);
+	return indexes.length > 0 ? Math.min(...indexes) : -1;
+}
+
+function demoteSecondLevelHeadings(markdown: string): string {
+	return markdown.replace(/^## /gm, "### ");
+}
+
+function escapeRegExp(text: string): string {
+	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function buildTagFileContent(tagName: string, date: string): string {

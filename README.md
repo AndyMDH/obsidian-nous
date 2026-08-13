@@ -86,7 +86,7 @@ key. Then the wizard checks the optional voice and meeting setup.
 |---|---|---|
 | ➕ | Type, paste, or attach a file | command palette → "Nous: Quick capture" |
 | 🎙️ | Voice note | click the mic |
-| 📞 | Meeting (macOS) | click the phone — setup installs the native Nous recorder helper when needed |
+| 📞 | Meeting (macOS) | click the phone — Nous opens a live note where you can type questions while it records |
 | 📥 | Anything else | drop it straight into `00-Inbox` |
 
 <p align="center">
@@ -113,9 +113,12 @@ Nous can point at folders you already use instead.
   only for speech-to-text.
 - **Meetings** are captured with the native `nous-recorder` helper on macOS:
   setup can install it for you, then the phone button uses it directly. It
-  records system audio (`Them`) and your mic (`Me`) separately, then Nous
-  turns both into a speaker-labeled note. If speech-to-text is not ready yet,
-  the recording is still saved and waits in the inbox until you finish setup.
+  opens a live note in Obsidian when recording starts, so you can type
+  questions and quick notes during the call. When you stop, Nous adds the
+  transcript to that same note. It records system audio (`Them`) and your mic
+  (`Me`) separately, then turns both into a speaker-labeled note. If
+  speech-to-text is not ready yet, the recording and your typed notes still
+  wait in the inbox until you finish setup.
   Already use [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)?
   Nous can still use it as a legacy fallback. New users do not need it.
 - **Limitation**: group calls lump every other participant into one `Them:`

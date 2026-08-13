@@ -39,9 +39,12 @@ proceed.
 Skip a file if its frontmatter already contains \`status: enriched\` — it's
 already been processed. Also skip a file whose frontmatter contains
 \`nous_pending_native_recording: true\`; the plugin itself must transcribe
-that native recorder placeholder before this skill can enrich it. These are
-the idempotency guards; they mean it's always safe to re-run this skill over
-an inbox that partially succeeded before.
+that native recorder placeholder before this skill can enrich it. Also skip a
+file whose frontmatter contains \`nous_live_native_recording: true\`; the
+recording is still active and the plugin will replace that live note with
+normal text when the user stops recording. These are the idempotency guards;
+they mean it's always safe to re-run this skill over an inbox that partially
+succeeded before.
 (Image and PDF files never have frontmatter of their own, so this guard only
 applies once they've already been turned into a note in \`${f.meetings}/\` -
 at that point the original file is gone from \`${f.inbox}/\`, so there's
@@ -190,18 +193,38 @@ Summary framing — just summarize the idea.
 
 - [ ] ...
 
+## Notes taken during meeting
+
+### Questions to ask
+
+- ...
+
+### Live notes
+
+- ...
+
 ## Transcript
 
 <original raw text, unmodified, collapsed under this heading>
 \`\`\`
 
 Omit the Decisions section entirely if there were none, and Action items
-entirely if there were none. Never invent decisions or action items that
+entirely if there were none. Omit \`## Notes taken during meeting\` if the
+inbox file did not contain \`## Questions to ask\`, \`## Live notes\`, or
+\`## Notes taken during meeting\`. Never invent decisions or action items that
 aren't actually in the transcript.
 
 **Never delete, summarize away, or paraphrase the original transcript text.**
 It moves intact, verbatim, under \`## Transcript\`. Enrichment adds structure
 above it; it does not touch the source material.
+
+If the inbox file contains \`## Questions to ask\` or \`## Live notes\` before
+\`## Transcript\`, those sections were typed by the user during the meeting.
+Copy those sections into \`## Notes taken during meeting\` above the transcript
+and demote their headings to \`### Questions to ask\` / \`### Live notes\`.
+Then copy only the actual transcript body under \`## Transcript\` (usually the
+content after the source file's \`## Transcript\` heading, plus any brief
+"Meeting recording from..." line before the typed-note sections).
 
 **For an image or PDF file, there is no transcript.** Replace the \`## Transcript\`
 section with \`## Captured image\` (image) or \`## Captured document\` (PDF)

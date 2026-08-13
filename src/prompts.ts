@@ -31,6 +31,7 @@ The permitted tag registry is exactly this list, nothing else is valid: ${tagReg
 - key_points: bullet strings, the substantive points made.
 - decisions: bullet strings, actual decisions only. Empty array if none - never invent one.
 - action_items: bullet strings, actual commitments only. Empty array if none - never invent one.
+- If the raw captured text includes sections named "Questions to ask" or "Live notes", those were typed by the user during the meeting. Use them as context for the summary, key points, open threads, and action items, but do not treat them as spoken transcript lines.
 Do not include the original transcript text in your response - the caller already has it and will attach it verbatim itself.
 
 ## Duplicate check

@@ -49,10 +49,11 @@ A capture lands in `00-Inbox` by one of several paths:
 - **Quick capture**: the user opens the quick-capture modal and types or attaches a file.
 - **Voice capture**: the plugin records from the microphone and drops a WebM/M4A file in the inbox. Optionally (opt-in, desktop-only, beta), OpenAI's Realtime API streams an incremental transcript while recording is still in progress; when that succeeds, the known transcript is used directly and the batch transcription step below is skipped for that file. See `realtimeTranscribe.ts` in `docs/TECHNICAL.md`.
 - **Meeting capture**: on macOS, the phone button prefers the native
-  `nous-recorder` helper to capture system audio and microphone audio, then
-  writes a `Me:` / `Them:` transcript into the inbox. If the helper is not
-  available, the older QuickRecorder setup can still feed transcripts into
-  the same inbox path.
+  `nous-recorder` helper to capture system audio and microphone audio. It
+  opens a live inbox note first, so the user can type questions and quick
+  notes during the call, then adds a `Me:` / `Them:` transcript to that same
+  note when recording stops. If the helper is not available, the older
+  QuickRecorder setup can still feed transcripts into the same inbox path.
 - **Manual drop**: the user creates a file in `00-Inbox` directly, or a dictation tool writes there.
 - **Auto-process**: the plugin watches `create` events and enriches new inbox files after a short settle delay.
 

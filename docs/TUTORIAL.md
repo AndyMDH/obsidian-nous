@@ -144,13 +144,22 @@ small native helper for this.
    **Install**. Nous downloads the recorder, checks it, and stores it in this
    vault's plugin folder.
 2. After that: click the **📞 phone icon** when a call starts, click it again
-   when it ends. A speaker-labeled transcript lands in your inbox and comes
-   back enriched, same as everything else.
+   when it ends.
+
+When recording starts, Nous opens a live note. Keep typing in Obsidian during
+the meeting:
+
+- Put questions you need to ask under **Questions to ask**.
+- Put quick reminders or decisions under **Live notes**.
+
+When you stop recording, Nous adds the transcript to that same note. Then the
+note comes back enriched, same as everything else.
 
 If speech-to-text is not ready yet, Nous still saves the recording. It leaves
-a note in `00-Inbox` called "Meeting recording needs transcription." Later,
-add local `whisper.cpp` or a Gemini/OpenAI key, then run command palette →
-"Nous: Process inbox now." Nous will finish that saved recording.
+a note in `00-Inbox` that says the meeting needs transcription. Your typed
+questions and notes stay in that note. Later, add local `whisper.cpp` or a
+Gemini/OpenAI key, then run command palette → "Nous: Process inbox now." Nous
+will finish that saved recording.
 
 Already use QuickRecorder? Nous can still use it as a legacy fallback. New
 users do not need it. The fallback setup is documented in

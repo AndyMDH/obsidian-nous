@@ -8,6 +8,7 @@ import {
 	snippet,
 	extractTranscriptSnippet,
 	extractEnrichedSections,
+	splitManualNotesFromTranscript,
 	extractSummaryText,
 	firstSentence,
 	buildMeetingMarkdown,
@@ -60,6 +61,31 @@ test("extractEnrichedSections stops before Transcript and Related", () => {
 	assert.ok(sections.includes("Summary text."));
 	assert.ok(!sections.includes("Raw transcript"));
 	assert.ok(!sections.includes("[[tag]]"));
+});
+
+test("splitManualNotesFromTranscript separates typed meeting notes from the transcript", () => {
+	const raw = `Meeting recording from 2026-08-12 10.00.
+
+## Questions to ask
+
+- [ ] Ask about budget
+
+## Live notes
+
+Need a follow-up owner.
+
+## Transcript
+
+Them: hello
+
+Me: hi`;
+	const split = splitManualNotesFromTranscript(raw);
+	assert.match(split.manualNotes, /Ask about budget/);
+	assert.match(split.manualNotes, /Need a follow-up owner/);
+	assert.ok(!split.manualNotes.includes("Them: hello"));
+	assert.match(split.transcript, /Meeting recording from/);
+	assert.match(split.transcript, /Them: hello/);
+	assert.ok(!split.transcript.includes("Ask about budget"));
 });
 
 test("extractSummaryText + firstSentence do not silently fall through on the heading newline", () => {
@@ -148,6 +174,24 @@ test("buildMeetingMarkdown preserves the raw transcript verbatim", () => {
 	const md = buildMeetingMarkdown(baseResult(), raw, "2026-07-02T12:00:00.000Z", null);
 	assert.ok(md.includes("Tom: hello."));
 	assert.ok(md.includes("Andy: hi there."));
+});
+
+test("buildMeetingMarkdown keeps typed meeting notes above Transcript", () => {
+	const md = buildMeetingMarkdown(
+		baseResult(),
+		"Them: roadmap update.",
+		"2026-07-02T12:00:00.000Z",
+		null,
+		undefined,
+		"## Questions to ask\n\n- [ ] Ask about budget\n\n## Live notes\n\nNeed a follow-up owner."
+	);
+	const notesIdx = md.indexOf("## Notes taken during meeting");
+	const transcriptIdx = md.indexOf("## Transcript");
+	assert.ok(notesIdx > -1);
+	assert.ok(transcriptIdx > notesIdx);
+	assert.match(md, /### Questions to ask/);
+	assert.match(md, /Ask about budget/);
+	assert.ok(!md.slice(transcriptIdx).includes("Ask about budget"));
 });
 
 test("buildMeetingMarkdown Related section includes tags, related notes, and wiki link only when present", () => {

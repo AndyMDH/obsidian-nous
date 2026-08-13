@@ -41,9 +41,15 @@ import {
 } from "./src/transcribe";
 import {
 	DEFAULT_NATIVE_RECORDER_BIN,
+	buildCompletedNativeRecordingNote,
+	buildLiveNativeRecordingNote,
+	buildNativeRecordingProblemNote,
 	buildPendingNativeRecordingNote,
+	extractNativeRecordingManualNotes,
+	hasMeaningfulNativeRecordingManualNotes,
 	nativeRecorderArgs,
 	nativeRecorderReleaseAssetUrl,
+	parseLiveNativeRecordingNote,
 	parsePendingNativeRecordingNote,
 	parseNativeRecorderChecksum,
 	parseNativeRecorderStatus,
@@ -170,6 +176,7 @@ export default class NousPlugin extends Plugin {
 	private meetingStatusBarEl: HTMLElement | null = null;
 	private meetingPollInterval: number | null = null;
 	private nativeRecorderLastProblem: string | null = null;
+	private activeNativeMeetingNotePath: string | null = null;
 	// Live transcripts already known by the time a voice recording is saved
 	// (see saveVoiceRecording()) - checked by processFile()/
 	// transcribeInboxAudioForCli() so a known transcript skips the batch
@@ -959,16 +966,24 @@ export default class NousPlugin extends Plugin {
 
 	private async toggleNativeMeetingCapture(status: NativeRecorderStatus) {
 		if (status.recording) {
+			const liveNote = await this.findActiveNativeMeetingNote(status.output);
 			const result = await this.runNativeRecorder("stop");
 			if (result.code !== 0) {
 				new Notice(`Nous: native recorder failed to stop - ${(result.stderr || result.stdout).slice(0, 200)}`, 10000);
 				return;
 			}
 			const stopped = parseNativeRecorderStatus(result.stdout);
+			const recordingDir = stopped.output ?? status.output;
 			this.setMeetingRecordingIndicator(false);
+			this.activeNativeMeetingNotePath = null;
 			new Notice("Nous: meeting recording stopped. Preparing transcript...");
-			if (stopped.output) {
-				void this.ingestNativeMeetingRecording(stopped.output);
+			if (recordingDir) {
+				void this.ingestNativeMeetingRecording(recordingDir, liveNote?.path ?? null);
+			} else if (liveNote) {
+				void this.markLiveNativeMeetingNoteProblem(
+					liveNote,
+					"Nous could not find the saved audio folder when the recorder stopped."
+				);
 			}
 			return;
 		}
@@ -995,7 +1010,14 @@ export default class NousPlugin extends Plugin {
 		}
 		this.nativeRecorderLastProblem = null;
 		this.setMeetingRecordingIndicator(true);
-		new Notice("Nous: meeting recording started.");
+		try {
+			this.activeNativeMeetingNotePath = await this.createLiveNativeMeetingNote(next.output);
+			new Notice("Nous: meeting recording started. Live note opened.");
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			await this.appendLog(`ERROR: could not create live meeting note: ${msg}`);
+			new Notice("Nous: meeting recording started, but the live note could not be opened.", 10000);
+		}
 	}
 
 	private async nativeRecorderStatus(): Promise<NativeRecorderStatus & { available: boolean }> {
@@ -1115,31 +1137,64 @@ export default class NousPlugin extends Plugin {
 		}
 	}
 
-	private async ingestNativeMeetingRecording(recordingDir: string): Promise<void> {
+	private async ingestNativeMeetingRecording(recordingDir: string, liveNotePath: string | null = null): Promise<void> {
 		const { path } = await loadNodeModules();
+		let liveFile: TFile | null = null;
+		let manualNotes = "";
 		try {
+			liveFile = liveNotePath ? this.app.vault.getFileByPath(liveNotePath) : null;
+			const liveContent = liveFile ? await this.app.vault.read(liveFile) : "";
+			manualNotes = liveContent ? extractNativeRecordingManualNotes(liveContent) : "";
+
 			if (!(await this.hasAudioTranscriptionBackend())) {
-				await this.createPendingNativeMeetingRecording(recordingDir);
+				await this.createPendingNativeMeetingRecording(recordingDir, liveFile, manualNotes);
 				return;
 			}
 
 			const transcript = await this.transcribeNativeMeetingRecording(recordingDir);
-			if (!transcript) return;
+			if (!transcript) {
+				if (liveFile) {
+					await this.markLiveNativeMeetingNoteProblem(
+						liveFile,
+						"Nous saved the meeting audio, but it did not produce a transcript."
+					);
+				}
+				return;
+			}
 
 			await this.ensureFolderExists(this.settings.inboxFolder);
-			const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${transcript.stamp} Meeting transcript.md`);
-			await this.app.vault.create(notePath, transcript.content);
+			let notePath: string;
+			const content = buildCompletedNativeRecordingNote(transcript.stamp, transcript.transcript, manualNotes);
+			if (liveFile) {
+				await this.app.vault.modify(liveFile, content);
+				notePath = liveFile.path;
+			} else {
+				notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${transcript.stamp} Meeting transcript.md`);
+				await this.app.vault.create(notePath, content);
+			}
 			await this.appendLog(`TRANSCRIBED: ${path.basename(recordingDir)} -> ${notePath}`);
-			new Notice(`Nous: meeting transcript saved to inbox: ${path.basename(notePath)}`);
-			if (!this.settings.autoProcessOnCreate) void this.processInbox();
+			new Notice(`Nous: meeting transcript added to inbox: ${path.basename(notePath)}`);
+			if (liveFile || !this.settings.autoProcessOnCreate) void this.processInbox();
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
+			if (liveFile) {
+				await this.markLiveNativeMeetingNoteProblem(
+					liveFile,
+					`Transcription failed: ${msg}`,
+					manualNotes
+				).catch(async (problemError) => {
+					const problemMsg = problemError instanceof Error ? problemError.message : String(problemError);
+					await this.appendLog(`ERROR: could not recover live meeting note after transcription failure: ${problemMsg}`);
+				});
+			}
 			new Notice(`Nous: native recording transcription failed - ${msg}`, 10000);
 			await this.appendLog(`ERROR: native recording transcription failed: ${msg}`);
 		}
 	}
 
-	private async transcribeNativeMeetingRecording(recordingDir: string): Promise<{ stamp: string; content: string } | null> {
+	private async transcribeNativeMeetingRecording(
+		recordingDir: string
+	): Promise<{ stamp: string; content: string; transcript: string } | null> {
 		const { fs, path } = await loadNodeModules();
 		try {
 			const sysPath = path.join(recordingDir, "sys.m4a");
@@ -1169,9 +1224,11 @@ export default class NousPlugin extends Plugin {
 			}
 
 			const stamp = this.meetingStampFromRecordingDir(recordingDir);
+			const transcript = parts.join("\n\n");
 			return {
 				stamp,
-				content: `Meeting recording from ${stamp}, transcribed automatically (Me = my mic, Them = everyone else on the call).\n\n${parts.join("\n\n")}\n`,
+				content: buildCompletedNativeRecordingNote(stamp, transcript),
+				transcript,
 			};
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
@@ -1179,17 +1236,43 @@ export default class NousPlugin extends Plugin {
 		}
 	}
 
-	private async createPendingNativeMeetingRecording(recordingDir: string): Promise<void> {
+	private async createPendingNativeMeetingRecording(
+		recordingDir: string,
+		liveFile: TFile | null = null,
+		manualNotes = ""
+	): Promise<void> {
 		const { path } = await loadNodeModules();
 		await this.ensureFolderExists(this.settings.inboxFolder);
 		const stamp = this.meetingStampFromRecordingDir(recordingDir);
-		const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${stamp} Meeting recording needs transcription.md`);
-		await this.app.vault.create(notePath, buildPendingNativeRecordingNote(recordingDir, stamp));
+		let notePath: string;
+		const content = buildPendingNativeRecordingNote(recordingDir, stamp, manualNotes);
+		if (liveFile) {
+			await this.app.vault.modify(liveFile, content);
+			notePath = liveFile.path;
+		} else {
+			notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${stamp} Meeting recording needs transcription.md`);
+			await this.app.vault.create(notePath, content);
+		}
 		await this.appendLog(`PENDING: ${path.basename(recordingDir)} needs speech-to-text setup -> ${notePath}`);
 		new Notice(
 			"Nous: meeting recording saved. Set up speech-to-text later, then run 'Nous: Process inbox now' to finish it.",
 			12000
 		);
+	}
+
+	private async markLiveNativeMeetingNoteProblem(
+		liveFile: TFile,
+		problem: string,
+		knownManualNotes?: string
+	): Promise<void> {
+		const content = await this.app.vault.read(liveFile);
+		const live = parseLiveNativeRecordingNote(content);
+		if (!live) return;
+		const manualNotes = knownManualNotes ?? extractNativeRecordingManualNotes(content);
+		await this.app.vault.modify(liveFile, buildNativeRecordingProblemNote(live.recordedAt, problem, manualNotes));
+		await this.appendLog(`RECOVERED: live native meeting note kept without transcript -> ${liveFile.path}`);
+		new Notice("Nous: no transcript was created. Your live notes were kept in the inbox.", 10000);
+		if (hasMeaningfulNativeRecordingManualNotes(manualNotes)) void this.processInbox();
 	}
 
 	private async transcribeExternalAudio(filePath: string, filename: string): Promise<string> {
@@ -1204,6 +1287,47 @@ export default class NousPlugin extends Plugin {
 		const base = recordingDir.split(/[\\/]/).pop() ?? "";
 		const match = base.match(/^(\d{4}-\d{2}-\d{2} \d{2}\.\d{2})/);
 		return match ? match[1] : window.moment().format("YYYY-MM-DD HH.mm");
+	}
+
+	private async createLiveNativeMeetingNote(recordingDir: string | null): Promise<string> {
+		await this.ensureFolderExists(this.settings.inboxFolder);
+		const stamp = recordingDir ? this.meetingStampFromRecordingDir(recordingDir) : window.moment().format("YYYY-MM-DD HH.mm");
+		const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${stamp} Meeting live note.md`);
+		await this.app.vault.create(notePath, buildLiveNativeRecordingNote(recordingDir, stamp));
+		const file = this.app.vault.getFileByPath(notePath);
+		if (file) await this.app.workspace.getLeaf(true).openFile(file);
+		await this.appendLog(`LIVE NOTE: native meeting recording -> ${notePath}`);
+		return notePath;
+	}
+
+	private async findActiveNativeMeetingNote(recordingDir: string | null = null): Promise<TFile | null> {
+		if (this.activeNativeMeetingNotePath) {
+			const file = this.app.vault.getFileByPath(this.activeNativeMeetingNotePath);
+			if (file) {
+				const live = parseLiveNativeRecordingNote(await this.app.vault.read(file));
+				if (live) return file;
+			}
+		}
+
+		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
+		if (!folder) return null;
+		const candidates: { file: TFile; recordingDir: string | null }[] = [];
+		for (const child of folder.children) {
+			if (!(child instanceof TFile) || !["md", "txt"].includes(child.extension.toLowerCase())) continue;
+			try {
+				const live = parseLiveNativeRecordingNote(await this.app.vault.read(child));
+				if (live) candidates.push({ file: child, recordingDir: live.recordingDir });
+			} catch {
+				// Leave unreadable inbox files to the normal processor.
+			}
+		}
+		candidates.sort((a, b) => b.file.stat.ctime - a.file.stat.ctime);
+		if (recordingDir) {
+			const exact = candidates.find((candidate) => candidate.recordingDir === recordingDir);
+			if (exact) return exact.file;
+			return candidates.length === 1 ? candidates[0].file : null;
+		}
+		return candidates[0]?.file ?? null;
 	}
 
 	private async uniqueVaultPath(basePath: string): Promise<string> {
@@ -1452,7 +1576,11 @@ export default class NousPlugin extends Plugin {
 			try {
 				const transcript = await this.transcribeNativeMeetingRecording(pending.recordingDir);
 				if (!transcript) continue;
-				await this.app.vault.modify(file, transcript.content);
+				const manualNotes = extractNativeRecordingManualNotes(content);
+				await this.app.vault.modify(
+					file,
+					buildCompletedNativeRecordingNote(transcript.stamp, transcript.transcript, manualNotes)
+				);
 				await this.appendLog(`TRANSCRIBED: ${file.name} pending recording -> ${file.path}`);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
@@ -1681,6 +1809,8 @@ export default class NousPlugin extends Plugin {
 			} else {
 				raw = await this.app.vault.read(file);
 				if (raw.trim().length === 0) return false;
+				const liveNativeRecording = parseLiveNativeRecordingNote(raw);
+				if (liveNativeRecording) return false;
 				const pendingNativeRecording = parsePendingNativeRecordingNote(raw);
 				if (pendingNativeRecording) {
 					if (!(await this.hasAudioTranscriptionBackend())) {
@@ -1692,10 +1822,24 @@ export default class NousPlugin extends Plugin {
 					}
 					const transcript = await this.transcribeNativeMeetingRecording(pendingNativeRecording.recordingDir);
 					if (!transcript) return false;
-					raw = transcript.content;
+					raw = buildCompletedNativeRecordingNote(
+						transcript.stamp,
+						transcript.transcript,
+						extractNativeRecordingManualNotes(raw)
+					);
 					await this.app.vault.modify(file, raw);
 					await this.appendLog(`TRANSCRIBED: ${file.name} pending recording -> ${file.path}`);
 					new Notice(`Nous: transcribed pending meeting recording "${file.name}".`);
+				}
+			}
+
+			let rawTranscriptForMarkdown = raw;
+			let manualNotesForMarkdown: string | undefined;
+			if (!attachment && !isAudio) {
+				const split = logic.splitManualNotesFromTranscript(raw);
+				if (split.manualNotes) {
+					rawTranscriptForMarkdown = split.transcript;
+					manualNotesForMarkdown = split.manualNotes;
 				}
 			}
 
@@ -1763,7 +1907,14 @@ export default class NousPlugin extends Plugin {
 				await this.app.vault.create(destPath, markdown);
 				await this.app.fileManager.renameFile(file, `${this.settings.meetingsFolder}/${attachmentFilename}`);
 			} else {
-				const markdown = logic.buildMeetingMarkdown(result, raw, enrichedAt, existingWikiLink);
+				const markdown = logic.buildMeetingMarkdown(
+					result,
+					rawTranscriptForMarkdown,
+					enrichedAt,
+					existingWikiLink,
+					undefined,
+					manualNotesForMarkdown
+				);
 				await this.app.vault.create(destPath, markdown);
 				await this.app.fileManager.trashFile(file);
 			}

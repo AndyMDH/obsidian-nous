@@ -143,14 +143,19 @@ Then click the **📞 phone icon** in the left sidebar (or command palette →
 "Nous: Toggle meeting capture") when the meeting starts, and click it again
 when it ends. First run may trigger macOS microphone and screen/system-audio
 permission prompts for Obsidian or the helper; allow them, then try the
-button again if macOS interrupted the first capture. A speaker-labeled
-transcript lands in your inbox and comes out enriched. `Me:` is your mic;
-`Them:` is system audio from the call.
+button again if macOS interrupted the first capture.
+
+When recording starts, Nous opens a live note in Obsidian. Keep that note open
+during the call. Type questions under **Questions to ask** and quick reminders
+under **Live notes**. When you stop recording, Nous adds the speaker-labeled
+transcript to that same note, then enriches it like any other inbox item.
+`Me:` is your mic; `Them:` is system audio from the call.
 
 If speech-to-text is not ready yet, Nous still records the meeting. When you
-stop, it leaves a "Meeting recording needs transcription" note in the inbox.
-Add local `whisper.cpp` or a Gemini/OpenAI key later, then run command palette
-→ "Nous: Process inbox now". Nous will finish that saved recording.
+stop, the live note stays in the inbox and says it needs transcription. Your
+typed questions and notes stay there too. Add local `whisper.cpp` or a
+Gemini/OpenAI key later, then run command palette → "Nous: Process inbox now".
+Nous will finish that saved recording.
 
 Already use [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)?
 Nous can still use it as a legacy fallback. New users do not need it. The

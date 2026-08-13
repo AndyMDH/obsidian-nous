@@ -2,9 +2,15 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import {
 	NATIVE_RECORDER_ASSET,
+	buildCompletedNativeRecordingNote,
+	buildLiveNativeRecordingNote,
+	buildNativeRecordingProblemNote,
 	buildPendingNativeRecordingNote,
+	extractNativeRecordingManualNotes,
+	hasMeaningfulNativeRecordingManualNotes,
 	nativeRecorderArgs,
 	nativeRecorderReleaseAssetUrl,
+	parseLiveNativeRecordingNote,
 	parsePendingNativeRecordingNote,
 	parseNativeRecorderChecksum,
 	parseNativeRecorderStatus,
@@ -57,6 +63,54 @@ test("pending native recording notes round-trip recording metadata", () => {
 		recordedAt: "2026-08-12 10.00",
 	});
 	assert.match(note, /Process inbox now/);
+});
+
+test("live native recording notes expose the in-meeting writing surface", () => {
+	const note = buildLiveNativeRecordingNote(
+		"/Users/andy/Movies/NousRecordings/2026-08-12 10.00 Meeting recording.qma",
+		"2026-08-12 10.00"
+	);
+	assert.deepEqual(parseLiveNativeRecordingNote(note), {
+		recordingDir: "/Users/andy/Movies/NousRecordings/2026-08-12 10.00 Meeting recording.qma",
+		recordedAt: "2026-08-12 10.00",
+		status: "recording",
+	});
+	assert.match(note, /## Questions to ask/);
+	assert.match(note, /## Live notes/);
+});
+
+test("manual live notes are preserved across pending and completed native recording notes", () => {
+	const liveNote = buildLiveNativeRecordingNote(null, "2026-08-12 10.00").replace(
+		"## Questions to ask\n\n- [ ]",
+		"## Questions to ask\n\n- [ ] Ask about budget"
+	);
+	const manualNotes = extractNativeRecordingManualNotes(liveNote);
+	assert.match(manualNotes, /Ask about budget/);
+	assert.ok(!manualNotes.includes("Recording..."));
+
+	const pending = buildPendingNativeRecordingNote("/tmp/recording.qma", "2026-08-12 10.00", manualNotes);
+	assert.match(pending, /Ask about budget/);
+	assert.match(pending, /## Pending transcript/);
+	assert.equal(parsePendingNativeRecordingNote(pending)?.recordingDir, "/tmp/recording.qma");
+
+	const completed = buildCompletedNativeRecordingNote("2026-08-12 10.00", "Them: hello", manualNotes);
+	assert.match(completed, /Ask about budget/);
+	assert.match(completed, /## Transcript\n\nThem: hello/);
+	assert.ok(!completed.includes("nous_live_native_recording"));
+});
+
+test("problem native recording notes are recoverable ordinary inbox notes", () => {
+	const problem = buildNativeRecordingProblemNote(
+		"2026-08-12 10.00",
+		"Nous saved the meeting audio, but it did not produce a transcript.",
+		"## Questions to ask\n\n- [ ] Ask about budget"
+	);
+	assert.match(problem, /Ask about budget/);
+	assert.match(problem, /No transcript was created/);
+	assert.equal(parseLiveNativeRecordingNote(problem), null);
+	assert.equal(parsePendingNativeRecordingNote(problem), null);
+	assert.equal(hasMeaningfulNativeRecordingManualNotes("## Questions to ask\n\n- [ ] "), false);
+	assert.equal(hasMeaningfulNativeRecordingManualNotes("## Questions to ask\n\n- [ ] Ask about budget"), true);
 });
 
 test("parsePendingNativeRecordingNote ignores ordinary notes", () => {

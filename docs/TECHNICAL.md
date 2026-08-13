@@ -190,13 +190,19 @@ run, the setup wizard/settings can download the matching release asset,
 verify its SHA-256 sidecar, install it into the vault's plugin folder, and
 retry from that managed path. If the helper is still unavailable, Nous falls
 back to the older QuickRecorder AppleScript path. When the native helper
-stops, the plugin transcribes `sys.m4a` as `Them:` and `mic.m4a` as `Me:`,
-writes a Markdown transcript to the inbox, then lets the normal enrichment
-pipeline handle it. If speech-to-text is not ready, the plugin writes a
-pending native recording note into the inbox. API mode retries it in
-`processFile()`. CLI mode retries it before running the Claude skill. The
-skill template also skips pending native recording notes so Claude does not
-enrich a placeholder.
+starts, the plugin creates and opens a live inbox note using
+`buildLiveNativeRecordingNote()`. The user can type under `## Questions to ask`
+and `## Live notes` while recording continues.
+
+When the helper stops, the plugin transcribes `sys.m4a` as `Them:` and
+`mic.m4a` as `Me:`. If a live note exists, the plugin replaces that same note
+with normal inbox text from `buildCompletedNativeRecordingNote()`, preserving
+typed questions/notes and removing the live-control frontmatter before
+enrichment. If speech-to-text is not ready, that same live note becomes a
+pending native recording note. API mode retries it in `processFile()`. CLI
+mode retries it before running the Claude skill. The skill template also skips
+pending and live native recording notes so Claude does not enrich a placeholder
+or an active recording.
 
 ### `cliRunner.ts`
 
