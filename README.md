@@ -119,8 +119,6 @@ Nous can point at folders you already use instead.
   (`Me`) separately, then turns both into a speaker-labeled note. If
   speech-to-text is not ready yet, the recording and your typed notes still
   wait in the inbox until you finish setup.
-  Already use [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)?
-  Nous can still use it as a legacy fallback. New users do not need it.
 - **Limitation**: group calls lump every other participant into one `Them:`
   speaker — there's no per-person diarization.
 - **Limitation**: meeting capture is macOS-only; live voice transcription

@@ -130,7 +130,7 @@ all-or-nothing: once on, the app stops typing transcripts into other apps.
 Calls with other people need system-audio capture, which Obsidian's browser
 mic recorder cannot hear. Nous prefers a small native macOS helper,
 `nous-recorder`, so the phone button can start and stop a meeting recording
-directly without depending on QuickRecorder.
+directly.
 
 If the helper is missing, the setup wizard and Settings → Nous → Meeting
 capture show an **Install** button. Click it once. Nous downloads its recorder,
@@ -156,11 +156,6 @@ stop, the live note stays in the inbox and says it needs transcription. Your
 typed questions and notes stay there too. Add local `whisper.cpp` or a
 Gemini/OpenAI key later, then run command palette → "Nous: Process inbox now".
 Nous will finish that saved recording.
-
-Already use [QuickRecorder](https://github.com/lihaoyun6/QuickRecorder)?
-Nous can still use it as a legacy fallback. New users do not need it. The
-one-time setup remains in
-[`../examples/meeting-capture/`](../examples/meeting-capture/).
 
 Want Nous to use a specific tag — a client, a project? Add a file with
 that name in **`20-Tags`** and it'll prefer it over inventing its own.

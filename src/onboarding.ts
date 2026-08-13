@@ -4,8 +4,6 @@ export const VOICE_TRANSCRIPTION_SETUP_NOTICE =
 export const MEETING_RECORDER_MISSING_NOTICE =
 	"Nous: meeting capture needs the native Nous recorder. Open the setup wizard, or go to Settings -> Nous -> Meeting capture and click Install.";
 
-export const QUICKRECORDER_MISSING_NOTICE = MEETING_RECORDER_MISSING_NOTICE;
-
 export const ONBOARDING_PREREQUISITES_TEXT =
 	"Text, images, and PDFs work after that choice. Voice notes also need speech-to-text: local whisper.cpp on macOS, or a Gemini/OpenAI key used only for transcription. For meetings on macOS, install the native Nous recorder. If speech-to-text is not ready yet, Nous still saves the recording and finishes it later.";
 
@@ -15,7 +13,7 @@ export const VOICE_CAPTURE_SETTINGS_DESC =
 export const NATIVE_RECORDER_INSTALL_DESC =
 	"Recommended for meeting capture on macOS. Nous downloads its recorder, checks it, and uses it automatically.";
 
-export type MeetingCapturePrerequisite = "ready-native" | "ready-quickrecorder" | "needs-recorder" | "unsupported";
+export type MeetingCapturePrerequisite = "ready-native" | "needs-recorder" | "unsupported";
 
 export interface CapturePrerequisiteStatus {
 	voiceReady: boolean;
@@ -68,31 +66,26 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 					? status.voiceReady
 						? "Ready - native Nous Recorder is installed and transcripts can finish automatically."
 						: "Ready to record - native Nous Recorder is installed. Transcripts will wait in the inbox until speech-to-text is set up."
-					: status.meeting === "ready-quickrecorder"
-						? status.voiceReady
-							? "Legacy QuickRecorder fallback is ready. Install the native Nous Recorder for the normal setup."
-							: "Legacy QuickRecorder fallback is ready to record. Install the native Nous Recorder for the normal setup; transcripts need speech-to-text setup later."
 					: status.meeting === "unsupported"
 						? "macOS only. Other platforms can still use text, file, and voice-note capture."
 						: "Needs the native Nous Recorder. Click Install below.",
-			warning: status.meeting === "needs-recorder" || status.meeting === "ready-quickrecorder",
+			warning: status.meeting === "needs-recorder",
 		},
 	];
 }
 
 export function shouldOfferNativeRecorderInstall(status: CapturePrerequisiteStatus): boolean {
-	return status.meeting === "needs-recorder" || status.meeting === "ready-quickrecorder";
+	return status.meeting === "needs-recorder";
 }
 
 export function capturePrerequisitesContinueText(status: CapturePrerequisiteStatus): string {
 	if (status.meeting === "needs-recorder") return "Continue without meeting capture";
-	if (status.meeting === "ready-quickrecorder") return "Continue without native recorder";
 	return "Continue";
 }
 
 export function onboardingFinishTitle(status: CapturePrerequisiteStatus): string {
 	if (status.voiceReady && status.meeting === "ready-native") return "Nous is ready";
-	if (status.voiceReady && (status.meeting === "ready-quickrecorder" || status.meeting === "unsupported")) {
+	if (status.voiceReady && status.meeting === "unsupported") {
 		return "Text and voice capture are ready";
 	}
 	return "Text capture is ready";
@@ -122,12 +115,6 @@ export function onboardingFinishNextActions(status: CapturePrerequisiteStatus): 
 		actions.push({
 			name: "Meeting capture",
 			desc: "Install the native Nous Recorder from setup or Settings -> Nous -> Meeting capture.",
-			warning: true,
-		});
-	} else if (status.meeting === "ready-quickrecorder") {
-		actions.push({
-			name: "Meeting capture",
-			desc: "Legacy QuickRecorder fallback is detected. Install the native Nous Recorder for the normal setup.",
 			warning: true,
 		});
 	} else if (status.meeting === "unsupported") {

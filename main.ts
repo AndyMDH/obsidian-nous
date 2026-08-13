@@ -251,9 +251,9 @@ export default class NousPlugin extends Plugin {
 			this.meetingStatusBarEl = this.addStatusBarItem();
 			this.meetingStatusBarEl.hide();
 
-			// A recording can start/stop outside Nous too (native helper CLI or
-			// QuickRecorder's own ⌥M fallback), so the button-press-time update
-			// alone can go stale. Poll lightly to keep the indicator honest.
+			// A recording can start/stop outside Nous too via the native helper
+			// CLI, so the button-press-time update alone can go stale. Poll
+			// lightly to keep the indicator honest.
 			this.meetingPollInterval = window.setInterval(() => {
 				void this.updateMeetingRecordingIndicator();
 			}, 5000);
@@ -533,13 +533,7 @@ export default class NousPlugin extends Plugin {
 		let meeting: CapturePrerequisiteStatus["meeting"] = "unsupported";
 		if (Platform.isMacOS) {
 			const nativeStatus = await this.nativeRecorderStatus();
-			if (nativeStatus.available) {
-				meeting = "ready-native";
-			} else if (await this.isQuickRecorderInstalled()) {
-				meeting = "ready-quickrecorder";
-			} else {
-				meeting = "needs-recorder";
-			}
+			meeting = nativeStatus.available ? "ready-native" : "needs-recorder";
 		}
 		return { voiceReady, meeting };
 	}
@@ -923,9 +917,8 @@ export default class NousPlugin extends Plugin {
 
 	// One button for full meeting capture (both sides of a call). Obsidian's
 	// own mic access (toggleVoiceCapture above) can never hear the other
-	// participant, so macOS meeting capture prefers the signed native
-	// nous-recorder helper and falls back to the older QuickRecorder
-	// AppleScript setup when the helper is unavailable.
+	// participant, so macOS meeting capture uses the native nous-recorder
+	// helper directly.
 	async toggleMeetingCapture() {
 		if (!Platform.isMacOS) {
 			new Notice("Nous: meeting capture needs macOS.");
@@ -938,30 +931,7 @@ export default class NousPlugin extends Plugin {
 			return;
 		}
 
-		if (!(await this.isQuickRecorderInstalled())) {
-			new Notice(MEETING_RECORDER_MISSING_NOTICE, 15000);
-			return;
-		}
-		const wasRecording = await this.isQuickRecorderRecording();
-		try {
-			await this.runAppleScript('tell application "QuickRecorder" to record system audio with microphone');
-		} catch {
-			new Notice(
-				"Nous: couldn't reach QuickRecorder - the first time this runs, macOS may ask to let Obsidian control it. Approve that, then try again.",
-				10000
-			);
-			return;
-		}
-		// The record command re-shows QuickRecorder's window even when it was
-		// hidden (e.g. by a login-time hide script) - give it a moment to
-		// render, then hide it again the same way, so the toggle stays silent.
-		window.setTimeout(() => {
-			void this.runAppleScript('tell application "System Events" to set visible of process "QuickRecorder" to false').catch(
-				() => {}
-			);
-		}, 800);
-		this.setMeetingRecordingIndicator(!wasRecording);
-		new Notice(wasRecording ? "Nous: meeting recording stopped." : "Nous: meeting recording started.");
+		new Notice(MEETING_RECORDER_MISSING_NOTICE, 15000);
 	}
 
 	private async toggleNativeMeetingCapture(status: NativeRecorderStatus) {
@@ -1363,63 +1333,9 @@ export default class NousPlugin extends Plugin {
 		}
 	}
 
-	private async runAppleScript(script: string): Promise<void> {
-		const { execFile } = await loadNodeModules();
-		return new Promise((resolve, reject) => {
-			execFile("osascript", ["-e", script], (error) => {
-				if (error) reject(Object.assign(new Error(error.message), error));
-				else resolve();
-			});
-		});
-	}
-
-	private async isQuickRecorderInstalled(): Promise<boolean> {
-		try {
-			await this.runAppleScript('id of application "QuickRecorder"');
-			return true;
-		} catch {
-			return false;
-		}
-	}
-
-	private async quickRecorderWatchDir(): Promise<string> {
-		const { execFile, os, path } = await loadNodeModules();
-		const home = os.homedir();
-		const fallback = path.join(home, "Movies", "MeetingRecordings");
-		try {
-			const dir = await new Promise<string>((resolve, reject) => {
-				execFile(
-					"defaults",
-					["read", "com.lihaoyun6.QuickRecorder", "saveDirectory"],
-					(error, stdout) => {
-						if (error) reject(Object.assign(new Error(error.message), error));
-						else resolve(stdout.trim());
-					}
-				);
-			});
-			return dir || fallback;
-		} catch {
-			return fallback;
-		}
-	}
-
-	private async isQuickRecorderRecording(): Promise<boolean> {
-		const watchDir = await this.quickRecorderWatchDir();
-		const { execFile } = await loadNodeModules();
-		return new Promise((resolve) => {
-			execFile("lsof", ["+D", watchDir], (_error, stdout) => {
-				resolve(stdout.includes("QuickRecorder"));
-			});
-		});
-	}
-
 	private async updateMeetingRecordingIndicator(): Promise<void> {
 		const nativeStatus = await this.nativeRecorderStatus();
-		if (nativeStatus.available) {
-			this.setMeetingRecordingIndicator(nativeStatus.recording);
-			return;
-		}
-		this.setMeetingRecordingIndicator(await this.isQuickRecorderRecording());
+		this.setMeetingRecordingIndicator(nativeStatus.available && nativeStatus.recording);
 	}
 
 	async quickCapture(text: string, attached: File | null) {
@@ -2447,7 +2363,7 @@ class NousSettingTab extends PluginSettingTab {
 			render: (setting) => {
 				setting
 					.setDesc(
-						"On macOS, the phone button uses the native Nous recorder. Install it here. QuickRecorder is only a legacy fallback if you already use that setup."
+						"On macOS, the phone button uses the native Nous recorder. Click once to start a meeting recording, then click it again to stop."
 					)
 					.setClass("setting-item-description");
 			},
@@ -2927,11 +2843,7 @@ class OnboardingModal extends Modal {
 				}
 				if (Platform.isMacOS && shouldOfferNativeRecorderInstall(status)) {
 					new Setting(statusEl)
-						.setName(
-							status.meeting === "ready-quickrecorder"
-								? "Install native recorder (recommended)"
-								: "Install native recorder"
-						)
+						.setName("Install native recorder")
 						.setDesc(NATIVE_RECORDER_INSTALL_DESC)
 						.addButton((button) =>
 							button.setButtonText("Install").setCta().onClick(async () => {

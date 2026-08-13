@@ -16,8 +16,7 @@ export interface NousSettings {
 	// in main.ts. Falls back to the Gemini/OpenAI key below when unavailable.
 	whisperCliPath: string;
 	whisperModelPath: string;
-	// Native macOS meeting recorder helper. If unavailable, macOS meeting
-	// capture falls back to QuickRecorder.
+	// Native macOS meeting recorder helper.
 	nativeRecorderPath: string;
 	// Opt-in, desktop-only live/streaming dictation via OpenAI's Realtime
 	// API (see src/realtimeTranscribe.ts) - reuses apiKeys.openai, no

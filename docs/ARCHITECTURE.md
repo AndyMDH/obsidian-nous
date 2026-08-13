@@ -52,8 +52,8 @@ A capture lands in `00-Inbox` by one of several paths:
   `nous-recorder` helper to capture system audio and microphone audio. It
   opens a live inbox note first, so the user can type questions and quick
   notes during the call, then adds a `Me:` / `Them:` transcript to that same
-  note when recording stops. If the helper is not available, the older
-  QuickRecorder setup can still feed transcripts into the same inbox path.
+  note when recording stops. If the helper is not available, meeting capture
+  asks the user to install the native recorder.
 - **Manual drop**: the user creates a file in `00-Inbox` directly, or a dictation tool writes there.
 - **Auto-process**: the plugin watches `create` events and enriches new inbox files after a short settle delay.
 

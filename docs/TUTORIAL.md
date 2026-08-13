@@ -161,10 +161,6 @@ questions and notes stay in that note. Later, add local `whisper.cpp` or a
 Gemini/OpenAI key, then run command palette → "Nous: Process inbox now." Nous
 will finish that saved recording.
 
-Already use QuickRecorder? Nous can still use it as a legacy fallback. New
-users do not need it. The fallback setup is documented in
-[`../examples/meeting-capture/`](../examples/meeting-capture/).
-
 ## Where to go from here
 
 - Something not behaving? [USAGE.md](USAGE.md#if-something-breaks) has

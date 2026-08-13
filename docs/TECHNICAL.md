@@ -63,7 +63,7 @@ obsidian-nous/
 | `query-vault` | `runVaultQuery()` — CLI-only natural-language search. |
 | `quick-capture` | Opens `QuickCaptureModal`. |
 | `toggle-voice-capture` | Records from microphone; stops on second invocation (or opens `LiveVoiceCaptureModal` instead, if live transcription is on). |
-| `toggle-meeting-capture` | Starts/stops the native `nous-recorder` helper when available; falls back to QuickRecorder (macOS only). |
+| `toggle-meeting-capture` | Starts/stops the native `nous-recorder` helper (macOS only). |
 | `setup-wizard` | Opens `OnboardingModal`. |
 
 ### Auto-processing
@@ -188,11 +188,11 @@ Native meeting capture is split deliberately:
 `main.ts` prefers the native helper for the phone button. If `status` cannot
 run, the setup wizard/settings can download the matching release asset,
 verify its SHA-256 sidecar, install it into the vault's plugin folder, and
-retry from that managed path. If the helper is still unavailable, Nous falls
-back to the older QuickRecorder AppleScript path. When the native helper
-starts, the plugin creates and opens a live inbox note using
-`buildLiveNativeRecordingNote()`. The user can type under `## Questions to ask`
-and `## Live notes` while recording continues.
+retry from that managed path. If the helper is still unavailable, meeting
+capture stays unavailable until the native recorder is installed. When the
+native helper starts, the plugin creates and opens a live inbox note using
+`buildLiveNativeRecordingNote()`. The user can type under `## Questions to
+ask` and `## Live notes` while recording continues.
 
 When the helper stops, the plugin transcribes `sys.m4a` as `Them:` and
 `mic.m4a` as `Me:`. If a live note exists, the plugin replaces that same note

@@ -39,7 +39,6 @@ test("new-user copy sends meeting capture to the native recorder first", () => {
 		MEETING_RECORDER_MISSING_NOTICE,
 	]) {
 		assert.match(text, /native|nous-recorder|Nous Recorder/);
-		assert.doesNotMatch(text, /QuickRecorder/);
 	}
 	assert.match(ONBOARDING_PREREQUISITES_TEXT, /saves the recording|finishes it later/);
 	assert.match(MEETING_RECORDER_MISSING_NOTICE, /click Install/i);
@@ -58,10 +57,9 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 	assert.match(items[1].desc, /will not start recording/);
 	assert.match(items[2].desc, /native Nous Recorder/);
 	assert.match(items[2].desc, /Click Install below/);
-	assert.doesNotMatch(items[2].desc, /QuickRecorder/);
 });
 
-test("capture prerequisite checklist distinguishes native recorder from QuickRecorder fallback", () => {
+test("capture prerequisite checklist distinguishes native recorder readiness", () => {
 	const nativeItems = capturePrerequisiteItems({ voiceReady: true, meeting: "ready-native" });
 	assert.equal(nativeItems[2].warning, false);
 	assert.match(nativeItems[2].desc, /native Nous Recorder/);
@@ -70,26 +68,16 @@ test("capture prerequisite checklist distinguishes native recorder from QuickRec
 	assert.equal(nativeNoTranscriptionItems[2].warning, false);
 	assert.match(nativeNoTranscriptionItems[2].desc, /Ready to record/);
 	assert.match(nativeNoTranscriptionItems[2].desc, /wait in the inbox/);
-
-	const quickRecorderItems = capturePrerequisiteItems({ voiceReady: true, meeting: "ready-quickrecorder" });
-	assert.equal(quickRecorderItems[2].warning, true);
-	assert.match(quickRecorderItems[2].desc, /Legacy QuickRecorder fallback/);
-	assert.match(quickRecorderItems[2].desc, /native Nous Recorder/);
 });
 
-test("native recorder install stays offered when only the legacy fallback is ready", () => {
+test("native recorder install is offered only when the native recorder is missing", () => {
 	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "needs-recorder" }), true);
-	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "ready-quickrecorder" }), true);
 	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "ready-native" }), false);
 	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "unsupported" }), false);
 
 	assert.equal(
 		capturePrerequisitesContinueText({ voiceReady: true, meeting: "needs-recorder" }),
 		"Continue without meeting capture"
-	);
-	assert.equal(
-		capturePrerequisitesContinueText({ voiceReady: true, meeting: "ready-quickrecorder" }),
-		"Continue without native recorder"
 	);
 	assert.equal(capturePrerequisitesContinueText({ voiceReady: true, meeting: "ready-native" }), "Continue");
 });
@@ -119,13 +107,6 @@ test("finish screen stays truthful when optional capture setup is missing", () =
 	assert.equal(onboardingFinishTitle(ready), "Nous is ready");
 	assert.match(onboardingFinishIntro(ready, "00-Inbox", "10-Notes"), /voice notes, or meeting recordings/);
 	assert.deepEqual(onboardingFinishNextActions(ready), []);
-
-	const legacy = { voiceReady: true, meeting: "ready-quickrecorder" } as const;
-	assert.equal(onboardingFinishTitle(legacy), "Text and voice capture are ready");
-	assert.deepEqual(
-		onboardingFinishNextActions(legacy).map((item) => [item.name, item.warning]),
-		[["Meeting capture", true]]
-	);
 });
 
 test("native recorder readiness text exposes status and next action", () => {
