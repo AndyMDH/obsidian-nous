@@ -56,6 +56,53 @@ export function parseNativeRecorderChecksum(text: string, asset = NATIVE_RECORDE
 	return null;
 }
 
+export interface TranscriptSegment {
+	from: number;
+	text: string;
+}
+
+export interface TrackTranscript {
+	text: string;
+	segments: TranscriptSegment[] | null;
+}
+
+// Merge the two meeting tracks into one dialogue, ordered by when each
+// segment was spoken, with consecutive same-speaker segments joined into a
+// single line. Falls back to two labeled blocks when either track has no
+// segment timing (cloud transcription returns plain text only).
+export function interleaveMeetingTracks(
+	sys: TrackTranscript | null,
+	mic: TrackTranscript | null
+): string {
+	const sysText = sys?.text.trim() ?? "";
+	const micText = mic?.text.trim() ?? "";
+
+	if (sysText && micText && sys?.segments?.length && mic?.segments?.length) {
+		const merged = [
+			...sys.segments.map((segment) => ({ ...segment, label: "Them" })),
+			...mic.segments.map((segment) => ({ ...segment, label: "Me" })),
+		]
+			.filter((segment) => segment.text.trim().length > 0)
+			.sort((a, b) => a.from - b.from);
+		const lines: string[] = [];
+		let previousLabel: string | null = null;
+		for (const segment of merged) {
+			if (segment.label === previousLabel) {
+				lines[lines.length - 1] += ` ${segment.text.trim()}`;
+			} else {
+				lines.push(`${segment.label}: ${segment.text.trim()}`);
+				previousLabel = segment.label;
+			}
+		}
+		return lines.join("\n\n");
+	}
+
+	const parts: string[] = [];
+	if (sysText) parts.push(`Them: ${sysText}`);
+	if (micText) parts.push(`Me: ${micText}`);
+	return parts.join("\n\n");
+}
+
 export function buildLiveNativeRecordingNote(recordingDir: string | null, recordedAt: string): string {
 	return `---
 ${LIVE_NATIVE_RECORDING_FLAG}: true

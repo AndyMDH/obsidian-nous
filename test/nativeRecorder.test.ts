@@ -8,6 +8,7 @@ import {
 	buildPendingNativeRecordingNote,
 	extractNativeRecordingManualNotes,
 	hasMeaningfulNativeRecordingManualNotes,
+	interleaveMeetingTracks,
 	nativeRecorderArgs,
 	nativeRecorderReleaseAssetUrl,
 	parseLiveNativeRecordingNote,
@@ -116,4 +117,50 @@ test("problem native recording notes are recoverable ordinary inbox notes", () =
 test("parsePendingNativeRecordingNote ignores ordinary notes", () => {
 	assert.equal(parsePendingNativeRecordingNote("---\ntype: meeting\n---\nbody"), null);
 	assert.equal(parsePendingNativeRecordingNote("plain text"), null);
+});
+
+test("interleaveMeetingTracks orders segments by timestamp across tracks", () => {
+	const transcript = interleaveMeetingTracks(
+		{
+			text: "How are you? Good to hear.",
+			segments: [
+				{ from: 0, text: "How are you?" },
+				{ from: 5000, text: "Good to hear." },
+			],
+		},
+		{ text: "Doing well, thanks.", segments: [{ from: 2000, text: "Doing well, thanks." }] }
+	);
+	assert.equal(transcript, "Them: How are you?\n\nMe: Doing well, thanks.\n\nThem: Good to hear.");
+});
+
+test("interleaveMeetingTracks joins consecutive same-speaker segments into one line", () => {
+	const transcript = interleaveMeetingTracks(
+		{
+			text: "First point. Second point.",
+			segments: [
+				{ from: 0, text: "First point." },
+				{ from: 1000, text: "Second point." },
+			],
+		},
+		{ text: "Understood.", segments: [{ from: 9000, text: "Understood." }] }
+	);
+	assert.equal(transcript, "Them: First point. Second point.\n\nMe: Understood.");
+});
+
+test("interleaveMeetingTracks falls back to labeled blocks without segment timing", () => {
+	const transcript = interleaveMeetingTracks(
+		{ text: "Everything they said.", segments: null },
+		{ text: "Everything I said.", segments: null }
+	);
+	assert.equal(transcript, "Them: Everything they said.\n\nMe: Everything I said.");
+});
+
+test("interleaveMeetingTracks handles a single track and empty input", () => {
+	assert.equal(
+		interleaveMeetingTracks({ text: "Solo system audio.", segments: [{ from: 0, text: "Solo system audio." }] }, null),
+		"Them: Solo system audio."
+	);
+	assert.equal(interleaveMeetingTracks(null, { text: "Just me.", segments: null }), "Me: Just me.");
+	assert.equal(interleaveMeetingTracks(null, null), "");
+	assert.equal(interleaveMeetingTracks({ text: "  ", segments: [] }, null), "");
 });
