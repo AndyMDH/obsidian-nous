@@ -47,6 +47,7 @@ import {
 	buildPendingNativeRecordingNote,
 	extractNativeRecordingManualNotes,
 	hasMeaningfulNativeRecordingManualNotes,
+	interleaveMeetingTracks,
 	nativeRecorderArgs,
 	nativeRecorderReleaseAssetUrl,
 	parseLiveNativeRecordingNote,
@@ -54,6 +55,8 @@ import {
 	parseNativeRecorderChecksum,
 	parseNativeRecorderStatus,
 	type NativeRecorderStatus,
+	type TrackTranscript,
+	type TranscriptSegment,
 } from "./src/nativeRecorder";
 import {
 	type CapturePrerequisiteStatus,
@@ -73,7 +76,7 @@ import {
 } from "./src/onboarding";
 import { RealtimeTranscriber, type RealtimeSocket } from "./src/realtimeTranscribe";
 import { augmentedPath, buildEnrichArgs, buildQueryArgs, buildWikiArgs, summarizeLogLines } from "./src/cliRunner";
-import type { CliExec } from "./src/cliRunner";
+import type { CliExec, CliExecResult } from "./src/cliRunner";
 import { meetingEnricherSkill, vaultQuerySkill, wikiBuilderSkill } from "./src/skillTemplates";
 import type { SkillFolders } from "./src/skillTemplates";
 
@@ -358,17 +361,42 @@ export default class NousPlugin extends Plugin {
 	// Gemini/OpenAI has a key (Anthropic has no audio API), independent of
 	// execution mode.
 	async transcribeAudio(extension: string, binary: ArrayBuffer, filename: string): Promise<string> {
+		return (await this.transcribeAudioWithSegments(extension, binary, filename)).text;
+	}
+
+	// Same as transcribeAudio, but keeps whisper's per-segment timing when the
+	// local path handled it - meeting capture uses the offsets to interleave
+	// the two tracks into a dialogue. Cloud transcription has no reliable
+	// timing, so those paths return segments: null.
+	private async transcribeAudioWithSegments(
+		extension: string,
+		binary: ArrayBuffer,
+		filename: string
+	): Promise<TrackTranscript> {
 		const local = await this.transcribeLocally(extension, binary);
-		if (local && "text" in local) return local.text;
+		if (local && "text" in local) return { text: local.text, segments: local.segments };
 
 		const keys = this.settings.apiKeys;
 		const mediaType = audioMimeType(extension);
 		const preferOpenAi = this.settings.apiProvider === "openai" && !!keys.openai;
 		if (keys.gemini && !preferOpenAi) {
-			return transcribeWithGemini(this.httpPost, keys.gemini, mediaType, logic.arrayBufferToBase64(binary));
+			const text = await transcribeWithGemini(
+				this.httpPost,
+				keys.gemini,
+				mediaType,
+				logic.arrayBufferToBase64(binary)
+			);
+			return { text, segments: null };
 		}
 		if (keys.openai) {
-			return transcribeWithOpenAi(this.httpPostBinary, keys.openai, mediaType, new Uint8Array(binary), filename);
+			const text = await transcribeWithOpenAi(
+				this.httpPostBinary,
+				keys.openai,
+				mediaType,
+				new Uint8Array(binary),
+				filename
+			);
+			return { text, segments: null };
 		}
 		const localHint = local && "failure" in local ? ` Local attempt failed: ${local.failure}` : "";
 		throw new Error(
@@ -454,7 +482,7 @@ export default class NousPlugin extends Plugin {
 	private async transcribeLocally(
 		extension: string,
 		binary: ArrayBuffer
-	): Promise<{ text: string } | { failure: string } | null> {
+	): Promise<{ text: string; segments: TranscriptSegment[] } | { failure: string } | null> {
 		if (!Platform.isMacOS) return null; // afconvert is macOS-only
 
 		const modelPath = this.settings.whisperModelPath.trim() || this.defaultWhisperModelPath();
@@ -498,13 +526,22 @@ export default class NousPlugin extends Plugin {
 			}
 
 			const raw = await fsPromises.readFile(`${outBase}.json`, "utf8");
-			const parsed = JSON.parse(raw) as { transcription?: { text?: string }[] };
-			const text = (parsed.transcription ?? [])
-				.map((segment) => (segment.text ?? "").trim())
-				.filter((t) => t.length > 0)
+			const parsed = JSON.parse(raw) as {
+				transcription?: { text?: string; offsets?: { from?: number } }[];
+			};
+			const segments = (parsed.transcription ?? [])
+				.map((segment) => ({
+					from: segment.offsets?.from ?? 0,
+					text: (segment.text ?? "").trim(),
+				}))
+				.filter((segment) => segment.text.length > 0);
+			const text = segments
+				.map((segment) => segment.text)
 				.join(" ")
 				.trim();
-			return text ? { text } : { failure: "whisper-cli produced no speech text (silence, or the recording was too quiet)" };
+			return text
+				? { text, segments }
+				: { failure: "whisper-cli produced no speech text (silence, or the recording was too quiet)" };
 		} catch (err) {
 			return { failure: err instanceof Error ? err.message : String(err) };
 		} finally {
@@ -659,6 +696,14 @@ export default class NousPlugin extends Plugin {
 		});
 	};
 
+	// Some CLIs (claude included, for errors like "Not logged in") write
+	// their failure message to stdout rather than stderr - check both so a
+	// failed run is never logged with a blank reason.
+	private cliErrorDetail(result: CliExecResult): string {
+		const detail = (result.stderr.trim() || result.stdout.trim()).slice(0, 300);
+		return detail || "(no output)";
+	}
+
 	private getVaultBasePath(): string | null {
 		return this.app.vault.adapter instanceof FileSystemAdapter
 			? this.app.vault.adapter.getBasePath()
@@ -666,13 +711,15 @@ export default class NousPlugin extends Plugin {
 	}
 
 	// Named allowlist rather than spreading all of process.env - the CLI only
-	// needs PATH/HOME to resolve and locale/auth vars to behave normally, and
-	// forwarding the whole parent environment into a spawned process needlessly
-	// exposes things like USER/LOGNAME/HOSTNAME to it.
+	// needs PATH/HOME/USER to resolve and locale/auth vars to behave normally,
+	// and forwarding the whole parent environment into a spawned process
+	// needlessly exposes things like HOSTNAME to it. USER/LOGNAME are kept
+	// (unlike HOSTNAME) because `claude`'s Keychain-based auth lookup fails
+	// with "Not logged in" if the invoking process's USER is missing.
 	private cliEnv(): Record<string, string> {
 		const home = process.env.HOME ?? "";
 		const env: Record<string, string> = { HOME: home };
-		for (const key of ["LANG", "LC_ALL", "TERM", "TMPDIR", "SHELL"]) {
+		for (const key of ["USER", "LOGNAME", "LANG", "LC_ALL", "TERM", "TMPDIR", "SHELL"]) {
 			const value = process.env[key];
 			if (value) env[key] = value;
 		}
@@ -1178,23 +1225,16 @@ export default class NousPlugin extends Plugin {
 				.then(() => true)
 				.catch(() => false);
 
-			const parts: string[] = [];
-			if (sysExists) {
-				const sysTranscript = await this.transcribeExternalAudio(sysPath, "sys.m4a");
-				if (sysTranscript.trim()) parts.push(`Them: ${sysTranscript.trim()}`);
-			}
-			if (micExists) {
-				const micTranscript = await this.transcribeExternalAudio(micPath, "mic.m4a");
-				if (micTranscript.trim()) parts.push(`Me: ${micTranscript.trim()}`);
-			}
-			if (parts.length === 0) {
+			const sysTrack = sysExists ? await this.transcribeExternalAudioWithSegments(sysPath, "sys.m4a") : null;
+			const micTrack = micExists ? await this.transcribeExternalAudioWithSegments(micPath, "mic.m4a") : null;
+			const transcript = interleaveMeetingTracks(sysTrack, micTrack);
+			if (!transcript) {
 				new Notice("Nous: native recording had no transcribable audio.", 10000);
 				await this.appendLog(`SKIPPED: ${path.basename(recordingDir)} produced no transcript`);
 				return null;
 			}
 
 			const stamp = this.meetingStampFromRecordingDir(recordingDir);
-			const transcript = parts.join("\n\n");
 			return {
 				stamp,
 				content: buildCompletedNativeRecordingNote(stamp, transcript),
@@ -1245,12 +1285,12 @@ export default class NousPlugin extends Plugin {
 		if (hasMeaningfulNativeRecordingManualNotes(manualNotes)) void this.processInbox();
 	}
 
-	private async transcribeExternalAudio(filePath: string, filename: string): Promise<string> {
+	private async transcribeExternalAudioWithSegments(filePath: string, filename: string): Promise<TrackTranscript> {
 		const { fs } = await loadNodeModules();
 		const bytes = await fs.readFile(filePath);
 		const copy = new Uint8Array(bytes.byteLength);
 		copy.set(bytes);
-		return this.transcribeAudio("m4a", copy.buffer, filename);
+		return this.transcribeAudioWithSegments("m4a", copy.buffer, filename);
 	}
 
 	private meetingStampFromRecordingDir(recordingDir: string): string {
@@ -1520,7 +1560,7 @@ export default class NousPlugin extends Plugin {
 		);
 		if (enrichResult.code !== 0) {
 			await this.appendLog(
-				`ERROR: meeting-enricher CLI exited ${enrichResult.code} - ${enrichResult.stderr.slice(0, 300)}`
+				`ERROR: meeting-enricher CLI exited ${enrichResult.code} - ${this.cliErrorDetail(enrichResult)}`
 			);
 			new Notice(
 				`Nous: enrichment failed (is "${this.settings.claudeCliPath}" the right CLI path?) - see .nous/pipeline.log`,
@@ -1536,7 +1576,7 @@ export default class NousPlugin extends Plugin {
 		);
 		if (wikiResult.code !== 0) {
 			await this.appendLog(
-				`ERROR: wiki-builder CLI exited ${wikiResult.code} - ${wikiResult.stderr.slice(0, 300)}`
+				`ERROR: wiki-builder CLI exited ${wikiResult.code} - ${this.cliErrorDetail(wikiResult)}`
 			);
 			new Notice("Nous: wiki step failed - see .nous/pipeline.log", 10000);
 			return;
@@ -1573,7 +1613,7 @@ export default class NousPlugin extends Plugin {
 			{ cwd: basePath, env: this.cliEnv() }
 		);
 		if (result.code !== 0) {
-			await this.appendLog(`ERROR: wiki-builder CLI exited ${result.code} - ${result.stderr.slice(0, 300)}`);
+			await this.appendLog(`ERROR: wiki-builder CLI exited ${result.code} - ${this.cliErrorDetail(result)}`);
 			new Notice("Nous: wiki step failed - see .nous/pipeline.log", 10000);
 			return;
 		}
@@ -1607,7 +1647,7 @@ export default class NousPlugin extends Plugin {
 			{ cwd: basePath, env: this.cliEnv() }
 		);
 		if (result.code !== 0) {
-			await this.appendLog(`ERROR: vault-query CLI exited ${result.code} - ${result.stderr.slice(0, 300)}`);
+			await this.appendLog(`ERROR: vault-query CLI exited ${result.code} - ${this.cliErrorDetail(result)}`);
 			new Notice("Nous: query failed - see .nous/pipeline.log", 10000);
 			return;
 		}
