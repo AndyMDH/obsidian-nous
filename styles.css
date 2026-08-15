@@ -180,3 +180,39 @@
 	color: #eb6c36;
 	border-color: #eb6c36;
 }
+
+/* Wizard breathing room */
+.nous-modal .modal-content {
+	padding-top: 6px;
+}
+.nous-modal .modal-title {
+	margin-bottom: 10px;
+}
+.nous-welcome-question {
+	margin: 6px 0 20px;
+	line-height: 1.5;
+}
+.nous-mode-cards {
+	gap: 12px;
+	margin: 16px 0 24px;
+}
+.nous-mode-card {
+	padding: 14px 16px;
+}
+.nous-modal .setting-item {
+	padding: 14px 0;
+}
+.nous-modal .nous-tour-dots {
+	margin: 8px 0 20px;
+}
+.nous-tour-body {
+	min-height: 160px;
+	padding: 8px 0;
+}
+.nous-tour-icon {
+	margin: 12px auto 16px;
+}
+.nous-tour-text {
+	margin: 0 auto 12px;
+	line-height: 1.5;
+}
