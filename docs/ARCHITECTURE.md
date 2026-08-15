@@ -48,12 +48,16 @@ A capture lands in `00-Inbox` by one of several paths:
 
 - **Quick capture**: the user opens the quick-capture modal and types or attaches a file.
 - **Voice capture**: the plugin records from the microphone and drops a WebM/M4A file in the inbox. Optionally (opt-in, desktop-only, beta), OpenAI's Realtime API streams an incremental transcript while recording is still in progress; when that succeeds, the known transcript is used directly and the batch transcription step below is skipped for that file. See `realtimeTranscribe.ts` in `docs/TECHNICAL.md`.
-- **Meeting capture**: on macOS, the phone button prefers the native
+- **Meeting capture**: on macOS, the phone button uses the native
   `nous-recorder` helper to capture system audio and microphone audio. It
   opens a live inbox note first, so the user can type questions and quick
-  notes during the call, then adds a `Me:` / `Them:` transcript to that same
-  note when recording stops. If the helper is not available, meeting capture
-  asks the user to install the native recorder.
+  notes during the call. While recording, the helper streams both tracks
+  through Apple's on-device speech engine and the plugin mirrors that live
+  draft into the note's Transcript section - no network, no extra install.
+  When recording stops, the whisper pass replaces the draft: a call becomes
+  a `Me:` / `Them:` dialogue, an in-person meeting one unlabeled room
+  transcript. If the helper is not available, meeting capture asks the user
+  to install it.
 - **Manual drop**: the user creates a file in `00-Inbox` directly, or a dictation tool writes there.
 - **Auto-process**: the plugin watches `create` events and enriches new inbox files after a short settle delay.
 
@@ -215,4 +219,5 @@ User input
 - In **Local mode**, nothing leaves the machine.
 - API keys: on Obsidian 1.11.4+, keys are stored via `App.secretStorage` (Obsidian's own secret store), not in the plugin's `data.json` - the plugin's own data file only ever holds a blank string for each key field on those versions. On older Obsidian (no `secretStorage` API), keys fall back to the plugin's `data.json` in plain text, as before - do not sync the vault to untrusted locations in that case. Upgrading from an older install migrates any already-saved plaintext key into `secretStorage` automatically on the next load.
 - No telemetry is collected by the plugin.
-- **Live voice transcription (beta)** is opt-in and off by default. When enabled, it sends microphone audio to OpenAI's Realtime API over a WebSocket - the same OpenAI network surface (and the same `apiKeys.openai` key) already used for Gemini/OpenAI batch transcription fallback, not a new one. Users who leave it off, or who have no OpenAI key, see no behavior change and no new network surface at all.
+- **Live meeting transcription** runs entirely on-device via Apple's speech framework: audio never leaves the machine, and macOS gates it behind a one-time speech-recognition permission. Denied permission means no live view and an unchanged recording.
+- **Live voice transcription (beta)** - the separate voice-note feature - is opt-in and off by default. When enabled, it sends microphone audio to OpenAI's Realtime API over a WebSocket - the same OpenAI network surface (and the same `apiKeys.openai` key) already used for Gemini/OpenAI batch transcription fallback, not a new one. Users who leave it off, or who have no OpenAI key, see no behavior change and no new network surface at all.
