@@ -2419,6 +2419,21 @@ class NousSettingTab extends PluginSettingTab {
 		const items: SettingDefinitionItem[] = [];
 
 		items.push({
+			name: "",
+			render: (setting) => {
+				setting.settingEl.addClass("nous-settings-header");
+				setting.settingEl.empty();
+				const head = setting.settingEl.createDiv({ cls: "nous-settings-header-inner" });
+				head.createSpan({ cls: "nous-settings-header-name", text: "Nous" });
+				head.createSpan({ cls: "nous-settings-header-version", text: `v${this.plugin.manifest.version}` });
+				const links = head.createDiv({ cls: "nous-settings-header-links" });
+				links.createEl("a", { text: "Docs", href: "https://github.com/AndyMDH/obsidian-nous/tree/main/docs" });
+				links.createEl("a", { text: "Report a bug", href: "https://github.com/AndyMDH/obsidian-nous/issues" });
+				links.createEl("a", { text: "GitHub", href: "https://github.com/AndyMDH/obsidian-nous" });
+			},
+		});
+
+		items.push({
 			name: "Execution mode",
 			render: (setting) => {
 				setting
@@ -3013,39 +3028,58 @@ class OnboardingModal extends Modal {
 			text: ONBOARDING_PREREQUISITES_TEXT,
 		});
 
-		new Setting(this.contentEl)
-			.setName("I have a Claude subscription (pro/max)")
-			.setDesc("Uses Claude Code - no separate billing. Desktop only.")
-			.addButton((b) =>
-				b.setButtonText("Use Claude Code").setCta().onClick(async () => {
-					this.plugin.settings.executionMode = "cli";
-					await this.plugin.saveSettings();
-					this.renderTest();
-				})
-			);
+		const cards = this.contentEl.createDiv({ cls: "nous-mode-cards" });
+		const addCard = (options: {
+			title: string;
+			desc: string;
+			badge?: string;
+			onChoose: () => void | Promise<void>;
+		}) => {
+			const card = cards.createDiv({ cls: "nous-mode-card" });
+			card.setAttribute("role", "button");
+			card.setAttribute("tabindex", "0");
+			if (options.badge) card.createDiv({ cls: "nous-mode-card-badge", text: options.badge });
+			card.createDiv({ cls: "nous-mode-card-title", text: options.title });
+			card.createDiv({ cls: "nous-mode-card-desc", text: options.desc });
+			const choose = () => void options.onChoose();
+			card.addEventListener("click", choose);
+			card.addEventListener("keydown", (event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					choose();
+				}
+			});
+		};
 
-		new Setting(this.contentEl)
-			.setName("I want a free local model")
-			.setDesc("E.g. Ollama - nothing leaves your machine, no billing, no account. ~2 min setup.")
-			.addButton((b) =>
-				b.setButtonText("Use a local model").onClick(async () => {
-					this.plugin.settings.executionMode = "api";
-					this.plugin.settings.apiProvider = "local";
-					await this.plugin.saveSettings();
-					this.renderApiSetup();
-				})
-			);
-
-		new Setting(this.contentEl)
-			.setName("I have an API key")
-			.setDesc("Anthropic, OpenAI, Gemini, or Z.ai. Billed separately, works on mobile too.")
-			.addButton((b) =>
-				b.setButtonText("Use an API key").onClick(async () => {
-					this.plugin.settings.executionMode = "api";
-					await this.plugin.saveSettings();
-					this.renderApiSetup();
-				})
-			);
+		addCard({
+			title: "I have a Claude subscription",
+			desc: "Uses Claude Code - no separate billing. Desktop only.",
+			badge: "Recommended",
+			onChoose: async () => {
+				this.plugin.settings.executionMode = "cli";
+				await this.plugin.saveSettings();
+				this.renderTest();
+			},
+		});
+		addCard({
+			title: "I want a free local model",
+			desc: "E.g. Ollama - nothing leaves your machine, no billing, no account. ~2 min setup.",
+			onChoose: async () => {
+				this.plugin.settings.executionMode = "api";
+				this.plugin.settings.apiProvider = "local";
+				await this.plugin.saveSettings();
+				this.renderApiSetup();
+			},
+		});
+		addCard({
+			title: "I have an API key",
+			desc: "Anthropic, OpenAI, Gemini, or Z.ai. Billed separately, works on mobile too.",
+			onChoose: async () => {
+				this.plugin.settings.executionMode = "api";
+				await this.plugin.saveSettings();
+				this.renderApiSetup();
+			},
+		});
 
 		new Setting(this.contentEl)
 			.setName("Not now")

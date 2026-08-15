@@ -42,10 +42,7 @@ rest runs itself.
    whole thing happen once, live.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../assets/settings-nav-dark.svg">
-    <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="../assets/settings-nav-light.svg">
-  </picture>
+  <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="../assets/settings-nav.svg">
 </p>
 
 If you skip that sample note or want to redo setup later: command palette
@@ -85,10 +82,7 @@ Once a tag accumulates 4+ notes, Nous also writes a **wiki page** in
 you use it more, nothing to trigger yourself.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../assets/pipeline-dark.svg">
-    <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="../assets/pipeline-light.svg">
-  </picture>
+  <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="../assets/pipeline.svg">
 </p>
 
 ## Step 4: your first voice note
@@ -105,10 +99,7 @@ not start recording.
    your original recording embedded and playable inside it.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../assets/capture-scenario-dark.svg">
-    <img alt="Click the mic or phone icon to start recording, talk, click it again to stop — a tagged note with the audio or transcript inside lands in your inbox." src="../assets/capture-scenario-light.svg">
-  </picture>
+  <img alt="Click the mic or phone icon to start recording, talk, click it again to stop — a tagged note with the audio or transcript inside lands in your inbox." src="../assets/demo.svg">
 </p>
 
 The same click-to-start, click-to-stop gesture is used for meeting capture

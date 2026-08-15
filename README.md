@@ -82,7 +82,7 @@ search for "Nous", and bind the ones that you use often.
 | 📥 | Anything else | drop it straight into `00-Inbox` |
 
 <p align="center">
-  <img alt="Click the mic or phone icon to start recording — meetings open a live note for typing questions during the call — click again to stop, and the audio is transcribed on your Mac into a Me/Them dialogue that lands as a tagged note in your inbox." src="assets/capture-scenario.svg">
+  <img alt="Animated demo of one capture cycle: a live note opens while recording, the user types a question under Meeting notes, the transcript fills in as a Me/Them dialogue on stop, and the note comes back tagged and linked." src="assets/demo.svg">
 </p>
 
 *Dictate from anywhere (optional)*: a system-wide dictation app such as

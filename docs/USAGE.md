@@ -41,10 +41,7 @@ bottom-left, or `Cmd/Ctrl+,` — and click **Nous** in the left sidebar. Choose
 how Nous writes notes first; voice notes and meeting recording have their own
 setup rows below that.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="../assets/settings-nav-dark.svg">
-  <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="../assets/settings-nav-light.svg">
-</picture>
+<img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="../assets/settings-nav.svg">
 
 - **Claude subscription (Pro/Max)?** Set **Execution mode** to
   "Claude Code CLI", then run **Test connection**.

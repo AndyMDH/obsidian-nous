@@ -25,11 +25,12 @@
    enricher rewrites the note. Theme-aware: follows the user's accent color,
    falling back to Nous tangerine. */
 .nous-live-note h2,
-.nous-live-note .cm-header-2 {
-	color: var(--color-accent, #eb6c36);
+.nous-live-note .cm-header-2,
+.markdown-source-view.nous-live-note .cm-header-2 {
+	color: #eb6c36;
 }
 .markdown-reading-view .nous-live-note h2 {
-	border-bottom: 1px solid color-mix(in srgb, var(--color-accent, #eb6c36) 30%, transparent);
+	border-bottom: 1px solid rgba(235, 108, 54, 0.3);
 	padding-bottom: 4px;
 }
 .nous-live-note em,
@@ -39,5 +40,71 @@
 
 /* Transcription-in-flight status bar state */
 .nous-transcribing {
-	color: var(--color-accent, #eb6c36);
+	color: #eb6c36;
+}
+
+/* Setup wizard: execution-mode choice cards */
+.nous-mode-cards {
+	display: grid;
+	gap: 10px;
+	margin: 12px 0 16px;
+}
+.nous-mode-card {
+	position: relative;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 8px;
+	padding: 12px 14px;
+	cursor: pointer;
+	background: var(--background-secondary);
+	transition: border-color 0.12s ease;
+}
+.nous-mode-card:hover,
+.nous-mode-card:focus-visible {
+	border-color: var(--interactive-accent);
+}
+.nous-mode-card-title {
+	font-weight: 600;
+	margin-bottom: 2px;
+}
+.nous-mode-card-desc {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+.nous-mode-card-badge {
+	position: absolute;
+	top: 10px;
+	right: 12px;
+	font-size: var(--font-ui-smaller);
+	color: var(--interactive-accent);
+	border: 1px solid var(--interactive-accent);
+	border-radius: 4px;
+	padding: 1px 6px;
+}
+
+/* Settings tab header strip */
+.nous-settings-header {
+	border: none;
+	padding: 0 0 8px;
+}
+.nous-settings-header-inner {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	width: 100%;
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding-bottom: 8px;
+}
+.nous-settings-header-name {
+	font-weight: 700;
+	font-size: var(--font-ui-large);
+}
+.nous-settings-header-version {
+	color: var(--text-muted);
+	font-size: var(--font-ui-small);
+}
+.nous-settings-header-links {
+	margin-left: auto;
+	display: flex;
+	gap: 12px;
+	font-size: var(--font-ui-small);
 }
