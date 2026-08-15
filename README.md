@@ -92,7 +92,7 @@ key. Then the wizard checks the optional voice and meeting setup.
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/capture-scenario-dark.svg">
-    <img alt="Click the mic or phone icon to start recording, talk, click it again to stop — a tagged note with the audio or transcript inside lands in your inbox." src="assets/capture-scenario-light.svg">
+    <img alt="Click the mic or phone icon to start recording — meetings open a live note for typing questions during the call — click again to stop, and the audio is transcribed on your Mac into a Me/Them dialogue that lands as a tagged note in your inbox." src="assets/capture-scenario-light.svg">
   </picture>
 </p>
 
