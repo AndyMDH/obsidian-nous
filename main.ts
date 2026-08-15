@@ -262,6 +262,12 @@ export default class NousPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "open-settings",
+			name: "Open settings",
+			callback: () => this.openNousSettings(),
+		});
+
+		this.addCommand({
 			id: "toggle-voice-capture",
 			name: "Start/stop voice recording",
 			callback: () => void this.toggleVoiceCapture(),
@@ -906,6 +912,28 @@ export default class NousPlugin extends Plugin {
 		});
 	};
 
+	// Obsidian has no public API for this, but the internal one is stable and
+	// widely used: jump straight to this plugin's settings tab. New users
+	// consistently struggle to find Settings -> Community plugins -> Nous, so
+	// every instruction that names that path also offers this jump.
+	openNousSettings(): void {
+		const setting = (this.app as unknown as {
+			setting?: { open: () => void; openTabById: (id: string) => void };
+		}).setting;
+		if (!setting) return;
+		setting.open();
+		setting.openTabById(this.manifest.id);
+	}
+
+	// A notice whose last line is a clickable "Open Nous settings" link.
+	settingsNotice(message: string, timeoutMs = 10000): void {
+		const fragment = document.createDocumentFragment();
+		fragment.createDiv({ text: message });
+		const link = fragment.createEl("a", { text: "Open Nous settings" });
+		link.addEventListener("click", () => this.openNousSettings());
+		new Notice(fragment, timeoutMs);
+	}
+
 	private getVaultBasePath(): string | null {
 		return this.app.vault.adapter instanceof FileSystemAdapter
 			? this.app.vault.adapter.getBasePath()
@@ -1180,7 +1208,7 @@ export default class NousPlugin extends Plugin {
 			return;
 		}
 
-		new Notice(MEETING_RECORDER_MISSING_NOTICE, 15000);
+		this.settingsNotice(MEETING_RECORDER_MISSING_NOTICE, 15000);
 	}
 
 	private async toggleNativeMeetingCapture(status: NativeRecorderStatus) {
@@ -3006,23 +3034,39 @@ class VoiceCaptureSetupModal extends Modal {
 	onOpen() {
 		this.setTitle("Set up voice notes");
 		this.contentEl.createEl("p", {
-			text: "Voice notes need speech-to-text before Nous can start recording.",
-		});
-		this.contentEl.createEl("p", {
-			text: "Choose one path: install local whisper.cpp on macOS for private transcription, or add a Gemini/OpenAI key in Settings -> Nous. Gemini/OpenAI keys are used only to turn speech into text.",
+			text: "Voice notes need speech-to-text before Nous can start recording. Pick one path:",
 		});
 
-		new Setting(this.contentEl)
-			.setName("Private option")
-			.setDesc("Install whisper.cpp, then set the model path in settings -> Nous -> advanced settings -> voice capture.");
+		if (Platform.isMacOS) {
+			new Setting(this.contentEl)
+				.setName("Private (recommended)")
+				.setDesc(
+					'Download the local speech model (~1.6 GB, one time). Your voice never leaves this Mac. Also needs whisper-cli: "brew install whisper-cpp".'
+				)
+				.addButton((button) =>
+					button.setButtonText("Download model").setCta().onClick(() => {
+						button.setDisabled(true);
+						this.close();
+						void this.plugin.downloadWhisperModelsWithNotice();
+					})
+				);
+		}
 
 		new Setting(this.contentEl)
-			.setName("Cloud option")
-			.setDesc("Add a Gemini or OpenAI key in settings -> Nous. You can still use Claude, GLM, or a local model for the note-writing step.");
+			.setName("Cloud")
+			.setDesc(
+				"Add a Gemini or OpenAI key. The key is used only to turn speech into text - note-writing stays on the mode you chose."
+			)
+			.addButton((button) =>
+				button.setButtonText("Open Nous settings").onClick(() => {
+					this.close();
+					this.plugin.openNousSettings();
+				})
+			);
 
 		new Setting(this.contentEl)
 			.addButton((button) =>
-				button.setButtonText("Open setup wizard").setCta().onClick(() => {
+				button.setButtonText("Open setup wizard").onClick(() => {
 					this.close();
 					new OnboardingModal(this.app, this.plugin).open();
 				})
@@ -3335,6 +3379,16 @@ class OnboardingModal extends Modal {
 				}
 			}
 		}
+		new Setting(this.contentEl)
+			.setName("Everything else lives in the settings tab")
+			.setDesc("Providers, folders, hotkeys pointers, voice and meeting setup - all in one place.")
+			.addButton((b) =>
+				b.setButtonText("Open Nous settings").onClick(() => {
+					this.close();
+					this.plugin.openNousSettings();
+				})
+			);
+
 		this.contentEl.createEl("p", {
 			text: "Want to see it happen right now? Nous can drop a sample note into the inbox and enrich it while you watch.",
 		});
