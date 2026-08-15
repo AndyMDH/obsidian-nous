@@ -138,6 +138,10 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
   inbox now) is a real Obsidian command, not only a ribbon icon. Open
   **Settings → Hotkeys**, search for "Nous", and bind the commands that you
   use often.
+- **Dictate from anywhere (optional)**: a system-wide dictation app such as
+  [Handy](https://github.com/cjpais/Handy) can drop transcripts into the
+  inbox when Obsidian is closed. See the
+  [usage docs](docs/USAGE.md) for the one-line capture script.
 - **Settings** show only the essentials by default. The CLI, recorder, and
   whisper paths, the folder names, and the thresholds are under **Advanced
   settings**. The defaults work for almost everyone.
