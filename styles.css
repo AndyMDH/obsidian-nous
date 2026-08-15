@@ -151,3 +151,15 @@
 	border: none;
 	justify-content: center;
 }
+
+/* Wizard welcome */
+.nous-welcome-question {
+	color: var(--text-muted);
+	margin: 2px 0 14px;
+}
+.nous-mode-card {
+	margin: 0;
+}
+.nous-mode-cards + .setting-item {
+	margin-top: 6px;
+}

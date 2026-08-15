@@ -3095,7 +3095,7 @@ class OnboardingModal extends Modal {
 		this.clear();
 		this.setTitle("Welcome to Nous");
 		this.contentEl.createEl("p", {
-			cls: "nous-tour-text",
+			cls: "nous-welcome-question",
 			text: "How should Nous write your notes?",
 		});
 
