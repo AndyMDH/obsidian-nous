@@ -165,11 +165,13 @@ test("interleaveMeetingTracks falls back to labeled blocks without segment timin
 });
 
 test("interleaveMeetingTracks handles a single track and empty input", () => {
+	// A single source gets no speaker label - an in-person meeting arrives
+	// entirely through the mic.
 	assert.equal(
 		interleaveMeetingTracks({ text: "Solo system audio.", segments: [{ from: 0, text: "Solo system audio." }] }, null),
-		"Them: Solo system audio."
+		"Solo system audio."
 	);
-	assert.equal(interleaveMeetingTracks(null, { text: "Just me.", segments: null }), "Me: Just me.");
+	assert.equal(interleaveMeetingTracks(null, { text: "Just the room.", segments: null }), "Just the room.");
 	assert.equal(interleaveMeetingTracks(null, null), "");
 	assert.equal(interleaveMeetingTracks({ text: "  ", segments: [] }, null), "");
 });
@@ -243,4 +245,10 @@ test("live and pending notes carry the styling class; completed notes do not", (
 	assert.match(buildLiveNativeRecordingNote(null, "2026-08-15 12.00"), /cssclasses:\n {2}- nous-live-note/);
 	assert.match(buildPendingNativeRecordingNote("/tmp/r.qma", "2026-08-15 12.00"), /cssclasses:\n {2}- nous-live-note/);
 	assert.ok(!buildCompletedNativeRecordingNote("2026-08-15 12.00", "Them: hi").includes("cssclasses"));
+});
+
+
+test("the Me/Them legend appears only on labeled transcripts", () => {
+	assert.match(buildCompletedNativeRecordingNote("2026-08-15 15.00", "Them: hi\n\nMe: hello"), /Me = my mic/);
+	assert.ok(!buildCompletedNativeRecordingNote("2026-08-15 15.00", "One voice, one room.").includes("Me = my mic"));
 });

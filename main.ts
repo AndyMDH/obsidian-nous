@@ -3543,7 +3543,7 @@ class OnboardingModal extends Modal {
 			steps.push({
 				title: "Meetings",
 				icon: "phone-call",
-				text: "Records both call sides. A live note opens for your questions.",
+				text: "Works for calls and in-person meetings. A live note opens for your questions.",
 				link: {
 					text: "How meetings work",
 					href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md",

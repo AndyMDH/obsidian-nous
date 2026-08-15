@@ -136,10 +136,13 @@ export function interleaveMeetingTracks(
 		return lines.join("\n\n");
 	}
 
-	const parts: string[] = [];
-	if (sysText) parts.push(`Them: ${sysText}`);
-	if (micText) parts.push(`Me: ${micText}`);
-	return parts.join("\n\n");
+	// Both tracks but no timing: two labeled blocks. A single track gets no
+	// speaker label at all - an in-person meeting arrives entirely through
+	// the mic, and labeling the whole room "Me:" would be wrong.
+	if (sysText && micText) {
+		return `Them: ${sysText}\n\nMe: ${micText}`;
+	}
+	return sysText || micText;
 }
 
 // Hint lines from a briefly-shipped callout variant of the live note -
@@ -236,7 +239,12 @@ export function buildCompletedNativeRecordingNote(
 	manualNotes = ""
 ): string {
 	const notes = meaningfulManualNotes(manualNotes) ? `${manualNotes.trim()}\n\n` : "";
-	return `Meeting recording from ${recordedAt}, transcribed automatically (Me = my mic, Them = everyone else on the call).
+	// The Me/Them legend only belongs on transcripts that use those labels -
+	// a single-source recording (in-person meeting) has none.
+	const legend = /^(Me|Them):/m.test(transcript)
+		? " (Me = my mic, Them = everyone else on the call)"
+		: "";
+	return `Meeting recording from ${recordedAt}, transcribed automatically${legend}.
 
 ${notes}## Transcript
 

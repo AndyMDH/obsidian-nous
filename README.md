@@ -83,7 +83,7 @@ search for "Nous", and bind the ones that you use often.
 |---|---|---|
 | ➕ | Type, paste, or attach a file | command palette → "Nous: Quick capture" |
 | 🎙️ | Voice note | click the mic |
-| 📞 | Meeting (macOS) | click the phone. Nous opens a live note for your questions during the call |
+| 📞 | Meeting (macOS) | click the phone - on a call or in person. A live note opens for your questions |
 | 📥 | Anything else | drop it straight into `00-Inbox` |
 
 *Dictate from anywhere (optional)*: a system-wide dictation app such as
@@ -115,9 +115,9 @@ change each one in Settings → Nous.
   terminal command in the whole product.
 - **The native `nous-recorder` helper records meetings on macOS** (setup
   installs it). When the recording starts, Nous opens a live note for your
-  questions during the call. When you stop, Nous merges both call sides
-  into a `Me:`/`Them:` dialogue in that same note. Details and edge cases
-  are in the [usage docs](docs/USAGE.md).
+  questions. When you stop, an online call becomes a `Me:`/`Them:`
+  dialogue; an in-person meeting becomes one unlabeled room transcript.
+  Details are in the [usage docs](docs/USAGE.md).
 - **Privacy**: Nous sends only your captured notes and tag names to the
   provider that you chose. Local mode sends nothing anywhere. There is no
   telemetry.
