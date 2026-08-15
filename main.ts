@@ -201,6 +201,7 @@ export default class NousPlugin extends Plugin {
 	private meetingStatusBarEl: HTMLElement | null = null;
 	private meetingPollInterval: number | null = null;
 	private nativeRecorderLastProblem: string | null = null;
+	private meetingTranscribing = false;
 	private activeNativeMeetingNotePath: string | null = null;
 	// Live transcripts already known by the time a voice recording is saved
 	// (see saveVoiceRecording()) - checked by processFile()/
@@ -1058,7 +1059,6 @@ export default class NousPlugin extends Plugin {
 		recorder.start();
 		this.voiceRecorder = recorder;
 		this.setVoiceRecordingIndicator(true);
-		new Notice("Nous: recording - press the hotkey again to stop.");
 	}
 
 	// Only true when every fallback condition is satisfied: opt-in toggle,
@@ -1085,7 +1085,6 @@ export default class NousPlugin extends Plugin {
 		const path = `${this.settings.inboxFolder}/${stamp} Voice note.${ext}`;
 		await this.app.vault.createBinary(path, buffer);
 		if (transcript?.trim()) this.liveTranscripts.set(path, transcript.trim());
-		new Notice("Nous: voice note captured.");
 		if (!this.settings.autoProcessOnCreate) void this.processInbox();
 	}
 
@@ -1144,8 +1143,8 @@ export default class NousPlugin extends Plugin {
 			const recordingDir = stopped.output ?? status.output;
 			this.setMeetingRecordingIndicator(false);
 			this.activeNativeMeetingNotePath = null;
-			new Notice("Nous: meeting recording stopped. Preparing transcript...");
 			if (recordingDir) {
+				this.setMeetingTranscribingIndicator(true);
 				void this.ingestNativeMeetingRecording(recordingDir, liveNote?.path ?? null);
 			} else if (liveNote) {
 				void this.markLiveNativeMeetingNoteProblem(
@@ -1164,7 +1163,6 @@ export default class NousPlugin extends Plugin {
 			new Notice("Nous: recorder couldn't start - see .nous/pipeline.log", 10000);
 			return;
 		}
-		new Notice("Nous: starting meeting recording...");
 		await new Promise((resolve) => window.setTimeout(resolve, 1500));
 		const next = await this.nativeRecorderStatus();
 		if (!next.available || !next.recording) {
@@ -1182,7 +1180,6 @@ export default class NousPlugin extends Plugin {
 		this.setMeetingRecordingIndicator(true);
 		try {
 			this.activeNativeMeetingNotePath = await this.createLiveNativeMeetingNote(next.output);
-			new Notice("Nous: meeting recording started. Live note opened.");
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
 			await this.appendLog(`ERROR: could not create live meeting note: ${msg}`);
@@ -1361,7 +1358,6 @@ export default class NousPlugin extends Plugin {
 				await this.app.vault.create(notePath, content);
 			}
 			await this.appendLog(`TRANSCRIBED: ${path.basename(recordingDir)} -> ${notePath}`);
-			new Notice(`Nous: meeting transcript added to inbox: ${path.basename(notePath)}`);
 			if (liveFile || !this.settings.autoProcessOnCreate) void this.processInbox();
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
@@ -1377,6 +1373,8 @@ export default class NousPlugin extends Plugin {
 			}
 			new Notice("Nous: transcription failed - your notes and audio are kept. See .nous/pipeline.log", 10000);
 			await this.appendLog(`ERROR: native recording transcription failed: ${msg}`);
+		} finally {
+			this.setMeetingTranscribingIndicator(false);
 		}
 	}
 
@@ -1547,11 +1545,25 @@ export default class NousPlugin extends Plugin {
 		}
 		if (this.meetingStatusBarEl) {
 			if (recording) {
+				this.meetingTranscribing = false;
 				this.meetingStatusBarEl.setText("🔴 Nous meeting recording…");
 				this.meetingStatusBarEl.show();
-			} else {
+			} else if (!this.meetingTranscribing) {
 				this.meetingStatusBarEl.hide();
 			}
+		}
+	}
+
+	// The quiet-notification contract: state lives in the status bar, toasts
+	// are reserved for the finished note and for errors.
+	private setMeetingTranscribingIndicator(transcribing: boolean) {
+		this.meetingTranscribing = transcribing;
+		if (!this.meetingStatusBarEl) return;
+		if (transcribing) {
+			this.meetingStatusBarEl.setText("⏳ Nous transcribing…");
+			this.meetingStatusBarEl.show();
+		} else {
+			this.meetingStatusBarEl.hide();
 		}
 	}
 

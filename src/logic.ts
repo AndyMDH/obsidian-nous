@@ -104,6 +104,8 @@ export function splitManualNotesFromTranscript(rawText: string): ManualNotesSpli
 	const beforeTranscript = rawText.slice(0, transcriptHeading.index).trim();
 	const transcriptBody = rawText.slice(transcriptHeading.index + transcriptHeading[0].length).trim();
 	const manualStart = findFirstHeading(beforeTranscript, [
+		"Notes",
+		// Older live notes used these headings - keep recognizing them.
 		"Questions to ask",
 		"Live notes",
 		"Notes taken during meeting",

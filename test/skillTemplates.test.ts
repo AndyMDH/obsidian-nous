@@ -19,7 +19,6 @@ test("meeting enricher skill skips pending native recording placeholders", () =>
 test("meeting enricher skill preserves typed live meeting notes separately", () => {
 	const skill = meetingEnricherSkill(folders);
 	assert.match(skill, /## Notes taken during meeting/);
-	assert.match(skill, /### Questions to ask/);
-	assert.match(skill, /### Live notes/);
+	assert.match(skill, /`## Notes`/);
 	assert.match(skill, /typed by the user during the meeting/);
 });

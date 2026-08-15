@@ -78,18 +78,21 @@ test("live native recording notes expose the in-meeting writing surface", () => 
 		recordedAt: "2026-08-12 10.00",
 		status: "recording",
 	});
-	assert.match(note, /## Questions to ask/);
-	assert.match(note, /## Live notes/);
+	assert.match(note, /## Notes/);
+	assert.match(note, /## Transcript/);
+	// Minimal by design: no title header, no pre-made checkboxes.
+	assert.ok(!note.includes("# Meeting live note"));
+	assert.ok(!note.includes("- [ ]"));
 });
 
 test("manual live notes are preserved across pending and completed native recording notes", () => {
 	const liveNote = buildLiveNativeRecordingNote(null, "2026-08-12 10.00").replace(
-		"## Questions to ask\n\n- [ ]",
-		"## Questions to ask\n\n- [ ] Ask about budget"
+		"## Notes\n",
+		"## Notes\n\n- [ ] Ask about budget\n"
 	);
 	const manualNotes = extractNativeRecordingManualNotes(liveNote);
 	assert.match(manualNotes, /Ask about budget/);
-	assert.ok(!manualNotes.includes("Recording..."));
+	assert.ok(!manualNotes.includes("the transcript appears here"));
 
 	const pending = buildPendingNativeRecordingNote("/tmp/recording.qma", "2026-08-12 10.00", manualNotes);
 	assert.match(pending, /Ask about budget/);

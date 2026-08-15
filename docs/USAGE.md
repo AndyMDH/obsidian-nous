@@ -145,10 +145,11 @@ when it ends. First run may trigger macOS microphone and screen/system-audio
 permission prompts for Obsidian or the helper; allow them, then try the
 button again if macOS interrupted the first capture.
 
-When recording starts, Nous opens a live note in Obsidian. Keep that note open
-during the call. Type questions under **Questions to ask** and quick reminders
-under **Live notes**. When you stop recording, Nous adds the speaker-labeled
-transcript to that same note, then enriches it like any other inbox item.
+When recording starts, Nous opens a live note in Obsidian with one open
+**Notes** section. Type anything there during the call. When you stop
+recording, Nous adds the speaker-labeled transcript to that same note, then
+enriches it like any other inbox item. The status bar shows the state:
+recording, then transcribing.
 `Me:` is your mic; `Them:` is system audio from the call, merged into one
 chronological dialogue. Mic capture needs macOS 15+ — on macOS 14 the
 transcript is `Them:`-only.

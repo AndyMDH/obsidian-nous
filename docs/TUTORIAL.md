@@ -146,11 +146,9 @@ small native helper for this.
 2. After that: click the **📞 phone icon** when a call starts, click it again
    when it ends.
 
-When recording starts, Nous opens a live note. Keep typing in Obsidian during
-the meeting:
-
-- Put questions you need to ask under **Questions to ask**.
-- Put quick reminders or decisions under **Live notes**.
+When recording starts, Nous opens a live note with one open **Notes**
+section. Type anything there during the meeting: questions, decisions,
+reminders. Checkboxes (`- [ ]`) work if you want a tick-off list.
 
 When you stop recording, Nous adds the transcript to that same note. Then the
 note comes back enriched, same as everything else.

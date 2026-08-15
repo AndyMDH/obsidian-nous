@@ -132,6 +132,9 @@ export function interleaveMeetingTracks(
 	return parts.join("\n\n");
 }
 
+// Deliberately minimal: no title header (the filename is the title), no
+// pre-made checkboxes - one open section with the cursor ready, and the
+// transcript placeholder out of the way below it.
 export function buildLiveNativeRecordingNote(recordingDir: string | null, recordedAt: string): string {
 	return `---
 ${LIVE_NATIVE_RECORDING_FLAG}: true
@@ -139,17 +142,11 @@ recording_dir: ${JSON.stringify(recordingDir ?? "")}
 recorded_at: ${JSON.stringify(recordedAt)}
 status: recording
 ---
-# Meeting live note
-
-## Questions to ask
-
-- [ ]
-
-## Live notes
+## Notes
 
 ## Transcript
 
-Recording...
+*Recording - the transcript appears here when you stop.*
 `;
 }
 
@@ -173,6 +170,8 @@ export function parseLiveNativeRecordingNote(content: string): LiveNativeRecordi
 export function extractNativeRecordingManualNotes(content: string): string {
 	const body = stripFrontmatter(content);
 	const starts = [
+		findMarkdownHeading(body, "Notes"),
+		// Older live notes used these headings - keep recognizing them.
 		findMarkdownHeading(body, "Questions to ask"),
 		findMarkdownHeading(body, "Live notes"),
 		findMarkdownHeading(body, "Notes taken during meeting"),

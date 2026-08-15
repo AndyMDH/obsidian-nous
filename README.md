@@ -73,6 +73,8 @@ the wizard checks the optional voice and meeting setup.
 
 **2. Capture something.** There are four ways in, all in the left sidebar.
 The 🎙️ and 📞 buttons toggle: click to start, talk, then click again to stop.
+Each action is also a real Obsidian command - open **Settings → Hotkeys**,
+search for "Nous", and bind the ones that you use often.
 
 | | | |
 |---|---|---|
@@ -85,10 +87,16 @@ The 🎙️ and 📞 buttons toggle: click to start, talk, then click again to s
   <img alt="Click the mic or phone icon to start recording — meetings open a live note for typing questions during the call — click again to stop, and the audio is transcribed on your Mac into a Me/Them dialogue that lands as a tagged note in your inbox." src="assets/capture-scenario.svg">
 </p>
 
+*Dictate from anywhere (optional)*: a system-wide dictation app such as
+[Handy](https://github.com/cjpais/Handy) can drop transcripts into the inbox
+when Obsidian is closed - see the [usage docs](docs/USAGE.md) for the
+one-line capture script.
+
 **3. That is all.** Within seconds, Nous tags, summarizes, and links your
 capture in **`10-Notes`**. The original text, image, or recording stays
 inside the note. When a topic has 4 or more notes, Nous writes a wiki page
-for it in **`30-Wikis`**.
+for it in **`30-Wikis`**. Obsidian must be open for this to run - new
+captures wait in `00-Inbox` until you open it.
 
 *Do you already have a vault structure?* The folder names
 (`00-Inbox`/`10-Notes`/`20-Tags`/`30-Wikis`) are only defaults. You can
@@ -106,33 +114,22 @@ change each one in Settings → Nous.
   questions during the call. When you stop, Nous merges both call sides
   into a `Me:`/`Them:` dialogue in that same note. Details and edge cases
   are in the [usage docs](docs/USAGE.md).
+- **Privacy**: Nous sends only your captured notes and tag names to the
+  provider that you chose. Local mode sends nothing anywhere. There is no
+  telemetry.
 - **Limitations**: a group call shows all other participants as one
   `Them:` speaker. Mic capture needs macOS 15 or later. Live voice
   transcription (beta) needs an OpenAI key and desktop.
 
 Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Good to know
+## Your vault as AI context
 
-- **Obsidian must be open** before Nous processes captures. New captures
-  wait in `00-Inbox` until you open it.
-- **Privacy**: Nous sends only your captured notes and tag names to the
-  provider that you chose. Local mode sends nothing anywhere. There is no
-  telemetry.
-- **Hotkeys**: each capture action is a real Obsidian command. Open
-  **Settings → Hotkeys**, search for "Nous", and bind the ones that you
-  use often.
-- **Dictate from anywhere (optional)**: a system-wide dictation app such as
-  [Handy](https://github.com/cjpais/Handy) can drop transcripts into the
-  inbox when Obsidian is closed. See the
-  [usage docs](docs/USAGE.md) for the one-line capture script.
-- **AI context, concretely**: add one line to Claude Code's global
-  `~/.claude/CLAUDE.md`, for example "My notes live in `~/path/to/vault` —
-  check `10-Notes`/`20-Tags`/`30-Wikis` for background". Then every project
-  gets that context automatically, with no extra setup.
-- **Ecosystem**: [Obsidian LLM Wiki](https://github.com/green-dalii/obsidian-llm-wiki)
-  lists Nous as a companion plugin for local voice and meeting capture. The
-  two plugins are independent and can share a vault.
+A Nous vault is great context for AI coding assistants - real tags and
+linked wikis beat a pile of raw notes. Add one line to Claude Code's global
+`~/.claude/CLAUDE.md`, for example "My notes live in `~/path/to/vault` -
+check `10-Notes`/`20-Tags`/`30-Wikis` for background". Then every project
+gets that context automatically, with no extra setup.
 
 ## Documentation
 
@@ -142,6 +139,10 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | [`docs/USAGE.md`](docs/USAGE.md) | Every provider, hotkey, and troubleshooting step. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The conceptual model — layers, data flow, design principles. |
 | [`docs/TECHNICAL.md`](docs/TECHNICAL.md) | Code map and implementation detail, for contributors. |
+
+[Obsidian LLM Wiki](https://github.com/green-dalii/obsidian-llm-wiki) lists
+Nous as a companion plugin for local voice and meeting capture - the two
+plugins are independent and can share a vault.
 
 ## For developers
 

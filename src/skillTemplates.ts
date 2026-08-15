@@ -195,12 +195,6 @@ Summary framing — just summarize the idea.
 
 ## Notes taken during meeting
 
-### Questions to ask
-
-- ...
-
-### Live notes
-
 - ...
 
 ## Transcript
@@ -210,18 +204,19 @@ Summary framing — just summarize the idea.
 
 Omit the Decisions section entirely if there were none, and Action items
 entirely if there were none. Omit \`## Notes taken during meeting\` if the
-inbox file did not contain \`## Questions to ask\`, \`## Live notes\`, or
-\`## Notes taken during meeting\`. Never invent decisions or action items that
-aren't actually in the transcript.
+inbox file did not contain \`## Notes\`, \`## Questions to ask\`,
+\`## Live notes\`, or \`## Notes taken during meeting\` with content. Never
+invent decisions or action items that aren't actually in the transcript.
 
 **Never delete, summarize away, or paraphrase the original transcript text.**
 It moves intact, verbatim, under \`## Transcript\`. Enrichment adds structure
 above it; it does not touch the source material.
 
-If the inbox file contains \`## Questions to ask\` or \`## Live notes\` before
-\`## Transcript\`, those sections were typed by the user during the meeting.
-Copy those sections into \`## Notes taken during meeting\` above the transcript
-and demote their headings to \`### Questions to ask\` / \`### Live notes\`.
+If the inbox file contains \`## Notes\` (or, in older notes,
+\`## Questions to ask\` / \`## Live notes\`) before \`## Transcript\`, that
+content was typed by the user during the meeting. Copy it verbatim into
+\`## Notes taken during meeting\` above the transcript; demote any \`##\`
+sub-headings it contains to \`###\`.
 Then copy only the actual transcript body under \`## Transcript\` (usually the
 content after the source file's \`## Transcript\` heading, plus any brief
 "Meeting recording from..." line before the typed-note sections).
