@@ -6,14 +6,14 @@
       <polygon points="0 0, 8 3, 0 6" fill="#57606a"/>
     </marker>
     <marker id="pl-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#7c3aed"/>
+      <polygon points="0 0, 8 3, 0 6" fill="#C4633B"/>
     </marker>
   </defs>
 
   <!-- connectors (drawn before boxes) -->
   <line x1="168" y1="84" x2="200" y2="84" stroke="#57606a" stroke-width="1.2" marker-end="url(#pl-arrow)"/>
-  <line x1="340" y1="84" x2="372" y2="84" stroke="#7c3aed" stroke-width="1.2" marker-end="url(#pl-arrow-accent)"/>
-  <line x1="512" y1="84" x2="544" y2="84" stroke="#7c3aed" stroke-width="1.2" marker-end="url(#pl-arrow-accent)"/>
+  <line x1="340" y1="84" x2="372" y2="84" stroke="#C4633B" stroke-width="1.2" marker-end="url(#pl-arrow-accent)"/>
+  <line x1="512" y1="84" x2="544" y2="84" stroke="#C4633B" stroke-width="1.2" marker-end="url(#pl-arrow-accent)"/>
   <line x1="684" y1="84" x2="716" y2="84" stroke="#57606a" stroke-width="1.2" marker-end="url(#pl-arrow)"/>
 
   <!-- 1. You capture -->
@@ -29,7 +29,7 @@
   <text x="270" y="108" text-anchor="middle" font-size="9" fill="#57606a" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">00-Inbox/</text>
 
   <!-- 3. Nous (focal) -->
-  <rect x="372" y="48" width="140" height="72" rx="8" fill="#f3eefe" stroke="#7c3aed" stroke-width="1"/>
+  <rect x="372" y="48" width="140" height="72" rx="8" fill="#FAEEE7" stroke="#C4633B" stroke-width="1"/>
   <text x="442" y="72" text-anchor="middle" font-size="14">🧠</text>
   <text x="442" y="92" text-anchor="middle" font-size="12" font-weight="600" fill="#1f2328">Nous enriches</text>
   <text x="442" y="108" text-anchor="middle" font-size="9" fill="#57606a" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">title · tags · links</text>

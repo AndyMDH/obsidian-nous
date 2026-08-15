@@ -6,12 +6,12 @@
       <polygon points="0 0, 8 3, 0 6" fill="#57606a"/>
     </marker>
     <marker id="cl-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#7c3aed"/>
+      <polygon points="0 0, 8 3, 0 6" fill="#C4633B"/>
     </marker>
   </defs>
 
   <!-- connectors (drawn before boxes) -->
-  <line x1="200" y1="84" x2="240" y2="84" stroke="#7c3aed" stroke-width="1.2" marker-end="url(#cl-arrow-accent)"/>
+  <line x1="200" y1="84" x2="240" y2="84" stroke="#C4633B" stroke-width="1.2" marker-end="url(#cl-arrow-accent)"/>
   <line x1="420" y1="84" x2="460" y2="84" stroke="#57606a" stroke-width="1.2" marker-end="url(#cl-arrow)"/>
   <line x1="640" y1="84" x2="680" y2="84" stroke="#57606a" stroke-width="1.2" marker-end="url(#cl-arrow)"/>
 
@@ -22,7 +22,7 @@
   <text x="110" y="108" text-anchor="middle" font-size="9" fill="#57606a" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">voice note · meeting</text>
 
   <!-- 2. Live note (focal — the new behavior) -->
-  <rect x="240" y="44" width="180" height="80" rx="8" fill="#f3eefe" stroke="#7c3aed" stroke-width="1"/>
+  <rect x="240" y="44" width="180" height="80" rx="8" fill="#FAEEE7" stroke="#C4633B" stroke-width="1"/>
   <text x="330" y="68" text-anchor="middle" font-size="14">📝</text>
   <text x="330" y="88" text-anchor="middle" font-size="12" font-weight="600" fill="#1f2328">Live note opens</text>
   <text x="330" y="102" text-anchor="middle" font-size="9" fill="#57606a" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">type questions</text>

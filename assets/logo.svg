@@ -1,32 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#818cf8"/>
-      <stop offset="1" stop-color="#6d28d9"/>
-    </linearGradient>
-  </defs>
-  <!-- rounded app tile -->
-  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#g)"/>
-  <!-- mind / knowledge-graph: a symmetric radial burst around a central idea -->
-  <g stroke="#ffffff" stroke-opacity="0.85" stroke-width="6.5" stroke-linecap="round">
-    <line x1="128" y1="128" x2="128" y2="68"/>
-    <line x1="128" y1="128" x2="180" y2="98"/>
-    <line x1="128" y1="128" x2="180" y2="158"/>
-    <line x1="128" y1="128" x2="128" y2="188"/>
-    <line x1="128" y1="128" x2="76"  y2="158"/>
-    <line x1="128" y1="128" x2="76"  y2="98"/>
-    <line x1="128" y1="68"  x2="180" y2="98"/>
-    <line x1="180" y1="158" x2="128" y2="188"/>
-    <line x1="76"  y1="158" x2="76"  y2="98"/>
-  </g>
-  <!-- nodes -->
-  <g fill="#ffffff">
-    <circle cx="128" cy="128" r="21"/>
-    <circle cx="128" cy="68"  r="11"/>
-    <circle cx="180" cy="98"  r="11"/>
-    <circle cx="180" cy="158" r="11"/>
-    <circle cx="128" cy="188" r="11"/>
-    <circle cx="76"  cy="158" r="11"/>
-    <circle cx="76"  cy="98"  r="11"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112" role="img" aria-labelledby="nous-logo-title">
+  <title id="nous-logo-title">Nous — a friendly lowercase n with a thought-spark</title>
+  <rect x="4" y="4" width="104" height="104" rx="28" fill="#FAF3ED" stroke="#E8D9CC" stroke-width="2"/>
+  <!-- lowercase n, one warm rounded stroke -->
+  <path d="M 38 80 L 38 50 Q 38 42 48 42 L 60 42 Q 74 42 74 56 L 74 80"
+        fill="none" stroke="#3D332C" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- thought-spark -->
+  <circle cx="82" cy="30" r="7" fill="#C4633B"/>
 </svg>

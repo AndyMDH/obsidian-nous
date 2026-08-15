@@ -240,7 +240,7 @@ export default class NousPlugin extends Plugin {
 			callback: () => new QuickCaptureModal(this.app, this).open(),
 		});
 
-		this.addRibbonIcon("plus-circle", "Nous quick capture", () => {
+		this.addRibbonIcon("feather", "Nous quick capture", () => {
 			new QuickCaptureModal(this.app, this).open();
 		});
 

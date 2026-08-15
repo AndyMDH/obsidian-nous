@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="Nous logo — a knowledge graph forming a brain" width="112">
+  <img src="assets/logo.svg" alt="Nous logo — a warm rounded lowercase n with a clay thought-spark" width="112">
 </p>
 
 <h1 align="center">Nous</h1>
@@ -17,15 +17,15 @@
 </p>
 
 <p align="center">
-  <a href="https://obsidian.md/plugins?id=nous"><img alt="Get it from Obsidian" src="https://img.shields.io/badge/Obsidian-Get%20the%20plugin-7C3AED?logo=obsidian&logoColor=white"></a>
+  <a href="https://obsidian.md/plugins?id=nous"><img alt="Get it from Obsidian" src="https://img.shields.io/badge/Obsidian-Get%20the%20plugin-C4633B?logo=obsidian&logoColor=white"></a>
   <!-- TODO: swap back to the dynamic downloads badge once "nous" has an
        entry in obsidianmd/obsidian-releases community-plugin-stats.json -
        it doesn't yet, so the dynamic query badge renders broken. -->
-  <img alt="New Obsidian plugin" src="https://img.shields.io/badge/Obsidian-new%20plugin-7C3AED?logo=obsidian&logoColor=white">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-7C3AED"></a>
-  <a href="https://github.com/AndyMDH/obsidian-nous/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/AndyMDH/obsidian-nous?color=7C3AED&label=version"></a>
+  <img alt="New Obsidian plugin" src="https://img.shields.io/badge/Obsidian-new%20plugin-C4633B?logo=obsidian&logoColor=white">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-C4633B"></a>
+  <a href="https://github.com/AndyMDH/obsidian-nous/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/AndyMDH/obsidian-nous?color=C4633B&label=version"></a>
   <a href="https://github.com/AndyMDH/obsidian-nous/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/AndyMDH/obsidian-nous/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Last commit" src="https://img.shields.io/github/last-commit/AndyMDH/obsidian-nous?color=7C3AED">
+  <img alt="Last commit" src="https://img.shields.io/github/last-commit/AndyMDH/obsidian-nous?color=C4633B">
 </p>
 
 <p align="center">
