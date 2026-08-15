@@ -3524,7 +3524,7 @@ class OnboardingModal extends Modal {
 		steps.push({
 			title: "Voice notes",
 			icon: "mic",
-			text: "Click, talk, click again. Transcribed on this machine.",
+			text: "For your own voice - ideas, memos, thoughts. Click, talk, click again. Transcribed on this machine.",
 			link: {
 				text: "Dictate from anywhere with Handy (optional)",
 				href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md",
@@ -3543,7 +3543,7 @@ class OnboardingModal extends Modal {
 			steps.push({
 				title: "Meetings",
 				icon: "phone-call",
-				text: "Works for calls and in-person meetings. A live note opens for your questions.",
+				text: "For when someone else is talking - calls or in person. A live note opens for your questions.",
 				link: {
 					text: "How meetings work",
 					href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md",
