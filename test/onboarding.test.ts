@@ -52,9 +52,9 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 			["Meeting capture", true],
 		]
 	);
-	assert.match(items[1].desc, /will not start recording/);
-	assert.match(items[2].desc, /native Nous Recorder/);
-	assert.match(items[2].desc, /Click Install below/);
+	assert.match(items[1].desc, /Download model|Gemini\/OpenAI/);
+	assert.match(items[2].desc, /native recorder/i);
+	assert.match(items[2].desc, /click Install below/);
 });
 
 test("capture prerequisite checklist distinguishes native recorder readiness", () => {

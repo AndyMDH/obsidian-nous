@@ -73,7 +73,6 @@ import {
 import {
 	type CapturePrerequisiteStatus,
 	type NativeRecorderReadiness,
-	ONBOARDING_PREREQUISITES_TEXT,
 	MEETING_RECORDER_MISSING_NOTICE,
 	NATIVE_RECORDER_INSTALL_DESC,
 	VOICE_CAPTURE_SETTINGS_DESC,
@@ -3096,10 +3095,8 @@ class OnboardingModal extends Modal {
 		this.clear();
 		this.setTitle("Welcome to Nous");
 		this.contentEl.createEl("p", {
-			text: "First, choose how Nous should write and organize your notes. After that, the wizard checks optional voice and meeting recording setup.",
-		});
-		this.contentEl.createEl("p", {
-			text: ONBOARDING_PREREQUISITES_TEXT,
+			cls: "nous-tour-text",
+			text: "How should Nous write your notes?",
 		});
 
 		const cards = this.contentEl.createDiv({ cls: "nous-mode-cards" });
@@ -3127,7 +3124,7 @@ class OnboardingModal extends Modal {
 
 		addCard({
 			title: "I have a Claude subscription",
-			desc: "Uses Claude Code - no separate billing. Desktop only.",
+			desc: "Uses Claude Code. No extra billing. Desktop only.",
 			badge: "Recommended",
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "cli";
@@ -3137,7 +3134,7 @@ class OnboardingModal extends Modal {
 		});
 		addCard({
 			title: "I want a free local model",
-			desc: "E.g. Ollama - nothing leaves your machine, no billing, no account. ~2 min setup.",
+			desc: "Ollama - free, private, ~2 min setup.",
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "api";
 				this.plugin.settings.apiProvider = "local";
@@ -3147,7 +3144,7 @@ class OnboardingModal extends Modal {
 		});
 		addCard({
 			title: "I have an API key",
-			desc: "Anthropic, OpenAI, Gemini, or Z.ai. Billed separately, works on mobile too.",
+			desc: "Anthropic, OpenAI, Gemini, or Z.ai. Works on mobile.",
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "api";
 				await this.plugin.saveSettings();
@@ -3157,7 +3154,7 @@ class OnboardingModal extends Modal {
 
 		new Setting(this.contentEl)
 			.setName("Not now")
-			.setDesc("You can rerun this anytime: command palette → \"Nous: Open setup wizard\".")
+			.setDesc("Rerun anytime from the command palette.")
 			.addButton((b) =>
 				b.setButtonText("Skip").onClick(async () => {
 					this.plugin.settings.onboarded = true;
