@@ -32,13 +32,13 @@
   <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="assets/pipeline.svg">
 </p>
 
-A typed thought, a voice memo, a call, a photo, a PDF — Nous turns whatever
-you capture into a summarized, tagged note, linked to everything related.
-Text, images, and PDFs work after the connection check. Voice notes and calls
-may ask for speech-to-text or macOS recorder setup.
+Nous turns each capture — a typed thought, a voice memo, a call, a photo, a
+PDF — into a summarized, tagged note that links to related notes. Text,
+images, and PDFs work after the connection check. Voice notes and calls can
+need speech-to-text or recorder setup first.
 
 **Works on:** Desktop (macOS, Windows, Linux) and Mobile (API-key or local-model
-mode). Meeting capture is macOS-only; live voice transcription (beta) is
+mode). Meeting capture is macOS-only. Live voice transcription (beta) is
 desktop-only.
 
 ## Features
@@ -46,76 +46,75 @@ desktop-only.
 - 📥 **Capture anything** — typed notes, voice memos, calls, photos, PDFs
 - 🏷️ **Tagged and linked automatically** — from a controlled vocabulary,
   not freeform tag sprawl
-- 📖 **Self-updating wikis** — once a topic has enough notes, Nous writes a
-  hub page pulling them together
+- 📖 **Self-updating wikis** — when a topic has enough notes, Nous writes a
+  hub page that collects them
 - 🎙️ **Live voice transcription** (beta) — watch text appear as you talk
 - 🤖 **Great context for AI coding assistants** — real tags and linked wikis
-  beat a pile of raw notes; point Claude Code's global `CLAUDE.md` at your
-  vault and every project gets that context automatically
+  beat a pile of raw notes. Point Claude Code's global `CLAUDE.md` at your
+  vault, and every project gets that context automatically
 - 🔒 **Local-first** — Claude Code CLI, local whisper.cpp, and Ollama send
-  nothing off your machine; direct API keys are opt-in
+  nothing off your machine. Direct API keys are opt-in
 - 📱 **Works on mobile** — with a direct API key
 
 ## Install
 
-1. In Obsidian: **Settings → Community plugins**, turn community plugins on.
-2. **Browse**, search **"Nous"**, click **Install**, then **Enable**.
+1. In Obsidian, open **Settings → Community plugins**. Turn community plugins on.
+2. Click **Browse** and search for **"Nous"**. Click **Install**, then **Enable**.
 
-Or jump straight to [Nous's page on Obsidian's site](https://obsidian.md/plugins?id=nous).
+Or open [Nous's page on Obsidian's site](https://obsidian.md/plugins?id=nous) directly.
 
 ## Quickstart
 
-**1. Enable Nous** — a setup wizard opens automatically. First, choose how
-Nous should write notes: a Claude subscription, a free local model, or an API
-key. Then the wizard checks the optional voice and meeting setup.
+**1. Enable Nous** — a setup wizard opens automatically. Choose how Nous
+writes notes: a Claude subscription, a free local model, or an API key. Then
+the wizard checks the optional voice and meeting setup.
 
 <p align="center">
   <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav.svg">
 </p>
 
-**2. Capture something.** Four ways in, all in the left sidebar — 🎙️ and
-📞 both click to start, talk, click the same button again to stop:
+**2. Capture something.** There are four ways in, all in the left sidebar.
+The 🎙️ and 📞 buttons toggle: click to start, talk, then click again to stop.
 
 | | | |
 |---|---|---|
 | ➕ | Type, paste, or attach a file | command palette → "Nous: Quick capture" |
 | 🎙️ | Voice note | click the mic |
-| 📞 | Meeting (macOS) | click the phone — Nous opens a live note where you can type questions while it records |
+| 📞 | Meeting (macOS) | click the phone. Nous opens a live note for your questions during the call |
 | 📥 | Anything else | drop it straight into `00-Inbox` |
 
 <p align="center">
   <img alt="Click the mic or phone icon to start recording — meetings open a live note for typing questions during the call — click again to stop, and the audio is transcribed on your Mac into a Me/Them dialogue that lands as a tagged note in your inbox." src="assets/capture-scenario.svg">
 </p>
 
-**3. That's it.** Within seconds your capture is tagged, summarized, and
-linked to related notes in **`10-Notes`** — original text, image, or
-recording kept inside. Topics with 4+ notes get their own wiki page in
-**`30-Wikis`** automatically.
+**3. That is all.** Within seconds, Nous tags, summarizes, and links your
+capture in **`10-Notes`**. The original text, image, or recording stays
+inside the note. When a topic has 4 or more notes, Nous writes a wiki page
+for it in **`30-Wikis`**.
 
-*Already have a vault structure?* `00-Inbox`/`10-Notes`/`20-Tags`/`30-Wikis`
-are just defaults — every folder name is configurable in Settings → Nous, so
-Nous can point at folders you already use instead.
+*Do you already have a vault structure?* The folder names
+(`00-Inbox`/`10-Notes`/`20-Tags`/`30-Wikis`) are only defaults. You can
+change each one in Settings → Nous.
 
 ## How it works, briefly
 
-- **Voice transcription needs one extra backend** —
+- **Voice transcription needs one extra backend.**
   [whisper.cpp](https://github.com/ggml-org/whisper.cpp) runs locally on
-  your Mac; voice never leaves it. Without that, add a Gemini/OpenAI key used
-  only for speech-to-text.
-- **Meetings** are captured with the native `nous-recorder` helper on macOS:
-  setup can install it for you, then the phone button uses it directly. It
-  opens a live note in Obsidian when recording starts, so you can type
-  questions and quick notes during the call. When you stop, Nous adds the
-  transcript to that same note. It records system audio (`Them`) and your mic
-  (`Me`) separately, then merges both into a chronological, speaker-labeled
-  dialogue. If
-  speech-to-text is not ready yet, the recording and your typed notes still
-  wait in the inbox until you finish setup.
-- **Limitation**: group calls lump every other participant into one `Them:`
-  speaker — there's no per-person diarization.
-- **Limitation**: meeting capture is macOS-only, and recording your own mic
-  needs macOS 15+ — on macOS 14 only the other side (`Them:`) is captured.
-  Live voice transcription (beta) is OpenAI-only and desktop-only.
+  your Mac, and your voice never leaves it. Setup downloads the speech model
+  for you. If you prefer a cloud backend, add a Gemini or OpenAI key. Nous
+  uses the key only for speech-to-text.
+- **The native `nous-recorder` helper records meetings on macOS** (setup
+  installs it). When the recording starts, Nous opens a live note in
+  Obsidian for your questions and quick notes. When you stop, Nous adds the
+  transcript to that same note. The helper records system audio (`Them`) and
+  your mic (`Me`) as separate tracks. Nous merges the two tracks into one
+  speaker-labeled dialogue, in time order. If speech-to-text is not ready,
+  the recording and your typed notes wait in the inbox.
+- **Limitation**: a group call shows all other participants as one `Them:`
+  speaker. There is no per-person diarization.
+- **Limitation**: meeting capture is macOS-only, and mic capture needs
+  macOS 15 or later. On macOS 14, Nous records only the other side
+  (`Them:`). Live voice transcription (beta) needs OpenAI and desktop.
 
 Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
@@ -124,32 +123,34 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **[Obsidian LLM Wiki](https://github.com/green-dalii/obsidian-llm-wiki)** —
   lists Nous as a companion plugin in its
   [Ecosystem section](https://github.com/green-dalii/obsidian-llm-wiki#-ecosystem)
-  for local voice memo and meeting capture. Independent of that plugin — both
-  can share the same vault without coupling.
+  for local voice memo and meeting capture. The two plugins are independent.
+  Both can share the same vault.
 
 ## Good to know
 
-- **Obsidian must be open** for captures to process — they wait in
-  `00-Inbox` until it is.
-- **Privacy**: only your captured notes and tag names are ever sent to the
-  provider you chose. Local mode sends nothing anywhere. No telemetry, ever.
-- **Mobile**: use Direct API key mode — Claude Code CLI is desktop-only.
-- **Hotkeys**: every capture action (voice, meeting, quick capture, process
-  inbox now, ...) is a real Obsidian command, not just a ribbon icon —
-  **Settings → Hotkeys**, search "Nous", bind whichever ones you use often.
-- **Settings** show just the essentials by default — CLI/recorder/whisper paths,
-  folder names, and tuning thresholds are one click away under **Advanced
-  settings**, since defaults work for almost everyone.
-- **AI context, concretely**: add a line to Claude Code's global
-  `~/.claude/CLAUDE.md` (e.g. "My notes live in `~/path/to/vault` — check
-  `10-Notes`/`20-Tags`/`30-Wikis` for relevant background") and every project
-  gets that context automatically, no extra setup per-project.
+- **Obsidian must be open** before Nous processes captures. New captures
+  wait in `00-Inbox` until you open it.
+- **Privacy**: Nous sends only your captured notes and tag names to the
+  provider that you chose. Local mode sends nothing anywhere. There is no
+  telemetry.
+- **Mobile**: use the API-key mode. The Claude Code CLI is desktop-only.
+- **Hotkeys**: each capture action (voice, meeting, quick capture, process
+  inbox now) is a real Obsidian command, not only a ribbon icon. Open
+  **Settings → Hotkeys**, search for "Nous", and bind the commands that you
+  use often.
+- **Settings** show only the essentials by default. The CLI, recorder, and
+  whisper paths, the folder names, and the thresholds are under **Advanced
+  settings**. The defaults work for almost everyone.
+- **AI context, concretely**: add one line to Claude Code's global
+  `~/.claude/CLAUDE.md`, for example "My notes live in `~/path/to/vault` —
+  check `10-Notes`/`20-Tags`/`30-Wikis` for background". Then every project
+  gets that context automatically, with no extra setup.
 
 ## Documentation
 
 | | |
 |---|---|
-| [`docs/TUTORIAL.md`](docs/TUTORIAL.md) | New to Nous? A slower, hand-holding walkthrough of your first hour. |
+| [`docs/TUTORIAL.md`](docs/TUTORIAL.md) | A slow, step-by-step walkthrough of your first hour with Nous. |
 | [`docs/USAGE.md`](docs/USAGE.md) | Every provider, hotkey, and troubleshooting step. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The conceptual model — layers, data flow, design principles. |
 | [`docs/TECHNICAL.md`](docs/TECHNICAL.md) | Code map and implementation detail, for contributors. |
@@ -162,8 +163,9 @@ npm run build:recorder
 npm run build:recorder:universal && npm run package:recorder
 ```
 
-Core logic lives in `src/` with no Obsidian dependency; `main.ts` wires it
-to the app. The native macOS meeting helper lives in `native/nous-recorder/`.
+Core logic lives in `src/` and has no Obsidian dependency. `main.ts`
+connects it to the app. The native macOS meeting helper lives in
+`native/nous-recorder/`.
 
 ## License
 
