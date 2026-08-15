@@ -70,7 +70,7 @@ force one anytime: command palette → "Nous: Build/update wikis now").
 ### Voice capture, in depth
 
 Click the **🎙️ mic icon** in the left sidebar (or command palette →
-"Nous: Toggle voice capture") to start recording, click it again to stop.
+"Nous: Start/stop voice recording") to start, click it again to stop.
 That's the whole thing — the recording drops into the inbox and comes back
 as a tagged, summarized note with the audio still playable inside.
 
@@ -137,7 +137,7 @@ open Settings → Nous → Advanced settings and set
 **Nous Recorder path** to the full path.
 
 Then click the **📞 phone icon** in the left sidebar (or command palette →
-"Nous: Toggle meeting capture") when the meeting starts, and click it again
+"Nous: Start/stop meeting recording") when the meeting starts, and click it again
 when it ends. First run may trigger macOS microphone and screen/system-audio
 permission prompts for Obsidian or the helper; allow them, then try the
 button again if macOS interrupted the first capture.

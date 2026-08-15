@@ -198,15 +198,28 @@ verify its SHA-256 sidecar, install it into the vault's plugin folder, and
 retry from that managed path. If the helper is still unavailable, meeting
 capture stays unavailable until the native recorder is installed. When the
 native helper starts, the plugin creates and opens a live inbox note using
-`buildLiveNativeRecordingNote()`. The user can type under `## Questions to
-ask` and `## Live notes` while recording continues.
+`buildLiveNativeRecordingNote()`: one `## Meeting notes` section with a
+stripped-on-completion typing hint, hidden Properties (via
+`cssclasses: nous-live-note` and the plugin stylesheet), and the cursor
+placed in the writing space. While recording, the helper also streams each
+track through Apple's on-device speech engine (`LiveTranscriber.swift`,
+forced `requiresOnDeviceRecognition`, request rotated every ~20s for
+committed lines) into `live.jsonl` in the recording folder; the plugin
+tails that file every 2 seconds (`renderLiveTranscript()` +
+`startLiveTranscriptSync()`) and mirrors it into the note's `## Transcript`
+section. The sync only writes while the live-recording frontmatter is
+present, so it can never touch a finished note. Missing speech permission
+or on-device model means no live view; recording is unaffected.
 
 When the helper stops, the plugin transcribes each track independently (a
 failed or silent track is logged as a `WARN:` and skipped, not fatal), then
 merges them into a chronological `Me:`/`Them:` dialogue using whisper's
 per-segment offsets, re-anchored with the helper's `timing.json` so a
 late-starting mic doesn't skew the ordering. Cloud transcription has no
-segment timing, so those tracks degrade to one labeled block each. If a live note exists, the plugin replaces that same note
+segment timing, so those tracks degrade to one labeled block each. A
+single-source recording (an in-person meeting) gets no speaker labels.
+Handled recordings move to `NousRecordings/Processed/` (purged after 30
+days) so the nudge watchdog never fires on them. If a live note exists, the plugin replaces that same note
 with normal inbox text from `buildCompletedNativeRecordingNote()`, preserving
 typed questions/notes and removing the live-control frontmatter before
 enrichment. If speech-to-text is not ready, that same live note becomes a
@@ -312,6 +325,7 @@ Tests are in `test/*.test.ts` and run with Node's built-in test runner.
 - `onboarding.test.ts` — setup-wizard readiness states.
 - `realtimeTranscribe.test.ts` — live-transcription session protocol.
 - `skillTemplates.test.ts` — generated CLI skill files.
+- `whisperModel.test.ts` — speech-model download helpers (LFS pointer parsing, progress text).
 
 The tests do not make live API calls. `HttpPost` and `CliExec` are injected so tests can provide canned responses.
 

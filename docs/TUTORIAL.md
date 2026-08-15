@@ -87,10 +87,11 @@ you use it more, nothing to trigger yourself.
 
 ## Step 4: your first voice note
 
-Voice notes need speech-to-text first. On macOS, install local `whisper.cpp`
-for private on-device transcription; otherwise add a Gemini/OpenAI key in
-Nous settings. If neither is set up, Nous will show a setup message and will
-not start recording.
+Voice notes need speech-to-text first. On macOS, click **Download model** in
+Settings → Nous → Voice capture (one download, fully private - it also
+needs `brew install whisper-cpp`). Or add a Gemini/OpenAI key instead:
+nothing to install. If neither is set up, Nous shows a setup message and
+does not start recording.
 
 1. Click the **🎙️ mic icon** in Obsidian's left sidebar.
 2. Talk for a few seconds.
@@ -137,12 +138,16 @@ small native helper for this.
 2. After that: click the **📞 phone icon** when a call starts, click it again
    when it ends.
 
-When recording starts, Nous opens a live note with one open **Notes**
-section. Type anything there during the meeting: questions, decisions,
-reminders. Checkboxes (`- [ ]`) work if you want a tick-off list.
+When recording starts, Nous opens a live note with one **Meeting notes**
+section and the cursor ready. Type anything there during the meeting:
+questions, decisions, reminders. Checkboxes (`- [ ]`) work if you want a
+tick-off list.
 
-When you stop recording, Nous adds the transcript to that same note. Then the
-note comes back enriched, same as everything else.
+While people talk, the transcript streams into the note's **Transcript**
+section - fully on-device, nothing to install (macOS asks once for speech
+recognition permission). This works on calls and in person. When you stop,
+Nous replaces the live draft with the final transcript, and the note comes
+back enriched, same as everything else.
 
 If speech-to-text is not ready yet, Nous still saves the recording. It leaves
 a note in `00-Inbox` that says the meeting needs transcription. Your typed
