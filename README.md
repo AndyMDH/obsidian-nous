@@ -107,11 +107,12 @@ change each one in Settings → Nous.
   <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="assets/pipeline.svg">
 </p>
 
-- **Voice transcription needs one extra backend.**
-  [whisper.cpp](https://github.com/ggml-org/whisper.cpp) runs locally on
-  your Mac, and your voice never leaves it. Setup downloads the speech model
-  for you. If you prefer a cloud backend, add a Gemini or OpenAI key. Nous
-  uses the key only for speech-to-text.
+- **Voice transcription has two paths.** With a Gemini or OpenAI key, there
+  is nothing to install - the key is used only for speech-to-text. For the
+  fully private path, [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
+  runs on your Mac and your voice never leaves it: setup downloads the
+  speech model in one click, and `brew install whisper-cpp` is the one
+  terminal command in the whole product.
 - **The native `nous-recorder` helper records meetings on macOS** (setup
   installs it). When the recording starts, Nous opens a live note for your
   questions during the call. When you stop, Nous merges both call sides

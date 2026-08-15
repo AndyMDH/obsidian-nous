@@ -216,3 +216,10 @@
 	margin: 0 auto 12px;
 	line-height: 1.5;
 }
+
+/* Wizard brand moment */
+.nous-wizard-logo {
+	display: flex;
+	justify-content: center;
+	margin: 4px 0 12px;
+}

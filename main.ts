@@ -3071,6 +3071,8 @@ class VoiceCaptureSetupModal extends Modal {
 
 // First-run setup: pick how notes are written, prove it works, then show
 // the optional voice/meeting setup state before the user leaves the wizard.
+const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" width="72" height="72" aria-hidden="true"><rect x="4" y="4" width="104" height="104" rx="28" fill="#f5f5f5" stroke="#d5d9e0" stroke-width="2"/><path d="M 38 80 L 38 50 Q 38 42 48 42 L 60 42 Q 74 42 74 56 L 74 80" fill="none" stroke="#2d3142" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="82" cy="30" r="7" fill="#eb6c36"/></svg>`;
+
 class OnboardingModal extends Modal {
 	private lastCaptureStatus: CapturePrerequisiteStatus | null = null;
 
@@ -3087,9 +3089,24 @@ class OnboardingModal extends Modal {
 		this.contentEl.empty();
 	}
 
+	private renderDots(step: number, total = 4) {
+		const dots = this.contentEl.createDiv({ cls: "nous-tour-dots" });
+		for (let i = 0; i < total; i++) {
+			dots.createSpan({ cls: i === step ? "nous-tour-dot is-active" : "nous-tour-dot" });
+		}
+	}
+
+	private renderLogo() {
+		const holder = this.contentEl.createDiv({ cls: "nous-wizard-logo" });
+		const doc = new DOMParser().parseFromString(NOUS_LOGO_SVG, "image/svg+xml");
+		holder.appendChild(document.importNode(doc.documentElement, true));
+	}
+
 	private renderWelcome() {
 		this.clear();
 		this.setTitle("Welcome to Nous");
+		this.renderDots(0);
+		this.renderLogo();
 		this.contentEl.createEl("p", {
 			cls: "nous-welcome-question",
 			text: "How should Nous write your notes?",
@@ -3233,11 +3250,12 @@ class OnboardingModal extends Modal {
 
 	private renderTest() {
 		this.clear();
-		this.setTitle("Check the connection");
+		this.setTitle("Checking the connection…");
+		this.renderDots(1);
 		const isCli = this.plugin.settings.executionMode === "cli";
 		this.contentEl.createEl("p", {
 			cls: "nous-welcome-question",
-			text: isCli ? "Nous checks that Claude Code is reachable." : "One tiny API call to confirm your key works.",
+			text: isCli ? "Making sure Claude Code is reachable." : "One tiny API call to confirm your key works.",
 		});
 		const status = this.contentEl.createEl("p", { text: "" });
 		const helpEl = this.contentEl.createDiv();
@@ -3260,29 +3278,39 @@ class OnboardingModal extends Modal {
 			links.createEl("a", { text: "Claude Code install guide", href: "https://docs.claude.com/en/docs/claude-code/setup" });
 		};
 
+		let retryButton: ButtonComponent | null = null;
+		const runCheck = async () => {
+			status.setText("Checking…");
+			helpEl.empty();
+			retryButton?.setDisabled(true);
+			try {
+				await this.plugin.testConnection();
+				status.setText("✓ Connected.");
+				window.setTimeout(() => this.renderCapturePrerequisites(), 400);
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				this.setTitle("Connection check failed");
+				status.setText(`✗ ${msg}`);
+				if (isCli) showCliInstallHelp();
+				retryButton?.setDisabled(false);
+			}
+		};
+
 		new Setting(this.contentEl)
 			.addButton((b) => b.setButtonText("Back").onClick(() => (isCli ? this.renderWelcome() : this.renderApiSetup())))
-			.addButton((b) =>
-				b.setButtonText("Test").setCta().onClick(async () => {
-					b.setButtonText("Testing…").setDisabled(true);
-					try {
-						status.setText(`✓ ${await this.plugin.testConnection()}`);
-						b.setButtonText("Test").setDisabled(false);
-						this.renderCapturePrerequisites();
-					} catch (e) {
-						const msg = e instanceof Error ? e.message : String(e);
-						status.setText(`✗ ${msg}`);
-						if (isCli) showCliInstallHelp();
-						b.setButtonText("Test").setDisabled(false);
-					}
-				})
-			)
-			.addButton((b) => b.setButtonText("Skip test").onClick(() => this.renderCapturePrerequisites()));
+			.addButton((b) => {
+				retryButton = b;
+				b.setButtonText("Retry").setCta().setDisabled(true).onClick(() => void runCheck());
+			})
+			.addButton((b) => b.setButtonText("Skip").onClick(() => this.renderCapturePrerequisites()));
+
+		void runCheck();
 	}
 
 	private renderCapturePrerequisites() {
 		this.clear();
 		this.setTitle("What works now");
+		this.renderDots(2);
 		const statusEl = this.contentEl.createDiv();
 		statusEl.createEl("p", { text: "Checking capture setup..." });
 		let continueButton: ButtonComponent | null = null;
@@ -3375,6 +3403,9 @@ class OnboardingModal extends Modal {
 		this.clear();
 		const status = this.lastCaptureStatus;
 		this.setTitle(status ? onboardingFinishTitle(status) : "Text capture is ready");
+		this.renderDots(3);
+		const mark = this.contentEl.createDiv({ cls: "nous-tour-icon" });
+		setIcon(mark, "check-circle-2");
 		this.contentEl.createEl("p", {
 			cls: "nous-welcome-question",
 			text: `Drop anything into "${this.plugin.settings.inboxFolder}" - it comes back tagged in "${this.plugin.settings.meetingsFolder}".`,

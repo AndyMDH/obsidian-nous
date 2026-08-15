@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.2.0
+
+The onboarding release.
+
+- The wizard shows its progress: four steps, dots on every screen, the
+  Nous mark on the welcome screen, and a check mark on the finish screen.
+- The connection check runs itself when the screen opens and moves on by
+  itself when it passes. If Claude Code is missing, the wizard shows the
+  install command with a Copy button.
+- A click-through 60-second tour drives the real features: drop a sample
+  note, open quick capture, start a voice recording.
+- Every wizard screen is one line of text plus its controls. Setup
+  notices carry an "Open Nous settings" link, and a command palette
+  entry jumps to the settings tab.
+- Brand pass: tangerine buttons, cards, and progress dots in all Nous
+  modals.
+
 ## 2.1.0
 
 The meeting-capture release. Everything below shipped since 2.0.4.
