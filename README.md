@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" alt="Nous logo — a warm rounded lowercase n with a clay thought-spark" width="112">
+  <img src="assets/logo.svg" alt="Nous logo — a rounded lowercase n with a tangerine thought-spark" width="112">
 </p>
 
 <h1 align="center">Nous</h1>
@@ -17,22 +17,19 @@
 </p>
 
 <p align="center">
-  <a href="https://obsidian.md/plugins?id=nous"><img alt="Get it from Obsidian" src="https://img.shields.io/badge/Obsidian-Get%20the%20plugin-C4633B?logo=obsidian&logoColor=white"></a>
+  <a href="https://obsidian.md/plugins?id=nous"><img alt="Get it from Obsidian" src="https://img.shields.io/badge/Obsidian-Get%20the%20plugin-EB6C36?logo=obsidian&logoColor=white"></a>
   <!-- TODO: swap back to the dynamic downloads badge once "nous" has an
        entry in obsidianmd/obsidian-releases community-plugin-stats.json -
        it doesn't yet, so the dynamic query badge renders broken. -->
-  <img alt="New Obsidian plugin" src="https://img.shields.io/badge/Obsidian-new%20plugin-C4633B?logo=obsidian&logoColor=white">
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-C4633B"></a>
-  <a href="https://github.com/AndyMDH/obsidian-nous/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/AndyMDH/obsidian-nous?color=C4633B&label=version"></a>
+  <img alt="New Obsidian plugin" src="https://img.shields.io/badge/Obsidian-new%20plugin-EB6C36?logo=obsidian&logoColor=white">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-EB6C36"></a>
+  <a href="https://github.com/AndyMDH/obsidian-nous/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/AndyMDH/obsidian-nous?color=EB6C36&label=version"></a>
   <a href="https://github.com/AndyMDH/obsidian-nous/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/AndyMDH/obsidian-nous/actions/workflows/ci.yml/badge.svg"></a>
-  <img alt="Last commit" src="https://img.shields.io/github/last-commit/AndyMDH/obsidian-nous?color=C4633B">
+  <img alt="Last commit" src="https://img.shields.io/github/last-commit/AndyMDH/obsidian-nous?color=EB6C36">
 </p>
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/pipeline-dark.svg">
-    <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="assets/pipeline-light.svg">
-  </picture>
+  <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="assets/pipeline.svg">
 </p>
 
 A typed thought, a voice memo, a call, a photo, a PDF — Nous turns whatever
@@ -73,10 +70,7 @@ Nous should write notes: a Claude subscription, a free local model, or an API
 key. Then the wizard checks the optional voice and meeting setup.
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/settings-nav-dark.svg">
-    <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav-light.svg">
-  </picture>
+  <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav.svg">
 </p>
 
 **2. Capture something.** Four ways in, all in the left sidebar — 🎙️ and
@@ -90,10 +84,7 @@ key. Then the wizard checks the optional voice and meeting setup.
 | 📥 | Anything else | drop it straight into `00-Inbox` |
 
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/capture-scenario-dark.svg">
-    <img alt="Click the mic or phone icon to start recording — meetings open a live note for typing questions during the call — click again to stop, and the audio is transcribed on your Mac into a Me/Them dialogue that lands as a tagged note in your inbox." src="assets/capture-scenario-light.svg">
-  </picture>
+  <img alt="Click the mic or phone icon to start recording — meetings open a live note for typing questions during the call — click again to stop, and the audio is transcribed on your Mac into a Me/Them dialogue that lands as a tagged note in your inbox." src="assets/capture-scenario.svg">
 </p>
 
 **3. That's it.** Within seconds your capture is tagged, summarized, and
