@@ -116,13 +116,15 @@ Nous can point at folders you already use instead.
   opens a live note in Obsidian when recording starts, so you can type
   questions and quick notes during the call. When you stop, Nous adds the
   transcript to that same note. It records system audio (`Them`) and your mic
-  (`Me`) separately, then turns both into a speaker-labeled note. If
+  (`Me`) separately, then merges both into a chronological, speaker-labeled
+  dialogue. If
   speech-to-text is not ready yet, the recording and your typed notes still
   wait in the inbox until you finish setup.
 - **Limitation**: group calls lump every other participant into one `Them:`
   speaker — there's no per-person diarization.
-- **Limitation**: meeting capture is macOS-only; live voice transcription
-  (beta) is OpenAI-only and desktop-only.
+- **Limitation**: meeting capture is macOS-only, and recording your own mic
+  needs macOS 15+ — on macOS 14 only the other side (`Them:`) is captured.
+  Live voice transcription (beta) is OpenAI-only and desktop-only.
 
 Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 

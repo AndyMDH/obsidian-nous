@@ -53,6 +53,14 @@ export function buildQueryArgs(question: string): string[] {
 	];
 }
 
+// Some CLIs (claude included, for errors like "Not logged in") write their
+// failure message to stdout rather than stderr, and a killed/missing binary
+// produces no output at all - check both streams and never return blank.
+export function cliErrorDetail(result: CliExecResult): string {
+	const detail = (result.stderr.trim() || result.stdout.trim()).slice(0, 300);
+	return detail || "(no output)";
+}
+
 export interface LogSummary {
 	enriched: number;
 	newWikis: number;

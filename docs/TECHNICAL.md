@@ -42,7 +42,7 @@ obsidian-nous/
 - **Dev loop**: `npm run dev` rebuilds `main.js` on file changes.
 - **Release build**: `npm run build` typechecks and emits a production `main.js`.
 
-`main.js` is the bundled artifact Obsidian loads. It is committed to the repository because Obsidian plugins expect the built file in the repo root.
+`main.js` is the bundled artifact Obsidian loads. It is gitignored and built by CI at release time (Obsidian installs plugins from release assets, not the repo tree).
 
 ## `main.ts`: the Obsidian facade
 
@@ -78,6 +78,11 @@ Obsidian's Electron process starts with a minimal `PATH`. `cliEnv()` augments `P
 - `/usr/local/bin`
 - `~/.local/bin`
 - an optional extra directory if configured
+
+The rest of the subprocess environment is a named allowlist, not the parent
+env: `HOME`, `USER`/`LOGNAME` (required — `claude`'s Keychain credential
+lookup fails without `USER`), locale/terminal vars, and `ANTHROPIC_*` /
+`CLAUDE_*`. Nothing else from the parent environment is forwarded.
 
 `getVaultBasePath()` uses `FileSystemAdapter.getBasePath()` to get the real filesystem path of the vault, which is required as the working directory for the `claude` CLI.
 
@@ -178,8 +183,10 @@ This is strictly a safety-net-backed addition: `LiveVoiceCaptureModal` always st
 
 Native meeting capture is split deliberately:
 
-- `src/nativeRecorder.ts` is pure TypeScript: it builds the CLI arguments for
-  `status` / `start` / `stop` and parses the helper's JSON status output.
+- `src/nativeRecorder.ts` is pure TypeScript: CLI arguments for
+  `status` / `start` / `stop`, JSON status parsing, the live/pending/completed
+  meeting-note builders, and transcript assembly (`interleaveMeetingTracks`,
+  `trackStartDeltasMs`).
 - `native/nous-recorder` is a SwiftPM executable. It uses ScreenCaptureKit to
   record system audio and microphone audio into a timestamped `.qma` folder
   containing `sys.m4a` and `mic.m4a`, plus a small state file in
@@ -194,8 +201,12 @@ native helper starts, the plugin creates and opens a live inbox note using
 `buildLiveNativeRecordingNote()`. The user can type under `## Questions to
 ask` and `## Live notes` while recording continues.
 
-When the helper stops, the plugin transcribes `sys.m4a` as `Them:` and
-`mic.m4a` as `Me:`. If a live note exists, the plugin replaces that same note
+When the helper stops, the plugin transcribes each track independently (a
+failed or silent track is logged as a `WARN:` and skipped, not fatal), then
+merges them into a chronological `Me:`/`Them:` dialogue using whisper's
+per-segment offsets, re-anchored with the helper's `timing.json` so a
+late-starting mic doesn't skew the ordering. Cloud transcription has no
+segment timing, so those tracks degrade to one labeled block each. If a live note exists, the plugin replaces that same note
 with normal inbox text from `buildCompletedNativeRecordingNote()`, preserving
 typed questions/notes and removing the live-control frontmatter before
 enrichment. If speech-to-text is not ready, that same live note becomes a
@@ -297,6 +308,10 @@ Tests are in `test/*.test.ts` and run with Node's built-in test runner.
 - `cliRunner.test.ts` — PATH augmentation, arg builders, log summarization.
 - `anthropic.test.ts`, `openaiCompatible.test.ts`, `gemini.test.ts` — provider adapters with stubbed HTTP.
 - `transcribe.test.ts` — audio transcription helpers with stubbed HTTP.
+- `nativeRecorder.test.ts` — recorder CLI args/status, meeting-note builders, transcript interleaving.
+- `onboarding.test.ts` — setup-wizard readiness states.
+- `realtimeTranscribe.test.ts` — live-transcription session protocol.
+- `skillTemplates.test.ts` — generated CLI skill files.
 
 The tests do not make live API calls. `HttpPost` and `CliExec` are injected so tests can provide canned responses.
 
@@ -319,6 +334,10 @@ Errors are surfaced in two ways:
    - `NEW TAG: <tag> - <justification>`
    - `ERROR: <context> - <message>`
    - `TRANSCRIBED: <audio> -> <note>`
+   - `PENDING: <recording> needs speech-to-text setup -> <note>`
+   - `LIVE NOTE: native meeting recording -> <note>`
+   - `RECOVERED: live native meeting note kept without transcript -> <note>`
+   - `WARN: <context>` / `SKIPPED: <context>`
 
 API errors are wrapped in `LlmApiError` so the HTTP status and truncated response body can be logged.
 

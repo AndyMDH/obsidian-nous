@@ -294,6 +294,14 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 	private let micWriter: SampleBufferAudioWriter
 	private let sampleQueue = DispatchQueue(label: "nous-recorder.samples")
 	private var stream: SCStream?
+	// First-buffer time per track, on the shared stream clock. Each m4a's
+	// internal timeline starts at its own first buffer, so if the mic feed
+	// starts late (e.g. the user is still answering the TCC prompt) its
+	// timestamps are skewed relative to the system track. These anchors are
+	// written to timing.json on stop so the transcription side can re-align
+	// the two tracks before interleaving them into a dialogue.
+	private var firstSystemPTS: Double?
+	private var firstMicPTS: Double?
 
 	init(outputFolder: URL) throws {
 		self.outputFolder = outputFolder
@@ -323,6 +331,8 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 		config.excludesCurrentProcessAudio = true
 		if #available(macOS 15.0, *) {
 			config.captureMicrophone = true
+		} else {
+			fputs("nous-recorder: microphone capture needs macOS 15+; recording system audio only\n", stderr)
 		}
 
 		let stream = SCStream(filter: filter, configuration: config, delegate: nil)
@@ -338,18 +348,38 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 		try? await stream?.stopCapture()
 		await systemWriter.finish()
 		await micWriter.finish()
+		writeTrackTiming()
 	}
 
 	func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
 		guard sampleBuffer.isValid else { return }
 		switch outputType {
 		case .audio:
+			if firstSystemPTS == nil { firstSystemPTS = sampleBuffer.presentationTimeStamp.seconds }
 			systemWriter.append(sampleBuffer)
 		case .microphone:
+			if firstMicPTS == nil { firstMicPTS = sampleBuffer.presentationTimeStamp.seconds }
 			micWriter.append(sampleBuffer)
 		default:
 			return
 		}
+	}
+
+	// stopCapture has already returned by the time this runs, so no further
+	// sample callbacks can race the reads; sync on the sample queue anyway to
+	// order the memory access after the last callback.
+	private func writeTrackTiming() {
+		var sys: Double?
+		var mic: Double?
+		sampleQueue.sync {
+			sys = firstSystemPTS
+			mic = firstMicPTS
+		}
+		var timing: [String: Double] = [:]
+		if let sys { timing["sys"] = sys }
+		if let mic { timing["mic"] = mic }
+		guard !timing.isEmpty, let data = try? JSONSerialization.data(withJSONObject: timing) else { return }
+		try? data.write(to: outputFolder.appendingPathComponent("timing.json"))
 	}
 }
 

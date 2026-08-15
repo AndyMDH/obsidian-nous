@@ -6,7 +6,7 @@ import { DEFAULT_ACRONYMS } from "eslint-plugin-obsidianmd/dist/lib/rules/ui/acr
 
 // Nous's own product/vendor names the sentence-case rule doesn't know about -
 // without these it would "fix" them down to lowercase (e.g. "quickrecorder").
-const PROJECT_BRANDS = [...DEFAULT_BRANDS, "Nous", "QuickRecorder", "GLM", "Claude Code", "Z.ai", "Siri", "Realtime API"];
+const PROJECT_BRANDS = [...DEFAULT_BRANDS, "Nous", "GLM", "Claude Code", "Z.ai", "Siri", "Realtime API"];
 const PROJECT_ACRONYMS = [...DEFAULT_ACRONYMS, "HEIC"];
 // Literal command names and UI option labels, not prose - lowercasing or
 // uppercasing part of them (e.g. "whisper-CLI") would make them wrong to

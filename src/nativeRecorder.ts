@@ -66,6 +66,35 @@ export interface TrackTranscript {
 	segments: TranscriptSegment[] | null;
 }
 
+// Parsed timing.json written by the native helper: each track's first-buffer
+// time in seconds on the shared stream clock. Used to re-align the two m4a
+// files, whose internal timelines each start at their own first buffer (the
+// mic can start seconds late while the user answers the TCC prompt).
+export function trackStartDeltasMs(raw: string | null): { sys: number; mic: number } {
+	if (!raw) return { sys: 0, mic: 0 };
+	let sys: number | undefined;
+	let mic: number | undefined;
+	try {
+		const parsed = JSON.parse(raw) as { sys?: unknown; mic?: unknown };
+		if (typeof parsed.sys === "number" && Number.isFinite(parsed.sys)) sys = parsed.sys;
+		if (typeof parsed.mic === "number" && Number.isFinite(parsed.mic)) mic = parsed.mic;
+	} catch {
+		return { sys: 0, mic: 0 };
+	}
+	const starts = [sys, mic].filter((v): v is number => v !== undefined);
+	if (starts.length === 0) return { sys: 0, mic: 0 };
+	const base = Math.min(...starts);
+	return {
+		sys: sys === undefined ? 0 : Math.max(0, Math.round((sys - base) * 1000)),
+		mic: mic === undefined ? 0 : Math.max(0, Math.round((mic - base) * 1000)),
+	};
+}
+
+export function shiftTrackSegments(track: TrackTranscript | null, deltaMs: number): TrackTranscript | null {
+	if (!track?.segments || deltaMs === 0) return track;
+	return { ...track, segments: track.segments.map((segment) => ({ ...segment, from: segment.from + deltaMs })) };
+}
+
 // Merge the two meeting tracks into one dialogue, ordered by when each
 // segment was spoken, with consecutive same-speaker segments joined into a
 // single line. Falls back to two labeled blocks when either track has no

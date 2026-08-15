@@ -4,6 +4,7 @@ import {
 	augmentedPath,
 	buildEnrichArgs,
 	buildWikiArgs,
+	cliErrorDetail,
 	summarizeLogLines,
 } from "../src/cliRunner.ts";
 
@@ -50,4 +51,12 @@ test("summarizeLogLines counts each event type independently", () => {
 test("summarizeLogLines returns all zeros for an empty-inbox run", () => {
 	const summary = summarizeLogLines("2026-07-03T00:00:00Z inbox empty, nothing to do\n");
 	assert.deepEqual(summary, { enriched: 0, newWikis: 0, updatedWikis: 0, problems: 0 });
+});
+
+test("cliErrorDetail prefers stderr, falls back to stdout, never returns blank", () => {
+	assert.equal(cliErrorDetail({ code: 1, stdout: "out msg", stderr: "err msg" }), "err msg");
+	assert.equal(cliErrorDetail({ code: 1, stdout: "Not logged in", stderr: "" }), "Not logged in");
+	assert.equal(cliErrorDetail({ code: 1, stdout: "stdout msg", stderr: "   \n" }), "stdout msg");
+	assert.equal(cliErrorDetail({ code: 1, stdout: "", stderr: "" }), "(no output)");
+	assert.equal(cliErrorDetail({ code: 1, stdout: "x".repeat(400), stderr: "" }).length, 300);
 });

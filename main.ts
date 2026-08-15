@@ -49,6 +49,8 @@ import {
 	hasMeaningfulNativeRecordingManualNotes,
 	interleaveMeetingTracks,
 	nativeRecorderArgs,
+	shiftTrackSegments,
+	trackStartDeltasMs,
 	nativeRecorderReleaseAssetUrl,
 	parseLiveNativeRecordingNote,
 	parsePendingNativeRecordingNote,
@@ -75,8 +77,8 @@ import {
 	shouldOfferNativeRecorderInstall,
 } from "./src/onboarding";
 import { RealtimeTranscriber, type RealtimeSocket } from "./src/realtimeTranscribe";
-import { augmentedPath, buildEnrichArgs, buildQueryArgs, buildWikiArgs, summarizeLogLines } from "./src/cliRunner";
-import type { CliExec, CliExecResult } from "./src/cliRunner";
+import { augmentedPath, buildEnrichArgs, buildQueryArgs, buildWikiArgs, cliErrorDetail, summarizeLogLines } from "./src/cliRunner";
+import type { CliExec } from "./src/cliRunner";
 import { meetingEnricherSkill, vaultQuerySkill, wikiBuilderSkill } from "./src/skillTemplates";
 import type { SkillFolders } from "./src/skillTemplates";
 
@@ -116,6 +118,7 @@ type NodeModules = {
 	crypto: typeof import("crypto");
 	execFile: typeof import("child_process").execFile;
 	fs: typeof import("fs").promises;
+	fsConstants: typeof import("fs").constants;
 	os: typeof import("os");
 	path: typeof import("path");
 };
@@ -144,7 +147,7 @@ function loadNodeModules(): Promise<NodeModules> {
 			const fs = req("fs") as typeof import("fs");
 			const os = req("os") as typeof import("os");
 			const path = req("path") as typeof import("path");
-			return { crypto, execFile: cp.execFile, fs: fs.promises, os, path };
+			return { crypto, execFile: cp.execFile, fs: fs.promises, fsConstants: fs.constants, os, path };
 		});
 	}
 	return nodeModulesPromise;
@@ -521,7 +524,7 @@ export default class NousPlugin extends Plugin {
 			const result = await this.cliExec(whisperCli, args, { cwd: os.tmpdir(), env });
 			if (result.code !== 0) {
 				return {
-					failure: `${whisperCli} exited ${result.code}: ${(result.stderr || result.stdout).trim().slice(0, 200) || "no output"}`,
+					failure: `${whisperCli} exited ${result.code}: ${cliErrorDetail(result)}`,
 				};
 			}
 
@@ -652,7 +655,7 @@ export default class NousPlugin extends Plugin {
 			});
 			if (result.code !== 0) {
 				throw new Error(
-					`"${this.settings.claudeCliPath} --version" exited ${result.code}: ${(result.stderr || result.stdout).slice(0, 200)}`
+					`"${this.settings.claudeCliPath} --version" exited ${result.code}: ${cliErrorDetail(result)}`
 				);
 			}
 			return `Claude Code found (${result.stdout.trim().slice(0, 60)}).`;
@@ -695,14 +698,6 @@ export default class NousPlugin extends Plugin {
 			child.stdin?.end();
 		});
 	};
-
-	// Some CLIs (claude included, for errors like "Not logged in") write
-	// their failure message to stdout rather than stderr - check both so a
-	// failed run is never logged with a blank reason.
-	private cliErrorDetail(result: CliExecResult): string {
-		const detail = (result.stderr.trim() || result.stdout.trim()).slice(0, 300);
-		return detail || "(no output)";
-	}
 
 	private getVaultBasePath(): string | null {
 		return this.app.vault.adapter instanceof FileSystemAdapter
@@ -986,7 +981,7 @@ export default class NousPlugin extends Plugin {
 			const liveNote = await this.findActiveNativeMeetingNote(status.output);
 			const result = await this.runNativeRecorder("stop");
 			if (result.code !== 0) {
-				new Notice(`Nous: native recorder failed to stop - ${(result.stderr || result.stdout).slice(0, 200)}`, 10000);
+				new Notice(`Nous: native recorder failed to stop - ${cliErrorDetail(result)}`, 10000);
 				return;
 			}
 			const stopped = parseNativeRecorderStatus(result.stdout);
@@ -1007,7 +1002,7 @@ export default class NousPlugin extends Plugin {
 
 		const result = await this.runNativeRecorder("start");
 		if (result.code !== 0) {
-			const detail = (result.stderr || result.stdout).trim().slice(0, 240);
+			const detail = cliErrorDetail(result);
 			this.nativeRecorderLastProblem = detail || "The helper could not start.";
 			new Notice(`Nous: native recorder failed to start - ${detail.slice(0, 200)}`, 10000);
 			return;
@@ -1065,11 +1060,18 @@ export default class NousPlugin extends Plugin {
 		// leaving it to PATH lookup: the helper re-spawns itself from argv[0],
 		// and a bare argv[0] resolves against the working directory instead of
 		// the real install location ("The file "nous-recorder" doesn't exist",
-		// NSFilePath=$HOME/nous-recorder).
+		// NSFilePath=$HOME/nous-recorder). Same directory order as
+		// augmentedPath(), and only an executable file counts, so this picks
+		// the same binary a shell PATH lookup would.
+		const { fs, fsConstants } = await loadNodeModules();
 		const home = process.env.HOME ?? "";
-		for (const dir of [`${home}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin"]) {
+		for (const dir of ["/opt/homebrew/bin", "/usr/local/bin", `${home}/.local/bin`]) {
 			const candidate = `${dir}/${DEFAULT_NATIVE_RECORDER_BIN}`;
-			if (await NousPlugin.fileExists(candidate)) return candidate;
+			const executable = await fs
+				.access(candidate, fsConstants.X_OK)
+				.then(() => true)
+				.catch(() => false);
+			if (executable) return candidate;
 		}
 		return DEFAULT_NATIVE_RECORDER_BIN;
 	}
@@ -1120,7 +1122,7 @@ export default class NousPlugin extends Plugin {
 		await this.clearMacQuarantine(target);
 		const check = await this.cliExec(target, ["version"], { cwd: path.dirname(target), env: this.cliEnv() });
 		if (check.code !== 0) {
-			throw new Error(`installed helper could not run: ${(check.stderr || check.stdout).trim().slice(0, 200)}`);
+			throw new Error(`installed helper could not run: ${cliErrorDetail(check)}`);
 		}
 
 		this.nativeRecorderLastProblem = null;
@@ -1222,39 +1224,50 @@ export default class NousPlugin extends Plugin {
 
 	private async transcribeNativeMeetingRecording(
 		recordingDir: string
-	): Promise<{ stamp: string; content: string; transcript: string } | null> {
+	): Promise<{ stamp: string; transcript: string } | null> {
 		const { fs, path } = await loadNodeModules();
-		try {
-			const sysPath = path.join(recordingDir, "sys.m4a");
-			const micPath = path.join(recordingDir, "mic.m4a");
-			const sysExists = await fs
-				.access(sysPath)
-				.then(() => true)
-				.catch(() => false);
-			const micExists = await fs
-				.access(micPath)
-				.then(() => true)
-				.catch(() => false);
 
-			const sysTrack = sysExists ? await this.transcribeExternalAudioWithSegments(sysPath, "sys.m4a") : null;
-			const micTrack = micExists ? await this.transcribeExternalAudioWithSegments(micPath, "mic.m4a") : null;
-			const transcript = interleaveMeetingTracks(sysTrack, micTrack);
-			if (!transcript) {
-				new Notice("Nous: native recording had no transcribable audio.", 10000);
-				await this.appendLog(`SKIPPED: ${path.basename(recordingDir)} produced no transcript`);
+		// A track that fails to transcribe (muted mic on a webinar, one
+		// corrupt file) must not cost the meeting - transcribe each track
+		// independently and let interleaveMeetingTracks work with whatever
+		// survived. Only fail the recording when BOTH tracks failed.
+		const transcribeTrack = async (filePath: string, filename: string): Promise<TrackTranscript | null> => {
+			const exists = await fs
+				.access(filePath)
+				.then(() => true)
+				.catch(() => false);
+			if (!exists) return null;
+			try {
+				return await this.transcribeExternalAudioWithSegments(filePath, filename);
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				await this.appendLog(`WARN: ${path.basename(recordingDir)} ${filename} could not be transcribed: ${msg}`);
 				return null;
 			}
+		};
 
-			const stamp = this.meetingStampFromRecordingDir(recordingDir);
-			return {
-				stamp,
-				content: buildCompletedNativeRecordingNote(stamp, transcript),
-				transcript,
-			};
-		} catch (e) {
-			const msg = e instanceof Error ? e.message : String(e);
-			throw new Error(`native recording transcription failed: ${msg}`);
+		const sysTrack = await transcribeTrack(path.join(recordingDir, "sys.m4a"), "sys.m4a");
+		const micTrack = await transcribeTrack(path.join(recordingDir, "mic.m4a"), "mic.m4a");
+
+		// Each m4a's timeline starts at its own first buffer; timing.json (from
+		// the native helper) says when each track actually began, so late mic
+		// starts don't skew the interleave. Absent for older recordings.
+		const timingRaw = await fs.readFile(path.join(recordingDir, "timing.json"), "utf8").catch(() => null);
+		const deltas = trackStartDeltasMs(timingRaw);
+		const transcript = interleaveMeetingTracks(
+			shiftTrackSegments(sysTrack, deltas.sys),
+			shiftTrackSegments(micTrack, deltas.mic)
+		);
+		if (!transcript) {
+			new Notice("Nous: native recording had no transcribable audio.", 10000);
+			await this.appendLog(`SKIPPED: ${path.basename(recordingDir)} produced no transcript`);
+			return null;
 		}
+
+		return {
+			stamp: this.meetingStampFromRecordingDir(recordingDir),
+			transcript,
+		};
 	}
 
 	private async createPendingNativeMeetingRecording(
@@ -1571,7 +1584,7 @@ export default class NousPlugin extends Plugin {
 		);
 		if (enrichResult.code !== 0) {
 			await this.appendLog(
-				`ERROR: meeting-enricher CLI exited ${enrichResult.code} - ${this.cliErrorDetail(enrichResult)}`
+				`ERROR: meeting-enricher CLI exited ${enrichResult.code} - ${cliErrorDetail(enrichResult)}`
 			);
 			new Notice(
 				`Nous: enrichment failed (is "${this.settings.claudeCliPath}" the right CLI path?) - see .nous/pipeline.log`,
@@ -1587,7 +1600,7 @@ export default class NousPlugin extends Plugin {
 		);
 		if (wikiResult.code !== 0) {
 			await this.appendLog(
-				`ERROR: wiki-builder CLI exited ${wikiResult.code} - ${this.cliErrorDetail(wikiResult)}`
+				`ERROR: wiki-builder CLI exited ${wikiResult.code} - ${cliErrorDetail(wikiResult)}`
 			);
 			new Notice("Nous: wiki step failed - see .nous/pipeline.log", 10000);
 			return;
@@ -1624,7 +1637,7 @@ export default class NousPlugin extends Plugin {
 			{ cwd: basePath, env: this.cliEnv() }
 		);
 		if (result.code !== 0) {
-			await this.appendLog(`ERROR: wiki-builder CLI exited ${result.code} - ${this.cliErrorDetail(result)}`);
+			await this.appendLog(`ERROR: wiki-builder CLI exited ${result.code} - ${cliErrorDetail(result)}`);
 			new Notice("Nous: wiki step failed - see .nous/pipeline.log", 10000);
 			return;
 		}
@@ -1658,7 +1671,7 @@ export default class NousPlugin extends Plugin {
 			{ cwd: basePath, env: this.cliEnv() }
 		);
 		if (result.code !== 0) {
-			await this.appendLog(`ERROR: vault-query CLI exited ${result.code} - ${this.cliErrorDetail(result)}`);
+			await this.appendLog(`ERROR: vault-query CLI exited ${result.code} - ${cliErrorDetail(result)}`);
 			new Notice("Nous: query failed - see .nous/pipeline.log", 10000);
 			return;
 		}

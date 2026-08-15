@@ -149,7 +149,9 @@ When recording starts, Nous opens a live note in Obsidian. Keep that note open
 during the call. Type questions under **Questions to ask** and quick reminders
 under **Live notes**. When you stop recording, Nous adds the speaker-labeled
 transcript to that same note, then enriches it like any other inbox item.
-`Me:` is your mic; `Them:` is system audio from the call.
+`Me:` is your mic; `Them:` is system audio from the call, merged into one
+chronological dialogue. Mic capture needs macOS 15+ — on macOS 14 the
+transcript is `Them:`-only.
 
 If speech-to-text is not ready yet, Nous still records the meeting. When you
 stop, the live note stays in the inbox and says it needs transcription. Your

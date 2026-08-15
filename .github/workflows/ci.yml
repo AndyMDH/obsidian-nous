@@ -16,3 +16,11 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm test
+
+  # The Swift helper only otherwise compiles at release time - catch
+  # recorder regressions on every push instead of at the tag.
+  build-recorder:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift build -c release --package-path native/nous-recorder

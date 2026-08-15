@@ -15,6 +15,8 @@ import {
 	parsePendingNativeRecordingNote,
 	parseNativeRecorderChecksum,
 	parseNativeRecorderStatus,
+	shiftTrackSegments,
+	trackStartDeltasMs,
 } from "../src/nativeRecorder.ts";
 
 test("nativeRecorderArgs passes the command and recordings directory", () => {
@@ -163,4 +165,47 @@ test("interleaveMeetingTracks handles a single track and empty input", () => {
 	assert.equal(interleaveMeetingTracks(null, { text: "Just me.", segments: null }), "Me: Just me.");
 	assert.equal(interleaveMeetingTracks(null, null), "");
 	assert.equal(interleaveMeetingTracks({ text: "  ", segments: [] }, null), "");
+});
+
+test("interleaveMeetingTracks degrades to blocks when only one track has timing", () => {
+	// Reachable when one track transcribed locally (segments) and the other
+	// fell back to a cloud key (no segment timing).
+	const transcript = interleaveMeetingTracks(
+		{ text: "Local track.", segments: [{ from: 0, text: "Local track." }] },
+		{ text: "Cloud track.", segments: null }
+	);
+	assert.equal(transcript, "Them: Local track.\n\nMe: Cloud track.");
+});
+
+test("interleaveMeetingTracks with all-zero offsets collapses to the block layout", () => {
+	// Whisper JSON without usable offsets maps every segment to from: 0 -
+	// stable sort keeps each track contiguous, Them first.
+	const transcript = interleaveMeetingTracks(
+		{
+			text: "A B",
+			segments: [
+				{ from: 0, text: "A" },
+				{ from: 0, text: "B" },
+			],
+		},
+		{ text: "C", segments: [{ from: 0, text: "C" }] }
+	);
+	assert.equal(transcript, "Them: A B\n\nMe: C");
+});
+
+test("trackStartDeltasMs re-anchors both tracks to the earlier start", () => {
+	assert.deepEqual(trackStartDeltasMs('{"sys": 100.0, "mic": 105.5}'), { sys: 0, mic: 5500 });
+	assert.deepEqual(trackStartDeltasMs('{"sys": 100.0}'), { sys: 0, mic: 0 });
+	assert.deepEqual(trackStartDeltasMs(null), { sys: 0, mic: 0 });
+	assert.deepEqual(trackStartDeltasMs("not json"), { sys: 0, mic: 0 });
+	assert.deepEqual(trackStartDeltasMs('{"sys": "bad", "mic": 5}'), { sys: 0, mic: 0 });
+});
+
+test("shiftTrackSegments offsets segment timing but leaves text and null tracks alone", () => {
+	const track = { text: "Hi", segments: [{ from: 1000, text: "Hi" }] };
+	assert.deepEqual(shiftTrackSegments(track, 5500), { text: "Hi", segments: [{ from: 6500, text: "Hi" }] });
+	assert.deepEqual(shiftTrackSegments(track, 0), track);
+	assert.equal(shiftTrackSegments(null, 5500), null);
+	const cloud = { text: "Hi", segments: null };
+	assert.equal(shiftTrackSegments(cloud, 5500), cloud);
 });

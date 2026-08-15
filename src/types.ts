@@ -129,18 +129,7 @@ export interface EnrichResult {
 	related_notes: string[];
 }
 
-export interface WikiSourceEntry {
-	title: string;
-	date: string;
-	body: string;
-}
-
 export interface WikiSynthesisResult {
 	current_state: string;
 	open_questions: string[];
-}
-
-export interface TopicCluster {
-	tag: string;
-	notes: { title: string; filename: string; date: string }[];
 }
