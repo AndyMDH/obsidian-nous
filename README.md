@@ -48,13 +48,11 @@ desktop-only.
   not freeform tag sprawl
 - 📖 **Self-updating wikis** — when a topic has enough notes, Nous writes a
   hub page that collects them
-- 🎙️ **Live voice transcription** (beta) — watch text appear as you talk
 - 🤖 **Great context for AI coding assistants** — real tags and linked wikis
   beat a pile of raw notes. Point Claude Code's global `CLAUDE.md` at your
   vault, and every project gets that context automatically
 - 🔒 **Local-first** — Claude Code CLI, local whisper.cpp, and Ollama send
   nothing off your machine. Direct API keys are opt-in
-- 📱 **Works on mobile** — with a direct API key
 
 ## Install
 
@@ -104,27 +102,15 @@ change each one in Settings → Nous.
   for you. If you prefer a cloud backend, add a Gemini or OpenAI key. Nous
   uses the key only for speech-to-text.
 - **The native `nous-recorder` helper records meetings on macOS** (setup
-  installs it). When the recording starts, Nous opens a live note in
-  Obsidian for your questions and quick notes. When you stop, Nous adds the
-  transcript to that same note. The helper records system audio (`Them`) and
-  your mic (`Me`) as separate tracks. Nous merges the two tracks into one
-  speaker-labeled dialogue, in time order. If speech-to-text is not ready,
-  the recording and your typed notes wait in the inbox.
-- **Limitation**: a group call shows all other participants as one `Them:`
-  speaker. There is no per-person diarization.
-- **Limitation**: meeting capture is macOS-only, and mic capture needs
-  macOS 15 or later. On macOS 14, Nous records only the other side
-  (`Them:`). Live voice transcription (beta) needs OpenAI and desktop.
+  installs it). When the recording starts, Nous opens a live note for your
+  questions during the call. When you stop, Nous merges both call sides
+  into a `Me:`/`Them:` dialogue in that same note. Details and edge cases
+  are in the [usage docs](docs/USAGE.md).
+- **Limitations**: a group call shows all other participants as one
+  `Them:` speaker. Mic capture needs macOS 15 or later. Live voice
+  transcription (beta) needs an OpenAI key and desktop.
 
 Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-
-## Ecosystem
-
-- **[Obsidian LLM Wiki](https://github.com/green-dalii/obsidian-llm-wiki)** —
-  lists Nous as a companion plugin in its
-  [Ecosystem section](https://github.com/green-dalii/obsidian-llm-wiki#-ecosystem)
-  for local voice memo and meeting capture. The two plugins are independent.
-  Both can share the same vault.
 
 ## Good to know
 
@@ -133,22 +119,20 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 - **Privacy**: Nous sends only your captured notes and tag names to the
   provider that you chose. Local mode sends nothing anywhere. There is no
   telemetry.
-- **Mobile**: use the API-key mode. The Claude Code CLI is desktop-only.
-- **Hotkeys**: each capture action (voice, meeting, quick capture, process
-  inbox now) is a real Obsidian command, not only a ribbon icon. Open
-  **Settings → Hotkeys**, search for "Nous", and bind the commands that you
+- **Hotkeys**: each capture action is a real Obsidian command. Open
+  **Settings → Hotkeys**, search for "Nous", and bind the ones that you
   use often.
 - **Dictate from anywhere (optional)**: a system-wide dictation app such as
   [Handy](https://github.com/cjpais/Handy) can drop transcripts into the
   inbox when Obsidian is closed. See the
   [usage docs](docs/USAGE.md) for the one-line capture script.
-- **Settings** show only the essentials by default. The CLI, recorder, and
-  whisper paths, the folder names, and the thresholds are under **Advanced
-  settings**. The defaults work for almost everyone.
 - **AI context, concretely**: add one line to Claude Code's global
   `~/.claude/CLAUDE.md`, for example "My notes live in `~/path/to/vault` —
   check `10-Notes`/`20-Tags`/`30-Wikis` for background". Then every project
   gets that context automatically, with no extra setup.
+- **Ecosystem**: [Obsidian LLM Wiki](https://github.com/green-dalii/obsidian-llm-wiki)
+  lists Nous as a companion plugin for local voice and meeting capture. The
+  two plugins are independent and can share a vault.
 
 ## Documentation
 

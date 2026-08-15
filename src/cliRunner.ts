@@ -65,16 +65,21 @@ export interface LogSummary {
 	enriched: number;
 	newWikis: number;
 	updatedWikis: number;
-	problems: number;
+	errors: number;
+	skipped: number;
 }
 
-// Count event lines the run appended to the log - the CLI output itself is unstructured.
+// Count event lines the run appended to the log - the CLI output itself is
+// unstructured. Errors and skips are counted apart: a skip (empty stub,
+// duplicate) is normal operation, an error is not, and the notices that
+// report them must not blur the two.
 export function summarizeLogLines(newLines: string): LogSummary {
 	const count = (pattern: RegExp) => (newLines.match(pattern) || []).length;
 	return {
 		enriched: count(/ ENRICHED:/g),
 		newWikis: count(/ NEW WIKI:/g),
 		updatedWikis: count(/ UPDATED WIKI:/g),
-		problems: count(/ ERROR:| SKIPPED:/g),
+		errors: count(/ ERROR:/g),
+		skipped: count(/ SKIPPED:/g),
 	};
 }

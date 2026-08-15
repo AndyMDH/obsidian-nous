@@ -1772,8 +1772,13 @@ export default class NousPlugin extends Plugin {
 				parts.push(`${summary.updatedWikis} wiki${summary.updatedWikis === 1 ? "" : "s"} updated`);
 			new Notice(`Nous: ${parts.join(", ")}.`);
 		}
-		if (summary.problems > 0) {
-			new Notice(`Nous: ${summary.problems} item(s) skipped or errored - see .nous/pipeline.log`, 8000);
+		if (summary.errors > 0) {
+			new Notice(`Nous: ${summary.errors} error${summary.errors === 1 ? "" : "s"} - see .nous/pipeline.log`, 8000);
+		} else if (summary.skipped > 0) {
+			new Notice(
+				`Nous: ${summary.skipped} item${summary.skipped === 1 ? "" : "s"} skipped - see .nous/pipeline.log`,
+				8000
+			);
 		}
 	}
 

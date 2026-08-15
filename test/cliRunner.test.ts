@@ -40,17 +40,19 @@ test("summarizeLogLines counts each event type independently", () => {
 2026-07-03T00:00:01Z ENRICHED: b.md - tags: [y]
 2026-07-03T00:00:02Z NEW WIKI: topic - sources: 4
 2026-07-03T00:00:03Z SKIPPED: c.md - empty file
-2026-07-03T00:00:04Z run complete`;
+2026-07-03T00:00:04Z ERROR: d.md - provider timeout
+2026-07-03T00:00:05Z run complete`;
 	const summary = summarizeLogLines(log);
 	assert.equal(summary.enriched, 2);
 	assert.equal(summary.newWikis, 1);
 	assert.equal(summary.updatedWikis, 0);
-	assert.equal(summary.problems, 1);
+	assert.equal(summary.errors, 1);
+	assert.equal(summary.skipped, 1);
 });
 
 test("summarizeLogLines returns all zeros for an empty-inbox run", () => {
 	const summary = summarizeLogLines("2026-07-03T00:00:00Z inbox empty, nothing to do\n");
-	assert.deepEqual(summary, { enriched: 0, newWikis: 0, updatedWikis: 0, problems: 0 });
+	assert.deepEqual(summary, { enriched: 0, newWikis: 0, updatedWikis: 0, errors: 0, skipped: 0 });
 });
 
 test("cliErrorDetail prefers stderr, falls back to stdout, never returns blank", () => {
