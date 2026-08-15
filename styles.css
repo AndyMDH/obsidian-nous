@@ -163,3 +163,20 @@
 .nous-mode-cards + .setting-item {
 	margin-top: 6px;
 }
+
+/* Brand CTAs inside Nous modals: tangerine, not the theme accent */
+.nous-modal button.mod-cta {
+	background-color: #eb6c36;
+	color: #ffffff;
+}
+.nous-modal button.mod-cta:hover {
+	background-color: #d95f2d;
+}
+.nous-mode-card:hover,
+.nous-mode-card:focus-visible {
+	border-color: #eb6c36;
+}
+.nous-mode-card-badge {
+	color: #eb6c36;
+	border-color: #eb6c36;
+}

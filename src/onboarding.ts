@@ -49,13 +49,13 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 	return [
 		{
 			name: "Text, images, and PDFs",
-			desc: "Ready after the connection check.",
+			desc: "Ready.",
 			warning: false,
 		},
 		{
 			name: "Voice notes",
 			desc: status.voiceReady
-				? "Ready - speech-to-text is configured."
+				? "Ready."
 				: "Needs speech-to-text: use Download model below plus \"brew install whisper-cpp\", or add a Gemini/OpenAI key.",
 			warning: !status.voiceReady,
 		},
@@ -64,7 +64,7 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 			desc:
 				status.meeting === "ready-native"
 					? status.voiceReady
-						? "Ready - the phone button records the call and opens a live note for your questions."
+						? "Ready."
 						: "Ready to record - transcripts wait in the inbox until speech-to-text is set up."
 					: status.meeting === "unsupported"
 						? "macOS only."

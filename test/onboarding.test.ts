@@ -60,7 +60,7 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 test("capture prerequisite checklist distinguishes native recorder readiness", () => {
 	const nativeItems = capturePrerequisiteItems({ voiceReady: true, meeting: "ready-native" });
 	assert.equal(nativeItems[2].warning, false);
-	assert.match(nativeItems[2].desc, /live note/);
+	assert.equal(nativeItems[2].desc, "Ready.");
 
 	const nativeNoTranscriptionItems = capturePrerequisiteItems({ voiceReady: false, meeting: "ready-native" });
 	assert.equal(nativeNoTranscriptionItems[2].warning, false);

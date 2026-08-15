@@ -3028,6 +3028,7 @@ class NousSettingTab extends PluginSettingTab {
 class VoiceCaptureSetupModal extends Modal {
 	constructor(app: App, private plugin: NousPlugin) {
 		super(app);
+		this.modalEl.addClass("nous-modal");
 	}
 
 	onOpen() {
@@ -3081,6 +3082,7 @@ class OnboardingModal extends Modal {
 
 	constructor(app: App, private plugin: NousPlugin) {
 		super(app);
+		this.modalEl.addClass("nous-modal");
 	}
 
 	onOpen() {
@@ -3267,10 +3269,7 @@ class OnboardingModal extends Modal {
 
 	private renderCapturePrerequisites() {
 		this.clear();
-		this.setTitle("Capture prerequisites");
-		this.contentEl.createEl("p", {
-			text: "Your first text capture is ready. These optional capture buttons need a little more system setup:",
-		});
+		this.setTitle("What works now");
 		const statusEl = this.contentEl.createDiv();
 		statusEl.createEl("p", { text: "Checking capture setup..." });
 		let continueButton: ButtonComponent | null = null;
@@ -3285,12 +3284,14 @@ class OnboardingModal extends Modal {
 				}
 				if (Platform.isMacOS) {
 					const recorderStatusSetting = new Setting(statusEl)
-						.setName("Native recorder status")
-						.setDesc("Checking native recorder status...");
+						.setName("Meeting recorder")
+						.setDesc("Checking…");
 					void this.plugin
 						.getNativeRecorderReadiness()
 						.then((readiness) => {
-							recorderStatusSetting.setDesc(nativeRecorderReadinessText(readiness));
+							// State only here - the full path/version detail
+							// stays in the settings tab.
+							recorderStatusSetting.setDesc(nativeRecorderReadinessText(readiness).split(" Path:")[0]);
 							recorderStatusSetting.settingEl.toggleClass(
 								"mod-warning",
 								readiness.state === "missing" ||
