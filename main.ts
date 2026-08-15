@@ -3435,20 +3435,18 @@ class OnboardingModal extends Modal {
 		link?: { text: string; href: string };
 		action?: (el: HTMLElement) => void;
 	}[] {
-		const notes = this.plugin.settings.meetingsFolder;
 		const steps: ReturnType<OnboardingModal["tourSteps"]> = [];
 
 		steps.push({
 			title: "One loop",
 			icon: "refresh-cw",
-			text: `Capture anything. It comes back tagged and linked in ${notes}.`,
+			text: `Capture anything. It comes back tagged and linked in ${this.plugin.settings.meetingsFolder}.`,
 			action: (el) => {
 				new Setting(el).addButton((b) =>
 					b.setButtonText("Drop a sample note").setCta().onClick(async () => {
 						b.setDisabled(true);
 						await this.plugin.createSampleNote();
 						void this.plugin.processInbox();
-						new Notice(`Nous: sample dropped - watch ${notes}.`);
 					})
 				);
 			},
