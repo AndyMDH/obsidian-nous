@@ -1604,7 +1604,7 @@ export default class NousPlugin extends Plugin {
 		const file = this.app.vault.getFileByPath(notePath);
 		if (file) {
 			await this.app.workspace.getLeaf(true).openFile(file);
-			this.placeCursorInLiveNoteNotes();
+			window.setTimeout(() => this.placeCursorInLiveNoteNotes(), 120);
 		}
 		await this.appendLog(`LIVE NOTE: native meeting recording -> ${notePath}`);
 		return notePath;

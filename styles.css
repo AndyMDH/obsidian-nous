@@ -223,3 +223,16 @@
 	justify-content: center;
 	margin: 4px 0 12px;
 }
+
+/* The live note's frontmatter is machinery (recording flags, paths) - hide
+   the Properties panel in that note entirely. The data stays in the file;
+   the user sees only their writing surface. */
+.nous-live-note .metadata-container {
+	display: none;
+}
+
+/* An inviting blank space under the notes heading, so "type here" is
+   visually obvious. */
+.nous-live-note .cm-line.HyperMD-header-2:first-of-type {
+	margin-bottom: 4px;
+}
