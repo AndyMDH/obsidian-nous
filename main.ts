@@ -3240,6 +3240,25 @@ class OnboardingModal extends Modal {
 			text: isCli ? "Nous checks that Claude Code is reachable." : "One tiny API call to confirm your key works.",
 		});
 		const status = this.contentEl.createEl("p", { text: "" });
+		const helpEl = this.contentEl.createDiv();
+
+		// A failed CLI check is a dead end for someone who has never installed
+		// Claude Code - hand them the install command instead of an error.
+		const showCliInstallHelp = () => {
+			helpEl.empty();
+			const installCommand = "curl -fsSL https://claude.ai/install.sh | bash";
+			new Setting(helpEl)
+				.setName("Install Claude Code")
+				.setDesc(`Run this in Terminal, then run "claude" once to log in: ${installCommand}`)
+				.addButton((b) =>
+					b.setButtonText("Copy command").onClick(async () => {
+						await navigator.clipboard.writeText(installCommand);
+						new Notice("Nous: command copied.");
+					})
+				);
+			const links = helpEl.createDiv({ cls: "nous-tour-links" });
+			links.createEl("a", { text: "Claude Code install guide", href: "https://docs.claude.com/en/docs/claude-code/setup" });
+		};
 
 		new Setting(this.contentEl)
 			.addButton((b) => b.setButtonText("Back").onClick(() => (isCli ? this.renderWelcome() : this.renderApiSetup())))
@@ -3253,6 +3272,7 @@ class OnboardingModal extends Modal {
 					} catch (e) {
 						const msg = e instanceof Error ? e.message : String(e);
 						status.setText(`✗ ${msg}`);
+						if (isCli) showCliInstallHelp();
 						b.setButtonText("Test").setDisabled(false);
 					}
 				})
