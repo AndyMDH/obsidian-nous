@@ -3402,9 +3402,8 @@ class OnboardingModal extends Modal {
 			);
 	}
 
-	// A click-through tour of the daily loop. Every step has one thing to
-	// read and, where possible, one real thing to try - the tour drives the
-	// actual features, not screenshots of them.
+	// A click-through tour of the daily loop: one tangerine icon, one grey
+	// line, one real action per step.
 	private renderTour(step: number) {
 		this.clear();
 		const steps = this.tourSteps();
@@ -3417,10 +3416,14 @@ class OnboardingModal extends Modal {
 		});
 
 		const body = this.contentEl.createDiv({ cls: "nous-tour-body" });
-		for (const line of current.lines) {
-			body.createEl("p", { text: line });
+		const iconEl = body.createDiv({ cls: "nous-tour-icon" });
+		setIcon(iconEl, current.icon);
+		body.createEl("p", { cls: "nous-tour-text", text: current.text });
+		if (current.link) {
+			const links = body.createDiv({ cls: "nous-tour-links" });
+			links.createEl("a", { text: current.link.text, href: current.link.href });
 		}
-		current.extra?.(body);
+		current.action?.(body);
 
 		const nav = new Setting(this.contentEl);
 		if (step > 0) {
@@ -3430,7 +3433,7 @@ class OnboardingModal extends Modal {
 			nav.addButton((b) => b.setButtonText("Next").setCta().onClick(() => this.renderTour(step + 1)));
 		} else {
 			nav.addButton((b) =>
-				b.setButtonText("Finish tour").setCta().onClick(async () => {
+				b.setButtonText("Finish").setCta().onClick(async () => {
 					await this.finish(false);
 				})
 			);
@@ -3442,39 +3445,39 @@ class OnboardingModal extends Modal {
 		);
 	}
 
-	private tourSteps(): { title: string; lines: string[]; extra?: (el: HTMLElement) => void }[] {
-		const inbox = this.plugin.settings.inboxFolder;
+	private tourSteps(): {
+		title: string;
+		icon: string;
+		text: string;
+		link?: { text: string; href: string };
+		action?: (el: HTMLElement) => void;
+	}[] {
 		const notes = this.plugin.settings.meetingsFolder;
-		const steps: { title: string; lines: string[]; extra?: (el: HTMLElement) => void }[] = [];
+		const steps: ReturnType<OnboardingModal["tourSteps"]> = [];
 
 		steps.push({
-			title: "The whole loop, once",
-			lines: [
-				`You capture something. It lands in "${inbox}". Nous turns it into a tagged, linked note in "${notes}". That is the entire product - the next steps show each door in.`,
-			],
-			extra: (el) => {
-				new Setting(el)
-					.setName("See it happen now")
-					.setDesc("Nous drops a sample note into the inbox and enriches it while you watch.")
-					.addButton((b) =>
-						b.setButtonText("Drop a sample note").onClick(async () => {
-							b.setDisabled(true);
-							await this.plugin.createSampleNote();
-							void this.plugin.processInbox();
-							new Notice(`Nous: sample note dropped - watch "${notes}".`);
-						})
-					);
+			title: "One loop",
+			icon: "refresh-cw",
+			text: `Capture anything. It comes back tagged and linked in ${notes}.`,
+			action: (el) => {
+				new Setting(el).addButton((b) =>
+					b.setButtonText("Drop a sample note").setCta().onClick(async () => {
+						b.setDisabled(true);
+						await this.plugin.createSampleNote();
+						void this.plugin.processInbox();
+						new Notice(`Nous: sample dropped - watch ${notes}.`);
+					})
+				);
 			},
 		});
 
 		steps.push({
-			title: "Type or paste anything",
-			lines: [
-				"The ➕ feather icon in the left ribbon (or the \"Quick capture\" command) takes typed text, pasted text, or a file. No folder decisions - it goes to the inbox.",
-			],
-			extra: (el) => {
+			title: "Quick capture",
+			icon: "feather",
+			text: "Type, paste, or attach. No folders to pick.",
+			action: (el) => {
 				new Setting(el).addButton((b) =>
-					b.setButtonText("Try quick capture").setCta().onClick(() => {
+					b.setButtonText("Try it").setCta().onClick(() => {
 						new QuickCaptureModal(this.app, this.plugin).open();
 					})
 				);
@@ -3482,13 +3485,12 @@ class OnboardingModal extends Modal {
 		});
 
 		steps.push({
-			title: "Talk instead of type",
-			lines: [
-				"The 🎙️ mic icon records a voice note: click, talk, click again. Nous transcribes on this machine and the words become a note like any other.",
-			],
-			extra: (el) => {
+			title: "Voice notes",
+			icon: "mic",
+			text: "Click, talk, click again. Transcribed on this machine.",
+			action: (el) => {
 				new Setting(el).addButton((b) =>
-					b.setButtonText("Record a voice note now").setCta().onClick(() => {
+					b.setButtonText("Record now").setCta().onClick(() => {
 						this.close();
 						void this.plugin.toggleVoiceCapture();
 					})
@@ -3498,21 +3500,25 @@ class OnboardingModal extends Modal {
 
 		if (Platform.isMacOS) {
 			steps.push({
-				title: "Meetings get a live note",
-				lines: [
-					"On a call, the 📞 phone icon records both sides. A live note opens with a Meeting notes section - type questions and thoughts during the call.",
-					"When you stop, the transcript fills in as a Me/Them dialogue and the note comes back tagged, with your typed notes kept.",
-					"Tip: bind a hotkey to \"Start/stop meeting recording\" in Settings → Hotkeys.",
-				],
+				title: "Meetings",
+				icon: "phone-call",
+				text: "Records both call sides. A live note opens for your questions.",
+				link: {
+					text: "How meetings work",
+					href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md",
+				},
 			});
 		}
 
 		steps.push({
 			title: "That is everything",
-			lines: [
-				"Wikis build themselves once a topic has enough notes. Settings has the rest - providers, folders, voice and meeting setup.",
-			],
-			extra: (el) => {
+			icon: "sparkles",
+			text: "Wikis build themselves. The rest lives in settings.",
+			link: {
+				text: "Read the docs",
+				href: "https://github.com/AndyMDH/obsidian-nous/tree/main/docs",
+			},
+			action: (el) => {
 				new Setting(el).addButton((b) =>
 					b.setButtonText("Open Nous settings").onClick(() => {
 						this.close();

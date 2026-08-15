@@ -109,11 +109,11 @@
 	font-size: var(--font-ui-small);
 }
 
-/* Onboarding tour */
+/* Onboarding tour - grey text, tangerine accents */
 .nous-tour-dots {
 	display: flex;
 	gap: 6px;
-	margin: 4px 0 12px;
+	margin: 4px 0 16px;
 }
 .nous-tour-dot {
 	width: 7px;
@@ -122,8 +122,32 @@
 	background: var(--background-modifier-border);
 }
 .nous-tour-dot.is-active {
-	background: var(--interactive-accent);
+	background: #eb6c36;
 }
 .nous-tour-body {
-	min-height: 120px;
+	min-height: 140px;
+	text-align: center;
+}
+.nous-tour-icon {
+	color: #eb6c36;
+	margin: 8px auto 12px;
+}
+.nous-tour-icon svg {
+	width: 44px;
+	height: 44px;
+}
+.nous-tour-text {
+	color: var(--text-muted);
+	max-width: 360px;
+	margin: 0 auto 8px;
+}
+.nous-tour-links {
+	margin-bottom: 8px;
+}
+.nous-tour-links a {
+	font-size: var(--font-ui-small);
+}
+.nous-tour-body .setting-item {
+	border: none;
+	justify-content: center;
 }
