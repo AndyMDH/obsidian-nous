@@ -1060,6 +1060,17 @@ export default class NousPlugin extends Plugin {
 
 		const managed = await this.managedNativeRecorderPath();
 		if (managed && (await NousPlugin.fileExists(managed))) return managed;
+
+		// Resolve the bare name to an absolute path ourselves rather than
+		// leaving it to PATH lookup: the helper re-spawns itself from argv[0],
+		// and a bare argv[0] resolves against the working directory instead of
+		// the real install location ("The file "nous-recorder" doesn't exist",
+		// NSFilePath=$HOME/nous-recorder).
+		const home = process.env.HOME ?? "";
+		for (const dir of [`${home}/.local/bin`, "/opt/homebrew/bin", "/usr/local/bin"]) {
+			const candidate = `${dir}/${DEFAULT_NATIVE_RECORDER_BIN}`;
+			if (await NousPlugin.fileExists(candidate)) return candidate;
+		}
 		return DEFAULT_NATIVE_RECORDER_BIN;
 	}
 

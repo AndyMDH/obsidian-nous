@@ -1,6 +1,7 @@
 import AVFoundation
 import CoreMedia
 import Foundation
+import MachO
 import ScreenCaptureKit
 
 struct RecorderState: Codable {
@@ -151,6 +152,25 @@ struct NousRecorderCLI {
 		return kill(pid, 0) == 0
 	}
 
+	// argv[0] is only the bare command name when the parent resolved us via
+	// PATH (Obsidian's plugin does), and Foundation would then look for it
+	// relative to the working directory - "The file "nous-recorder" doesn't
+	// exist" with NSFilePath=$HOME/nous-recorder. Ask the kernel for the real
+	// executable path instead.
+	private static func selfExecutableURL() -> URL {
+		var size = UInt32(4096)
+		var buffer = [CChar](repeating: 0, count: Int(size))
+		if _NSGetExecutablePath(&buffer, &size) != 0 {
+			buffer = [CChar](repeating: 0, count: Int(size))
+			_ = _NSGetExecutablePath(&buffer, &size)
+		}
+		let raw = String(cString: buffer)
+		if !raw.isEmpty {
+			return URL(fileURLWithPath: raw).resolvingSymlinksInPath()
+		}
+		return URL(fileURLWithPath: CommandLine.arguments[0])
+	}
+
 	private static func start(_ options: Options) throws {
 		let recordingsDir = try requiredRecordingsDir(options)
 		try FileManager.default.createDirectory(at: recordingsDir, withIntermediateDirectories: true)
@@ -165,7 +185,7 @@ struct NousRecorderCLI {
 		try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 
 		let child = Process()
-		child.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+		child.executableURL = selfExecutableURL()
 		child.arguments = [
 			"record",
 			"--output", output.path,
