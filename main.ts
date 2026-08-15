@@ -218,6 +218,8 @@ export default class NousPlugin extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
+		document.body.toggleClass("nous-styled-notes", this.settings.styledNotes);
+		this.register(() => document.body.removeClass("nous-styled-notes"));
 		this.addSettingTab(new NousSettingTab(this.app, this));
 
 		this.addCommand({
@@ -932,6 +934,26 @@ export default class NousPlugin extends Plugin {
 		const link = fragment.createEl("a", { text: "Open Nous settings" });
 		link.addEventListener("click", () => this.openNousSettings());
 		new Notice(fragment, timeoutMs);
+	}
+
+	async installEditorialSnippet(): Promise<void> {
+		const snippetsDir = `${this.app.vault.configDir}/snippets`;
+		const adapter = this.app.vault.adapter;
+		if (!(await adapter.exists(snippetsDir))) await adapter.mkdir(snippetsDir);
+		await adapter.write(`${snippetsDir}/${EDITORIAL_SNIPPET_FILENAME}`, EDITORIAL_SNIPPET);
+
+		const appearancePath = `${this.app.vault.configDir}/appearance.json`;
+		let appearance: { enabledCssSnippets?: string[] } = {};
+		try {
+			appearance = JSON.parse(await adapter.read(appearancePath)) as { enabledCssSnippets?: string[] };
+		} catch {
+			// Missing or malformed - start fresh.
+		}
+		const enabled = new Set(appearance.enabledCssSnippets ?? []);
+		enabled.add(EDITORIAL_SNIPPET_FILENAME.replace(/\.css$/, ""));
+		appearance.enabledCssSnippets = [...enabled].sort();
+		await adapter.write(appearancePath, JSON.stringify(appearance, null, 2));
+		new Notice("Nous: editorial theme installed. Set the accent color to #eb6c36 for the full effect.", 8000);
 	}
 
 	private getVaultBasePath(): string | null {
@@ -2416,6 +2438,60 @@ export default class NousPlugin extends Plugin {
 	}
 }
 
+const EDITORIAL_SNIPPET_FILENAME = "nous-editorial.css";
+// Kept in sync with examples/nous-editorial-theme.css in the repository.
+const EDITORIAL_SNIPPET = `/* Nous editorial theme - optional vault snippet. Remove or disable in
+   Appearance -> CSS snippets. For the full effect, set Appearance ->
+   Accent color to #eb6c36. */
+body {
+	--font-text: "Iowan Old Style", Palatino, Georgia, serif;
+	--line-height-normal: 1.6;
+}
+.inline-title,
+.markdown-preview-view h1 {
+	font-family: "Iowan Old Style", Palatino, Georgia, serif;
+	letter-spacing: -0.01em;
+}
+.tag,
+.cm-hashtag {
+	color: #eb6c36 !important;
+	background-color: rgba(235, 108, 54, 0.08);
+	border: 1px solid rgba(235, 108, 54, 0.35);
+}
+.metadata-property[data-property-key="tags"] .multi-select-pill {
+	color: #eb6c36;
+	background-color: rgba(235, 108, 54, 0.08);
+	border: 1px solid rgba(235, 108, 54, 0.35);
+}
+.metadata-property-key .metadata-property-key-input {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+.metadata-properties-heading .metadata-properties-title {
+	font-size: 12px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+.markdown-preview-view blockquote,
+.markdown-source-view .HyperMD-quote {
+	border-left: 2px solid rgba(235, 108, 54, 0.5);
+}
+input[type="checkbox"]:checked {
+	background-color: #eb6c36;
+	border-color: #eb6c36;
+}
+.workspace-tab-header.is-active .workspace-tab-header-inner-title,
+.nav-file-title.is-active {
+	color: #eb6c36;
+}
+.callout[data-callout="nous"] {
+	--callout-color: 235, 108, 54;
+	--callout-icon: lucide-sparkles;
+}
+`;
+
 class NousSettingTab extends PluginSettingTab {
 	plugin: NousPlugin;
 	// Provider whose model dropdown is showing the Custom field. Not persisted.
@@ -2895,6 +2971,41 @@ class NousSettingTab extends PluginSettingTab {
 				});
 			}
 		}
+
+		items.push({
+			name: "Appearance",
+			render: (setting) => {
+				setting.setHeading();
+			},
+		});
+		items.push({
+			name: "Styled Nous notes",
+			render: (setting) => {
+				setting
+					.setDesc("Meeting notes and wikis that Nous generates get the editorial layout in reading view.")
+					.addToggle((toggle) =>
+						toggle.setValue(this.plugin.settings.styledNotes).onChange(async (value) => {
+							this.plugin.settings.styledNotes = value;
+							document.body.toggleClass("nous-styled-notes", value);
+							await this.plugin.saveSettings();
+						})
+					);
+			},
+		});
+		items.push({
+			name: "Editorial theme (optional)",
+			render: (setting) => {
+				setting
+					.setDesc("Vault-wide look: serif text, tangerine tags and details, a branded callout. Installs as a CSS snippet you can disable anytime.")
+					.addButton((b) =>
+						b.setButtonText("Install").onClick(async () => {
+							b.setDisabled(true);
+							await this.plugin.installEditorialSnippet();
+							b.setDisabled(false);
+						})
+					);
+			},
+		});
 
 		items.push({
 			name: "Voice capture",

@@ -238,3 +238,16 @@ Every step is logged to `.nous/pipeline.log` in the vault.
 - **Privacy**: only your captured notes, tag names, and recent note titles
   are ever sent to the provider you chose. Local mode sends nothing
   anywhere. No telemetry, ever.
+
+## The Nous look (optional)
+
+Nous-generated notes get an editorial layout in reading view by default:
+the summary reads as a lede, decisions render as accent cards, and the
+transcript sits dimmed and small below your notes (hover to read it at
+full strength). Turn this off in Settings → Nous → Appearance.
+
+For the vault-wide look - serif text, tangerine tag chips, a `> [!nous]`
+callout - click **Install** under Settings → Nous → Appearance →
+Editorial theme. It lands as a normal CSS snippet you can disable in
+Appearance → CSS snippets. For the full effect, set Appearance → Accent
+color to `#eb6c36`.

@@ -255,3 +255,69 @@
 .nous-live-note .metadata-container {
 	display: none !important;
 }
+
+/* ------------------------------------------------------------------ */
+/* Styled Nous notes (settings toggle, default on). Scoped strictly to
+   notes Nous generates: meeting notes carry enriched_at, wikis carry
+   topic - hand-written notes are never touched. */
+
+/* Meeting notes: summary as a lede, decisions as accent cards, bigger
+   action checkboxes, transcript dimmed as archive (hover restores). */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Summary"]) + div p {
+	font-size: 1.05em;
+	line-height: 1.65;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Decisions"]) + div li {
+	list-style: none;
+	border-left: 2px solid #eb6c36;
+	background: rgba(235, 108, 54, 0.05);
+	padding: 6px 10px;
+	margin: 6px 0;
+	border-radius: 0 4px 4px 0;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Action items"]) + div .task-list-item-checkbox {
+	width: 17px;
+	height: 17px;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Transcript"]),
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Transcript"]) ~ div {
+	opacity: 0.62;
+	font-size: 0.85em;
+	line-height: 1.45;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Transcript"]):hover,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Transcript"]) ~ div:hover {
+	opacity: 1;
+}
+
+/* Wiki pages: accent title, eyebrow section headings, source chips */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) h1 {
+	color: #eb6c36;
+	border-bottom: 1px solid rgba(235, 108, 54, 0.3);
+	padding-bottom: 6px;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) h2 {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 13px;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	margin-top: 2em;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Timeline"]) + div li::marker {
+	color: #eb6c36;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Sources"]) + div ul {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding-left: 0;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Sources"]) + div li {
+	list-style: none;
+	border: 1px solid var(--background-modifier-border);
+	background: var(--background-secondary);
+	border-radius: 12px;
+	padding: 2px 10px;
+	font-size: 0.85em;
+}

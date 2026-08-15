@@ -1,0 +1,62 @@
+/* Nous editorial theme - optional vault snippet.
+   Installed by Settings -> Nous -> Appearance -> "Install editorial theme",
+   or copy this file to .obsidian/snippets/ and enable it in
+   Appearance -> CSS snippets. For the full effect, also set Appearance ->
+   Accent color to #eb6c36. */
+
+/* Serif reading + writing */
+body {
+	--font-text: "Iowan Old Style", Palatino, Georgia, serif;
+	--line-height-normal: 1.6;
+}
+.inline-title,
+.markdown-preview-view h1 {
+	font-family: "Iowan Old Style", Palatino, Georgia, serif;
+	letter-spacing: -0.01em;
+}
+
+/* Tags as tangerine chips */
+.tag,
+.cm-hashtag {
+	color: #eb6c36 !important;
+	background-color: rgba(235, 108, 54, 0.08);
+	border: 1px solid rgba(235, 108, 54, 0.35);
+}
+.metadata-property[data-property-key="tags"] .multi-select-pill {
+	color: #eb6c36;
+	background-color: rgba(235, 108, 54, 0.08);
+	border: 1px solid rgba(235, 108, 54, 0.35);
+}
+
+/* Quiet Properties panel */
+.metadata-property-key .metadata-property-key-input {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+.metadata-properties-heading .metadata-properties-title {
+	font-size: 12px;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+/* Accented details */
+.markdown-preview-view blockquote,
+.markdown-source-view .HyperMD-quote {
+	border-left: 2px solid rgba(235, 108, 54, 0.5);
+}
+input[type="checkbox"]:checked {
+	background-color: #eb6c36;
+	border-color: #eb6c36;
+}
+.workspace-tab-header.is-active .workspace-tab-header-inner-title,
+.nav-file-title.is-active {
+	color: #eb6c36;
+}
+
+/* Branded callout: > [!nous] */
+.callout[data-callout="nous"] {
+	--callout-color: 235, 108, 54;
+	--callout-icon: lucide-sparkles;
+}
