@@ -10,16 +10,16 @@
     /* Base state = the final frame, so reduced-motion readers see the
        finished note instead of an empty one. */
     .ph0 { opacity: 0; }
-    .rec  { animation: nd-rec 14s linear infinite; }
-    .trans { animation: nd-trans 14s linear infinite; }
-    .done { animation: nd-done 14s linear infinite; }
-    .typed1 { animation: nd-typed1 14s linear infinite; }
-    .typed2 { animation: nd-typed2 14s linear infinite; }
-    .typed3 { animation: nd-typed3 14s linear infinite; }
-    .placeholder { animation: nd-placeholder 14s linear infinite; }
-    .line1 { animation: nd-line1 14s linear infinite; }
-    .line2 { animation: nd-line2 14s linear infinite; }
-    .enriched { animation: nd-enriched 14s linear infinite; }
+    .rec  { animation: nd-rec 9s linear infinite; }
+    .trans { animation: nd-trans 9s linear infinite; }
+    .done { animation: nd-done 9s linear infinite; }
+    .typed1 { animation: nd-typed1 9s linear infinite; }
+    .typed2 { animation: nd-typed2 9s linear infinite; }
+    .typed3 { animation: nd-typed3 9s linear infinite; }
+    .placeholder { animation: nd-placeholder 9s linear infinite; }
+    .line1 { animation: nd-line1 9s linear infinite; }
+    .line2 { animation: nd-line2 9s linear infinite; }
+    .enriched { animation: nd-enriched 9s linear infinite; }
     @keyframes nd-rec { 0%, 2% { opacity: 0; } 4%, 54% { opacity: 1; } 56%, 100% { opacity: 0; } }
     @keyframes nd-trans { 0%, 56% { opacity: 0; } 58%, 78% { opacity: 1; } 80%, 100% { opacity: 0; } }
     @keyframes nd-done { 0%, 80% { opacity: 0; } 82%, 100% { opacity: 1; } }

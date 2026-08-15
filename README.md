@@ -29,7 +29,7 @@
 </p>
 
 <p align="center">
-  <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="assets/pipeline.svg">
+  <img alt="Animated demo of one capture cycle: a live note opens while recording, the user types a question under Meeting notes, the transcript fills in as a Me/Them dialogue on stop, and the note comes back tagged and linked." src="assets/demo.svg">
 </p>
 
 Nous turns each capture — a typed thought, a voice memo, a call, a photo, a
@@ -81,10 +81,6 @@ search for "Nous", and bind the ones that you use often.
 | 📞 | Meeting (macOS) | click the phone. Nous opens a live note for your questions during the call |
 | 📥 | Anything else | drop it straight into `00-Inbox` |
 
-<p align="center">
-  <img alt="Animated demo of one capture cycle: a live note opens while recording, the user types a question under Meeting notes, the transcript fills in as a Me/Them dialogue on stop, and the note comes back tagged and linked." src="assets/demo.svg">
-</p>
-
 *Dictate from anywhere (optional)*: a system-wide dictation app such as
 [Handy](https://github.com/cjpais/Handy) can drop transcripts into the inbox
 when Obsidian is closed - see the [usage docs](docs/USAGE.md) for the
@@ -101,6 +97,10 @@ captures wait in `00-Inbox` until you open it.
 change each one in Settings → Nous.
 
 ## How it works, briefly
+
+<p align="center">
+  <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="assets/pipeline.svg">
+</p>
 
 - **Voice transcription needs one extra backend.**
   [whisper.cpp](https://github.com/ggml-org/whisper.cpp) runs locally on

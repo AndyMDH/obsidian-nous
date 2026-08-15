@@ -240,7 +240,7 @@ test("nativeRecorderLatestAssetUrl points at the newest release asset", () => {
 });
 
 test("live and pending notes carry the styling class; completed notes do not", () => {
-	assert.match(buildLiveNativeRecordingNote(null, "2026-08-15 12.00"), /cssclasses:\n  - nous-live-note/);
-	assert.match(buildPendingNativeRecordingNote("/tmp/r.qma", "2026-08-15 12.00"), /cssclasses:\n  - nous-live-note/);
+	assert.match(buildLiveNativeRecordingNote(null, "2026-08-15 12.00"), /cssclasses:\n {2}- nous-live-note/);
+	assert.match(buildPendingNativeRecordingNote("/tmp/r.qma", "2026-08-15 12.00"), /cssclasses:\n {2}- nous-live-note/);
 	assert.ok(!buildCompletedNativeRecordingNote("2026-08-15 12.00", "Them: hi").includes("cssclasses"));
 });

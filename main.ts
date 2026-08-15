@@ -1224,7 +1224,7 @@ export default class NousPlugin extends Plugin {
 			this.nativeRecorderLastProblem = `Allow microphone and screen/audio recording permissions in macOS Privacy & Security, then try again.${detail ? ` Details: ${detail}` : ""}`;
 			if (detail) await this.appendLog(`ERROR: native recorder stopped immediately: ${detail}`);
 			new Notice(
-				"Nous: recording stopped right away - allow Microphone and Screen Recording in Privacy & Security, then try again.",
+				"Nous: recording stopped right away - allow microphone and screen recording in privacy & security, then try again.",
 				12000
 			);
 			return;
@@ -1402,7 +1402,10 @@ export default class NousPlugin extends Plugin {
 						liveFile,
 						"Nous saved the meeting audio, but it did not produce a transcript."
 					);
+				} else {
+					new Notice("Nous: no speech detected - no note was created.", 8000);
 				}
+				await this.archiveNativeRecording(recordingDir);
 				return;
 			}
 
@@ -1417,6 +1420,7 @@ export default class NousPlugin extends Plugin {
 				await this.app.vault.create(notePath, content);
 			}
 			await this.appendLog(`TRANSCRIBED: ${path.basename(recordingDir)} -> ${notePath}`);
+			await this.archiveNativeRecording(recordingDir);
 			if (liveFile || !this.settings.autoProcessOnCreate) void this.processInbox();
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
@@ -1434,6 +1438,31 @@ export default class NousPlugin extends Plugin {
 			await this.appendLog(`ERROR: native recording transcription failed: ${msg}`);
 		} finally {
 			this.setMeetingTranscribingIndicator(false);
+		}
+	}
+
+	// A handled recording must leave the watch directory - the nudge script
+	// treats a lingering .qma as "never ingested". The audio is kept in
+	// Processed/ for 30 days in case a transcript needs a re-listen, then
+	// purged. Errors here are logged, never fatal: the note already exists.
+	private async archiveNativeRecording(recordingDir: string): Promise<void> {
+		try {
+			const { fs, path } = await loadNodeModules();
+			const processedDir = path.join(path.dirname(recordingDir), "Processed");
+			await fs.mkdir(processedDir, { recursive: true });
+			await fs.rename(recordingDir, path.join(processedDir, path.basename(recordingDir)));
+
+			const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+			for (const entry of await fs.readdir(processedDir)) {
+				const entryPath = path.join(processedDir, entry);
+				const stat = await fs.stat(entryPath).catch(() => null);
+				if (stat && stat.mtimeMs < cutoff) {
+					await fs.rm(entryPath, { recursive: true, force: true });
+				}
+			}
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			await this.appendLog(`WARN: could not archive recording ${recordingDir}: ${msg}`);
 		}
 	}
 
@@ -1474,7 +1503,6 @@ export default class NousPlugin extends Plugin {
 			shiftTrackSegments(micTrack, deltas.mic)
 		);
 		if (!transcript) {
-			new Notice("Nous: native recording had no transcribable audio.", 10000);
 			await this.appendLog(`SKIPPED: ${path.basename(recordingDir)} produced no transcript`);
 			return null;
 		}
@@ -1799,7 +1827,7 @@ export default class NousPlugin extends Plugin {
 			if (!(await this.hasAudioTranscriptionBackend())) {
 				if (!warnedMissingBackend) {
 					new Notice(
-						"Nous: a meeting recording is waiting for speech-to-text - set it up in Settings → Nous → Voice capture.",
+						"Nous: a meeting recording is waiting for speech-to-text - set it up in settings → Nous → voice capture.",
 						12000
 					);
 					warnedMissingBackend = true;
@@ -1816,6 +1844,7 @@ export default class NousPlugin extends Plugin {
 					buildCompletedNativeRecordingNote(transcript.stamp, transcript.transcript, manualNotes)
 				);
 				await this.appendLog(`TRANSCRIBED: ${file.name} pending recording -> ${file.path}`);
+				await this.archiveNativeRecording(pending.recordingDir);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
 				new Notice(`Nous: could not transcribe "${file.name}" - see .nous/pipeline.log`, 10000);
@@ -1910,7 +1939,7 @@ export default class NousPlugin extends Plugin {
 
 	async runVaultQuery(question: string) {
 		if (this.settings.executionMode !== "cli") {
-			new Notice("Nous: vault query needs CLI mode - switch it in Settings → Nous.", 10000);
+			new Notice("Nous: vault query needs CLI mode - switch it in settings → Nous.", 10000);
 			return;
 		}
 		if (!Platform.isDesktopApp) {
@@ -2079,6 +2108,7 @@ export default class NousPlugin extends Plugin {
 					);
 					await this.app.vault.modify(file, raw);
 					await this.appendLog(`TRANSCRIBED: ${file.name} pending recording -> ${file.path}`);
+					await this.archiveNativeRecording(pendingNativeRecording.recordingDir);
 					new Notice(`Nous: transcribed pending meeting recording "${file.name}".`);
 				}
 			}
