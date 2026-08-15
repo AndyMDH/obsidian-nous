@@ -40,6 +40,13 @@ import {
 	type HttpPostBinary,
 } from "./src/transcribe";
 import {
+	WHISPER_MODELS_DIR_SEGMENTS,
+	WHISPER_MODEL_SOURCES,
+	downloadProgressText,
+	parseLfsPointer,
+	type LfsPointer,
+} from "./src/whisperModel";
+import {
 	DEFAULT_NATIVE_RECORDER_BIN,
 	buildCompletedNativeRecordingNote,
 	buildLiveNativeRecordingNote,
@@ -119,6 +126,8 @@ type NodeModules = {
 	execFile: typeof import("child_process").execFile;
 	fs: typeof import("fs").promises;
 	fsConstants: typeof import("fs").constants;
+	fsCreateWriteStream: typeof import("fs").createWriteStream;
+	https: typeof import("https");
 	os: typeof import("os");
 	path: typeof import("path");
 };
@@ -147,7 +156,17 @@ function loadNodeModules(): Promise<NodeModules> {
 			const fs = req("fs") as typeof import("fs");
 			const os = req("os") as typeof import("os");
 			const path = req("path") as typeof import("path");
-			return { crypto, execFile: cp.execFile, fs: fs.promises, fsConstants: fs.constants, os, path };
+			const https = req("https") as typeof import("https");
+			return {
+				crypto,
+				execFile: cp.execFile,
+				fs: fs.promises,
+				fsConstants: fs.constants,
+				fsCreateWriteStream: fs.createWriteStream,
+				https,
+				os,
+				path,
+			};
 		});
 	}
 	return nodeModulesPromise;
@@ -428,6 +447,142 @@ export default class NousPlugin extends Plugin {
 			.access(p)
 			.then(() => true)
 			.catch(() => false);
+	}
+
+	async hasWhisperModel(): Promise<boolean> {
+		const modelPath = this.settings.whisperModelPath.trim() || this.defaultWhisperModelPath();
+		return NousPlugin.fileExists(modelPath);
+	}
+
+	// One-click speech-model install: fetch the git-lfs pointer for the
+	// expected sha256/size, stream the model to disk (1.6 GB - never buffer it
+	// in memory), verify, then rename into place. The VAD model rides along
+	// but its failure is non-fatal.
+	async downloadWhisperModels(onProgress: (text: string) => void): Promise<string> {
+		if (!Platform.isMacOS) throw new Error("Local whisper transcription is macOS-only.");
+		const { fs, os, path } = await loadNodeModules();
+		const dir = path.join(os.homedir(), ...WHISPER_MODELS_DIR_SEGMENTS);
+		await fs.mkdir(dir, { recursive: true });
+
+		let installedPath = "";
+		for (const source of WHISPER_MODEL_SOURCES) {
+			const target = path.join(dir, source.filename);
+			if (await NousPlugin.fileExists(target)) {
+				if (source.required) installedPath = target;
+				continue;
+			}
+			try {
+				const pointerResponse = await requestUrl({ url: source.pointerUrl, method: "GET", throw: false });
+				if (pointerResponse.status >= 400) throw new Error(`checksum fetch failed (${pointerResponse.status})`);
+				const pointer = parseLfsPointer(pointerResponse.text);
+				if (!pointer) throw new Error("model checksum file was missing or malformed");
+
+				await this.streamDownloadToFile(source.downloadUrl, target, pointer, (received) =>
+					onProgress(downloadProgressText(source.filename, received, pointer.size))
+				);
+				if (source.required) installedPath = target;
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				if (source.required) throw new Error(`could not download ${source.filename}: ${msg}`);
+				await this.appendLog(`WARN: optional VAD model download failed: ${msg}`);
+			}
+		}
+		if (!installedPath) throw new Error("model download produced no file");
+
+		// Point the setting at the default location the download used, in case
+		// a custom (missing) path was configured.
+		this.settings.whisperModelPath = "";
+		await this.saveSettings();
+		return installedPath;
+	}
+
+	// Shared by the settings tab and the setup wizard: one persistent notice
+	// that live-updates with progress, then a terse outcome line (detail goes
+	// to the log, per the project's notice style).
+	async downloadWhisperModelsWithNotice(): Promise<boolean> {
+		const notice = new Notice("Nous: starting speech-model download…", 0);
+		try {
+			await this.downloadWhisperModels((text) => notice.setMessage(text));
+			notice.setMessage("Nous: speech model installed - voice notes now transcribe locally.");
+			window.setTimeout(() => notice.hide(), 8000);
+			return true;
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			await this.appendLog(`ERROR: speech-model download failed: ${msg}`);
+			notice.setMessage("Nous: model download failed - see .nous/pipeline.log");
+			window.setTimeout(() => notice.hide(), 10000);
+			return false;
+		}
+	}
+
+	private async streamDownloadToFile(
+		url: string,
+		target: string,
+		expected: LfsPointer,
+		onProgress: (receivedBytes: number) => void,
+		redirectsLeft = 5
+	): Promise<void> {
+		const { crypto, fs, fsCreateWriteStream, https } = await loadNodeModules();
+		const tmp = `${target}.download-${Date.now().toString(36)}`;
+
+		try {
+			await new Promise<void>((resolve, reject) => {
+				const request = https.get(url, (response) => {
+					const status = response.statusCode ?? 0;
+					if (status >= 300 && status < 400 && response.headers.location) {
+						response.resume();
+						if (redirectsLeft <= 0) {
+							reject(new Error("too many redirects"));
+							return;
+						}
+						this.streamDownloadToFile(response.headers.location, target, expected, onProgress, redirectsLeft - 1)
+							.then(resolve, reject);
+						return;
+					}
+					if (status !== 200) {
+						response.resume();
+						reject(new Error(`download failed (HTTP ${status})`));
+						return;
+					}
+
+					const hash = crypto.createHash("sha256");
+					const file = fsCreateWriteStream(tmp);
+					let received = 0;
+					let lastReported = 0;
+					response.on("data", (chunk: Buffer) => {
+						hash.update(chunk);
+						received += chunk.length;
+						// Progress at most every ~16 MB so the UI update itself
+						// doesn't become the bottleneck.
+						if (received - lastReported > 16_000_000 || received === expected.size) {
+							lastReported = received;
+							onProgress(received);
+						}
+					});
+					response.on("error", reject);
+					file.on("error", reject);
+					file.on("finish", () => {
+						const digest = hash.digest("hex");
+						if (received !== expected.size) {
+							reject(new Error(`download incomplete (${received} of ${expected.size} bytes)`));
+						} else if (digest !== expected.sha256) {
+							reject(new Error("downloaded model failed its checksum"));
+						} else {
+							resolve();
+						}
+					});
+					response.pipe(file);
+				});
+				request.on("error", reject);
+			});
+			// The redirect branch resolves after its own recursion completed
+			// the rename; only rename when this depth actually wrote the file.
+			if (await NousPlugin.fileExists(tmp)) {
+				await fs.rename(tmp, target);
+			}
+		} finally {
+			await fs.unlink(tmp).catch(() => {});
+		}
 	}
 
 	// Decodes any audio Chromium understands (mp4/aac, webm/opus, wav, mp3...)
@@ -981,7 +1136,8 @@ export default class NousPlugin extends Plugin {
 			const liveNote = await this.findActiveNativeMeetingNote(status.output);
 			const result = await this.runNativeRecorder("stop");
 			if (result.code !== 0) {
-				new Notice(`Nous: native recorder failed to stop - ${cliErrorDetail(result)}`, 10000);
+				await this.appendLog(`ERROR: native recorder failed to stop: ${cliErrorDetail(result)}`);
+				new Notice("Nous: recorder couldn't stop - see .nous/pipeline.log", 10000);
 				return;
 			}
 			const stopped = parseNativeRecorderStatus(result.stdout);
@@ -1004,7 +1160,8 @@ export default class NousPlugin extends Plugin {
 		if (result.code !== 0) {
 			const detail = cliErrorDetail(result);
 			this.nativeRecorderLastProblem = detail || "The helper could not start.";
-			new Notice(`Nous: native recorder failed to start - ${detail.slice(0, 200)}`, 10000);
+			await this.appendLog(`ERROR: native recorder failed to start: ${detail}`);
+			new Notice("Nous: recorder couldn't start - see .nous/pipeline.log", 10000);
 			return;
 		}
 		new Notice("Nous: starting meeting recording...");
@@ -1014,8 +1171,9 @@ export default class NousPlugin extends Plugin {
 			this.setMeetingRecordingIndicator(false);
 			const detail = await this.nativeRecorderLogTail();
 			this.nativeRecorderLastProblem = `Allow microphone and screen/audio recording permissions in macOS Privacy & Security, then try again.${detail ? ` Details: ${detail}` : ""}`;
+			if (detail) await this.appendLog(`ERROR: native recorder stopped immediately: ${detail}`);
 			new Notice(
-				`Nous: native recorder stopped immediately - allow microphone and screen/audio recording permissions in macOS Privacy & Security, then try again.${detail ? ` Details: ${detail}` : ""}`,
+				"Nous: recording stopped right away - allow Microphone and Screen Recording in Privacy & Security, then try again.",
 				12000
 			);
 			return;
@@ -1217,7 +1375,7 @@ export default class NousPlugin extends Plugin {
 					await this.appendLog(`ERROR: could not recover live meeting note after transcription failure: ${problemMsg}`);
 				});
 			}
-			new Notice(`Nous: native recording transcription failed - ${msg}`, 10000);
+			new Notice("Nous: transcription failed - your notes and audio are kept. See .nous/pipeline.log", 10000);
 			await this.appendLog(`ERROR: native recording transcription failed: ${msg}`);
 		}
 	}
@@ -1457,7 +1615,7 @@ export default class NousPlugin extends Plugin {
 				if (await this.processFile(file)) enriched++;
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				new Notice(`Nous: failed on "${file.name}" - ${msg}`, 10000);
+				new Notice(`Nous: failed on "${file.name}" - see .nous/pipeline.log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - ${msg}`);
 			}
 		}
@@ -1524,7 +1682,7 @@ export default class NousPlugin extends Plugin {
 				await this.appendLog(`TRANSCRIBED: ${file.name} -> ${notePath}`);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				new Notice(`Nous: could not transcribe "${file.name}" - ${msg}`, 10000);
+				new Notice(`Nous: could not transcribe "${file.name}" - see .nous/pipeline.log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - transcription failed: ${msg}`);
 			}
 		}
@@ -1545,7 +1703,7 @@ export default class NousPlugin extends Plugin {
 			if (!(await this.hasAudioTranscriptionBackend())) {
 				if (!warnedMissingBackend) {
 					new Notice(
-						"Nous: one or more meeting recordings are waiting for speech-to-text setup. Add local whisper.cpp or a Gemini/OpenAI key, then process inbox again.",
+						"Nous: a meeting recording is waiting for speech-to-text - set it up in Settings → Nous → Voice capture.",
 						12000
 					);
 					warnedMissingBackend = true;
@@ -1564,7 +1722,7 @@ export default class NousPlugin extends Plugin {
 				await this.appendLog(`TRANSCRIBED: ${file.name} pending recording -> ${file.path}`);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				new Notice(`Nous: could not transcribe pending recording "${file.name}" - ${msg}`, 10000);
+				new Notice(`Nous: could not transcribe "${file.name}" - see .nous/pipeline.log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - pending native recording transcription failed: ${msg}`);
 			}
 		}
@@ -1587,7 +1745,7 @@ export default class NousPlugin extends Plugin {
 				`ERROR: meeting-enricher CLI exited ${enrichResult.code} - ${cliErrorDetail(enrichResult)}`
 			);
 			new Notice(
-				`Nous: enrichment failed (is "${this.settings.claudeCliPath}" the right CLI path?) - see .nous/pipeline.log`,
+				"Nous: enrichment failed - see .nous/pipeline.log",
 				10000
 			);
 			return;
@@ -1651,7 +1809,7 @@ export default class NousPlugin extends Plugin {
 
 	async runVaultQuery(question: string) {
 		if (this.settings.executionMode !== "cli") {
-			new Notice("Nous: vault query needs CLI execution mode (it's an open-ended search, not a fixed-schema call) - switch modes in plugin settings.", 10000);
+			new Notice("Nous: vault query needs CLI mode - switch it in Settings → Nous.", 10000);
 			return;
 		}
 		if (!Platform.isDesktopApp) {
@@ -1795,7 +1953,7 @@ export default class NousPlugin extends Plugin {
 				if (pendingNativeRecording) {
 					if (!(await this.hasAudioTranscriptionBackend())) {
 						new Notice(
-							`Nous: "${file.name}" is waiting for speech-to-text setup. Add local whisper.cpp or a Gemini/OpenAI key, then process inbox again.`,
+							`Nous: "${file.name}" is waiting for speech-to-text - set it up in Settings → Nous → Voice capture.`,
 							12000
 						);
 						return false;
@@ -1971,7 +2129,7 @@ export default class NousPlugin extends Plugin {
 				}
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				new Notice(`Nous: wiki build failed for "${cluster.tag}" - ${msg}`, 10000);
+				new Notice(`Nous: wiki build failed for "${cluster.tag}" - see .nous/pipeline.log`, 10000);
 				await this.appendLog(`ERROR: wiki ${cluster.tag} - ${msg}`);
 			}
 		}
@@ -2564,6 +2722,30 @@ class NousSettingTab extends PluginSettingTab {
 			},
 		});
 
+		if (Platform.isMacOS) {
+			items.push({
+				name: "Speech model",
+				render: (setting) => {
+					setting.setDesc("Checking…");
+					void this.plugin.hasWhisperModel().then((present) => {
+						if (present) {
+							setting.setDesc("Speech model installed - voice notes transcribe locally.");
+							return;
+						}
+						setting.setDesc(
+							"No local speech model yet. Download once (~1.6 GB) and voice transcription runs fully on this Mac. Also needs whisper-cli: \"brew install whisper-cpp\"."
+						);
+						setting.addButton((b) =>
+							b.setButtonText("Download model").setCta().onClick(() => {
+								b.setDisabled(true);
+								void this.plugin.downloadWhisperModelsWithNotice().finally(() => this.update());
+							})
+						);
+					});
+				},
+			});
+		}
+
 		items.push({
 			name: "Live voice transcription (beta)",
 			render: (setting) => {
@@ -2904,6 +3086,24 @@ class OnboardingModal extends Modal {
 							recorderStatusSetting.setDesc(`Could not check the native recorder: ${msg}`);
 							recorderStatusSetting.settingEl.toggleClass("mod-warning", true);
 						});
+				}
+				if (Platform.isMacOS && !status.voiceReady) {
+					void this.plugin.hasWhisperModel().then((present) => {
+						if (present) return;
+						new Setting(statusEl)
+							.setName("Download speech model")
+							.setDesc(
+								"One download (~1.6 GB) and voice transcription runs fully on this Mac - no API key. Also needs whisper-cli: \"brew install whisper-cpp\"."
+							)
+							.addButton((button) =>
+								button.setButtonText("Download").setCta().onClick(async () => {
+									button.setButtonText("Downloading…").setDisabled(true);
+									const ok = await this.plugin.downloadWhisperModelsWithNotice();
+									if (ok) this.renderCapturePrerequisites();
+									else button.setButtonText("Download").setDisabled(false);
+								})
+							);
+					});
 				}
 				if (Platform.isMacOS && shouldOfferNativeRecorderInstall(status)) {
 					new Setting(statusEl)

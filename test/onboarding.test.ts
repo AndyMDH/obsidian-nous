@@ -30,18 +30,16 @@ test("new-user copy says voice notes need speech-to-text setup", () => {
 	]) {
 		assert.match(text, /speech-to-text|whisper\.cpp|Gemini\/OpenAI|Gemini or OpenAI/);
 	}
-	assert.match(VOICE_TRANSCRIPTION_SETUP_NOTICE, /No recording started/);
+	// The notice itself is deliberately terse - it must point at the fix, not
+	// explain the whole backend story.
+	assert.match(VOICE_TRANSCRIPTION_SETUP_NOTICE, /Settings → Nous → Voice capture/);
 });
 
 test("new-user copy sends meeting capture to the native recorder first", () => {
-	for (const text of [
-		ONBOARDING_PREREQUISITES_TEXT,
-		MEETING_RECORDER_MISSING_NOTICE,
-	]) {
-		assert.match(text, /native|nous-recorder|Nous Recorder/);
-	}
+	assert.match(ONBOARDING_PREREQUISITES_TEXT, /native/);
 	assert.match(ONBOARDING_PREREQUISITES_TEXT, /saves the recording|finishes it later/);
-	assert.match(MEETING_RECORDER_MISSING_NOTICE, /click Install/i);
+	// Terse notice: names the problem and points at the exact settings path.
+	assert.match(MEETING_RECORDER_MISSING_NOTICE, /Meeting capture → Install/);
 });
 
 test("capture prerequisite checklist marks missing optional capture setup", () => {
