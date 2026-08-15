@@ -238,3 +238,9 @@ test("nativeRecorderLatestAssetUrl points at the newest release asset", () => {
 		`https://github.com/AndyMDH/obsidian-nous/releases/latest/download/${NATIVE_RECORDER_ASSET}`
 	);
 });
+
+test("live and pending notes carry the styling class; completed notes do not", () => {
+	assert.match(buildLiveNativeRecordingNote(null, "2026-08-15 12.00"), /cssclasses: nous-live-note/);
+	assert.match(buildPendingNativeRecordingNote("/tmp/r.qma", "2026-08-15 12.00"), /cssclasses: nous-live-note/);
+	assert.ok(!buildCompletedNativeRecordingNote("2026-08-15 12.00", "Them: hi").includes("cssclasses"));
+});

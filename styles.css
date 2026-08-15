@@ -19,3 +19,25 @@
 		animation: none;
 	}
 }
+
+/* Live meeting notes (cssclasses: nous-live-note) - branded while the
+   recording or transcription is in flight; the class disappears when the
+   enricher rewrites the note. Theme-aware: follows the user's accent color,
+   falling back to Nous tangerine. */
+.nous-live-note h2,
+.nous-live-note .cm-header-2 {
+	color: var(--color-accent, #eb6c36);
+}
+.markdown-reading-view .nous-live-note h2 {
+	border-bottom: 1px solid color-mix(in srgb, var(--color-accent, #eb6c36) 30%, transparent);
+	padding-bottom: 4px;
+}
+.nous-live-note em,
+.nous-live-note .cm-em {
+	opacity: 0.6;
+}
+
+/* Transcription-in-flight status bar state */
+.nous-transcribing {
+	color: var(--color-accent, #eb6c36);
+}

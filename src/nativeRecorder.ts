@@ -162,6 +162,7 @@ ${LIVE_NATIVE_RECORDING_FLAG}: true
 recording_dir: ${JSON.stringify(recordingDir ?? "")}
 recorded_at: ${JSON.stringify(recordedAt)}
 status: recording
+cssclasses: nous-live-note
 ---
 ${LIVE_NOTE_NOTES_HEADING}
 
@@ -259,6 +260,7 @@ ${PENDING_NATIVE_RECORDING_FLAG}: true
 recording_dir: ${JSON.stringify(recordingDir)}
 recorded_at: ${JSON.stringify(recordedAt)}
 status: pending-transcription
+cssclasses: nous-live-note
 ---
 # Meeting recording captured
 

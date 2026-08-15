@@ -263,14 +263,14 @@ export default class NousPlugin extends Plugin {
 
 		this.addCommand({
 			id: "toggle-voice-capture",
-			name: "Toggle voice capture (start/stop recording)",
+			name: "Start/stop voice recording",
 			callback: () => void this.toggleVoiceCapture(),
 		});
 
 		if (Platform.isMacOS) {
 			this.addCommand({
 				id: "toggle-meeting-capture",
-				name: "Toggle meeting capture (start/stop recording)",
+				name: "Start/stop meeting recording",
 				callback: () => void this.toggleMeetingCapture(),
 			});
 
@@ -1641,7 +1641,9 @@ export default class NousPlugin extends Plugin {
 	private setMeetingTranscribingIndicator(transcribing: boolean) {
 		this.meetingTranscribing = transcribing;
 		if (!this.meetingStatusBarEl) return;
+		this.meetingStatusBarEl.toggleClass("nous-transcribing", transcribing);
 		if (transcribing) {
+			this.meetingStatusBarEl.toggleClass("nous-recording", false);
 			this.meetingStatusBarEl.setText("⏳ Nous transcribing…");
 			this.meetingStatusBarEl.show();
 		} else {
