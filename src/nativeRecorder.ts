@@ -46,6 +46,16 @@ export function nativeRecorderReleaseAssetUrl(
 	return `https://github.com/${repo}/releases/download/${encodeURIComponent(version)}/${encodeURIComponent(asset)}`;
 }
 
+// Fallback when the release matching the plugin version has no recorder
+// asset (for example, a hand-published release) - the newest release always
+// carries one because CI builds it on every tag.
+export function nativeRecorderLatestAssetUrl(
+	asset = NATIVE_RECORDER_ASSET,
+	repo = NATIVE_RECORDER_RELEASE_REPO
+): string {
+	return `https://github.com/${repo}/releases/latest/download/${encodeURIComponent(asset)}`;
+}
+
 export function parseNativeRecorderChecksum(text: string, asset = NATIVE_RECORDER_ASSET): string | null {
 	for (const line of text.split(/\r?\n/)) {
 		const match = line.trim().match(/^([a-fA-F0-9]{64})(?:\s+\*?(.+))?$/);
@@ -132,18 +142,20 @@ export function interleaveMeetingTracks(
 	return parts.join("\n\n");
 }
 
-// The rendered hint inside the live note's Notes section. It shows as a
-// friendly callout while the meeting runs and is stripped from the manual
-// notes before they reach the finished note, so leaving it in place costs
-// the user nothing.
+// Hint lines from a briefly-shipped callout variant of the live note -
+// still stripped from manual notes so those notes stay clean.
 export const LIVE_NOTE_HINT_LINES = [
 	"> [!tip] This space is yours",
 	"> Type questions, decisions, and thoughts here during the call - everything is kept in the finished note.",
 ];
 
+export const LIVE_NOTE_NOTES_HEADING = "## Meeting notes";
+
 // Deliberately minimal: no title header (the filename is the title), no
-// pre-made checkboxes - one open section with the cursor ready, and the
-// transcript placeholder out of the way below it.
+// pre-made checkboxes, no rendered hint (Obsidian un-renders callouts the
+// moment the cursor touches them, right where the user types) - a
+// self-explanatory heading with the cursor placed under it, and the
+// transcript placeholder out of the way below.
 export function buildLiveNativeRecordingNote(recordingDir: string | null, recordedAt: string): string {
 	return `---
 ${LIVE_NATIVE_RECORDING_FLAG}: true
@@ -151,9 +163,7 @@ recording_dir: ${JSON.stringify(recordingDir ?? "")}
 recorded_at: ${JSON.stringify(recordedAt)}
 status: recording
 ---
-## Notes
-
-${LIVE_NOTE_HINT_LINES.join("\n")}
+${LIVE_NOTE_NOTES_HEADING}
 
 ## Transcript
 
@@ -190,8 +200,9 @@ export function parseLiveNativeRecordingNote(content: string): LiveNativeRecordi
 export function extractNativeRecordingManualNotes(content: string): string {
 	const body = stripFrontmatter(content);
 	const starts = [
-		findMarkdownHeading(body, "Notes"),
+		findMarkdownHeading(body, "Meeting notes"),
 		// Older live notes used these headings - keep recognizing them.
+		findMarkdownHeading(body, "Notes"),
 		findMarkdownHeading(body, "Questions to ask"),
 		findMarkdownHeading(body, "Live notes"),
 		findMarkdownHeading(body, "Notes taken during meeting"),

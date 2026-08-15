@@ -204,7 +204,7 @@ Summary framing — just summarize the idea.
 
 Omit the Decisions section entirely if there were none, and Action items
 entirely if there were none. Omit \`## Notes taken during meeting\` if the
-inbox file did not contain \`## Notes\`, \`## Questions to ask\`,
+inbox file did not contain \`## Meeting notes\`, \`## Notes\`, \`## Questions to ask\`,
 \`## Live notes\`, or \`## Notes taken during meeting\` with content. Never
 invent decisions or action items that aren't actually in the transcript.
 
@@ -212,7 +212,7 @@ invent decisions or action items that aren't actually in the transcript.
 It moves intact, verbatim, under \`## Transcript\`. Enrichment adds structure
 above it; it does not touch the source material.
 
-If the inbox file contains \`## Notes\` (or, in older notes,
+If the inbox file contains \`## Meeting notes\` (or, in older notes, \`## Notes\`,
 \`## Questions to ask\` / \`## Live notes\`) before \`## Transcript\`, that
 content was typed by the user during the meeting. Copy it verbatim into
 \`## Notes taken during meeting\` above the transcript; demote any \`##\`
@@ -277,8 +277,14 @@ the same topic name. If linking to an existing wiki, use its actual filename
 - Never modify the content of an existing note's \`## Transcript\` section for
   any note (including ones this skill itself is currently processing — the
   transcript is copied once, verbatim, and never touched again).
-- If you cannot confidently classify or enrich a file (e.g. it's empty, or
-  unreadable), skip it and log:
+- If a file is empty or contains only a capture-timestamp stub with no real
+  content, move it to \`${f.inbox}/duplicates/\` (create the folder if
+  needed) and log:
+  \`<ISO timestamp> SKIPPED: <filename> - empty capture stub, moved to duplicates/\`
+  The 14-day purge ages it out; leaving it in \`${f.inbox}/\` means it is
+  re-checked and re-logged on every run forever.
+- If you cannot confidently classify or enrich a non-empty file (e.g. it is
+  garbled or unreadable), skip it and log:
   \`<ISO timestamp> SKIPPED: <filename> - <reason>\`
   Leave it in \`${f.inbox}/\` for manual review rather than guessing.
 `;

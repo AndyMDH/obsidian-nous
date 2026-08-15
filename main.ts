@@ -53,13 +53,14 @@ import {
 	buildLiveNativeRecordingNote,
 	buildNativeRecordingProblemNote,
 	buildPendingNativeRecordingNote,
-	LIVE_NOTE_HINT_LINES,
+	LIVE_NOTE_NOTES_HEADING,
 	extractNativeRecordingManualNotes,
 	hasMeaningfulNativeRecordingManualNotes,
 	interleaveMeetingTracks,
 	nativeRecorderArgs,
 	shiftTrackSegments,
 	trackStartDeltasMs,
+	nativeRecorderLatestAssetUrl,
 	nativeRecorderReleaseAssetUrl,
 	parseLiveNativeRecordingNote,
 	parsePendingNativeRecordingNote,
@@ -655,13 +656,13 @@ export default class NousPlugin extends Plugin {
 		const outBase = path.join(os.tmpdir(), `nous-voice-${stamp}`);
 		const cleanupPaths = [wavPath, `${outBase}.json`];
 		try {
-			const env = this.cliEnv();
-			// Previously shelled out to afconvert, but CoreAudio's ExtAudioFile
-			// rejects the fragmented/streaming mp4 (or webm) MediaRecorder
-			// produces - "couldn't set destination file's estimated duration" -
-			// because a live recording has no upfront duration atom. Chromium's
-			// own decoder has no such requirement (it produced the file), so
-			// decode + resample here instead of round-tripping through a CLI tool.
+			// afconvert would be cheaper, but CoreAudio's ExtAudioFile rejects
+			// the fragmented/streaming mp4 (or webm) MediaRecorder produces -
+			// "couldn't set destination file's estimated duration" - because a
+			// live recording has no upfront duration atom. Chromium's own
+			// decoder has no such requirement (it produced the file), so decode
+			// + resample here. Finalized files from disk take the afconvert
+			// path in transcribeFileLocallyWithSegments instead.
 			let wavBuffer: ArrayBuffer;
 			try {
 				wavBuffer = await NousPlugin.decodeToWav16kMono(binary);
@@ -671,42 +672,90 @@ export default class NousPlugin extends Plugin {
 				};
 			}
 			await fsPromises.writeFile(wavPath, Buffer.from(wavBuffer));
-
-			const whisperCli = this.settings.whisperCliPath.trim() || DEFAULT_WHISPER_CLI_BIN;
-			const vadModelPath = this.defaultWhisperVadModelPath();
-			const args = ["-m", modelPath, "-f", wavPath, "-l", "auto", "-oj", "-of", outBase];
-			if (await NousPlugin.fileExists(vadModelPath)) {
-				args.push("--vad", "--vad-model", vadModelPath);
-			}
-
-			const result = await this.cliExec(whisperCli, args, { cwd: os.tmpdir(), env });
-			if (result.code !== 0) {
-				return {
-					failure: `${whisperCli} exited ${result.code}: ${cliErrorDetail(result)}`,
-				};
-			}
-
-			const raw = await fsPromises.readFile(`${outBase}.json`, "utf8");
-			const parsed = JSON.parse(raw) as {
-				transcription?: { text?: string; offsets?: { from?: number } }[];
-			};
-			const segments = (parsed.transcription ?? [])
-				.map((segment) => ({
-					from: segment.offsets?.from ?? 0,
-					text: (segment.text ?? "").trim(),
-				}))
-				.filter((segment) => segment.text.length > 0);
-			const text = segments
-				.map((segment) => segment.text)
-				.join(" ")
-				.trim();
-			return text
-				? { text, segments }
-				: { failure: "whisper-cli produced no speech text (silence, or the recording was too quiet)" };
+			return await this.runWhisperOnWav(wavPath, outBase, modelPath);
 		} catch (err) {
 			return { failure: err instanceof Error ? err.message : String(err) };
 		} finally {
 			await Promise.all(cleanupPaths.map((p) => fsPromises.unlink(p).catch(() => {})));
+		}
+	}
+
+	private async runWhisperOnWav(
+		wavPath: string,
+		outBase: string,
+		modelPath: string
+	): Promise<{ text: string; segments: TranscriptSegment[] } | { failure: string }> {
+		const { fs: fsPromises, os } = await loadNodeModules();
+		const whisperCli = this.settings.whisperCliPath.trim() || DEFAULT_WHISPER_CLI_BIN;
+		const vadModelPath = this.defaultWhisperVadModelPath();
+		const args = ["-m", modelPath, "-f", wavPath, "-l", "auto", "-oj", "-of", outBase];
+		if (await NousPlugin.fileExists(vadModelPath)) {
+			args.push("--vad", "--vad-model", vadModelPath);
+		}
+
+		const result = await this.cliExec(whisperCli, args, { cwd: os.tmpdir(), env: this.cliEnv() });
+		if (result.code !== 0) {
+			return { failure: `${whisperCli} exited ${result.code}: ${cliErrorDetail(result)}` };
+		}
+
+		const raw = await fsPromises.readFile(`${outBase}.json`, "utf8");
+		const parsed = JSON.parse(raw) as {
+			transcription?: { text?: string; offsets?: { from?: number } }[];
+		};
+		const segments = (parsed.transcription ?? [])
+			.map((segment) => ({
+				from: segment.offsets?.from ?? 0,
+				text: (segment.text ?? "").trim(),
+			}))
+			.filter((segment) => segment.text.length > 0);
+		const text = segments
+			.map((segment) => segment.text)
+			.join(" ")
+			.trim();
+		return text
+			? { text, segments }
+			: { failure: "whisper-cli produced no speech text (silence, or the recording was too quiet)" };
+	}
+
+	// Local transcription for a finalized audio FILE (a native-recorder track):
+	// afconvert resamples on disk and whisper reads the wav from disk, so a
+	// one-hour meeting never has to fit in the renderer's memory. Returns null
+	// when local transcription is not set up or the attempt failed - callers
+	// fall back to the in-memory path (which can also reach cloud keys).
+	private async transcribeFileLocallyWithSegments(filePath: string): Promise<TrackTranscript | null> {
+		if (!Platform.isMacOS) return null;
+		const modelPath = this.settings.whisperModelPath.trim() || this.defaultWhisperModelPath();
+		if (!(await NousPlugin.fileExists(modelPath))) return null;
+
+		const { fs: fsPromises, os, path } = await loadNodeModules();
+		const stamp = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+		const wavPath = path.join(os.tmpdir(), `nous-track-${stamp}.wav`);
+		const outBase = path.join(os.tmpdir(), `nous-track-${stamp}`);
+		try {
+			const converted = await this.cliExec(
+				"afconvert",
+				["-f", "WAVE", "-d", "LEI16@16000", "-c", "1", filePath, wavPath],
+				{ cwd: os.tmpdir(), env: this.cliEnv() }
+			);
+			if (converted.code !== 0) {
+				await this.appendLog(`WARN: afconvert failed for ${path.basename(filePath)}: ${cliErrorDetail(converted)}`);
+				return null;
+			}
+			const result = await this.runWhisperOnWav(wavPath, outBase, modelPath);
+			if ("failure" in result) {
+				await this.appendLog(`WARN: local transcription of ${path.basename(filePath)}: ${result.failure}`);
+				// No speech is a result, not an error - do not re-decode the
+				// whole file in memory just to hear the same silence.
+				if (result.failure.startsWith("whisper-cli produced no speech text")) {
+					return { text: "", segments: [] };
+				}
+				return null;
+			}
+			return result;
+		} finally {
+			await Promise.all(
+				[wavPath, `${outBase}.json`].map((p) => fsPromises.unlink(p).catch(() => {}))
+			);
 		}
 	}
 
@@ -1249,9 +1298,14 @@ export default class NousPlugin extends Plugin {
 		const target = await this.managedNativeRecorderPath();
 		if (!target) throw new Error("Could not resolve this vault's plugin directory.");
 
-		const assetUrl = nativeRecorderReleaseAssetUrl(this.manifest.version);
-		const checksumUrl = `${assetUrl}.sha256`;
-		const checksumResponse = await requestUrl({ url: checksumUrl, method: "GET", throw: false });
+		let assetUrl = nativeRecorderReleaseAssetUrl(this.manifest.version);
+		let checksumResponse = await requestUrl({ url: `${assetUrl}.sha256`, method: "GET", throw: false });
+		if (checksumResponse.status >= 400) {
+			// This plugin version's release has no recorder asset - fall back
+			// to the newest release, which CI always builds one for.
+			assetUrl = nativeRecorderLatestAssetUrl();
+			checksumResponse = await requestUrl({ url: `${assetUrl}.sha256`, method: "GET", throw: false });
+		}
 		if (checksumResponse.status >= 400) {
 			throw new Error(`could not download checksum (${checksumResponse.status})`);
 		}
@@ -1471,6 +1525,9 @@ export default class NousPlugin extends Plugin {
 	}
 
 	private async transcribeExternalAudioWithSegments(filePath: string, filename: string): Promise<TrackTranscript> {
+		const local = await this.transcribeFileLocallyWithSegments(filePath);
+		if (local) return local;
+
 		const { fs } = await loadNodeModules();
 		const bytes = await fs.readFile(filePath);
 		const copy = new Uint8Array(bytes.byteLength);
@@ -1504,11 +1561,10 @@ export default class NousPlugin extends Plugin {
 		try {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (!view) return;
-			const lastHint = LIVE_NOTE_HINT_LINES[LIVE_NOTE_HINT_LINES.length - 1];
 			const lines = view.editor.getValue().split("\n");
-			const hintIndex = lines.findIndex((line) => line === lastHint);
-			if (hintIndex === -1) return;
-			view.editor.setCursor({ line: hintIndex + 1, ch: 0 });
+			const headingIndex = lines.findIndex((line) => line === LIVE_NOTE_NOTES_HEADING);
+			if (headingIndex === -1) return;
+			view.editor.setCursor({ line: headingIndex + 1, ch: 0 });
 			view.editor.focus();
 		} catch {
 			// Cursor placement is a nicety only.
@@ -1989,7 +2045,18 @@ export default class NousPlugin extends Plugin {
 				}
 			} else {
 				raw = await this.app.vault.read(file);
-				if (raw.trim().length === 0) return false;
+				if (raw.trim().length === 0) {
+					// An empty stub left in place is re-checked and re-logged
+					// on every run forever - park it with the duplicates so
+					// the 14-day purge ages it out.
+					await this.ensureFolderExists(`${this.settings.inboxFolder}/duplicates`);
+					await this.app.fileManager.renameFile(
+						file,
+						`${this.settings.inboxFolder}/duplicates/${file.name}`
+					);
+					await this.appendLog(`SKIPPED: ${file.name} - empty capture stub, moved to duplicates/`);
+					return false;
+				}
 				const liveNativeRecording = parseLiveNativeRecordingNote(raw);
 				if (liveNativeRecording) return false;
 				const pendingNativeRecording = parsePendingNativeRecordingNote(raw);

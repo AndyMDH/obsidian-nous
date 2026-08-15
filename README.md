@@ -33,9 +33,11 @@
 </p>
 
 Nous turns each capture — a typed thought, a voice memo, a call, a photo, a
-PDF — into a summarized, tagged note that links to related notes. Text,
-images, and PDFs work after the connection check. Voice notes and calls can
-need speech-to-text or recorder setup first.
+PDF — into a summarized note, tagged from a controlled vocabulary and linked
+to related notes. When a topic has enough notes, Nous writes a self-updating
+wiki page that collects them. And it is local-first: Claude Code CLI, local
+whisper.cpp, and Ollama send nothing off your machine — direct API keys are
+opt-in.
 
 **Works on:** Desktop (macOS, Windows, Linux) and Mobile (API-key or local-model
 mode). Meeting capture is macOS-only. Live voice transcription (beta) is
@@ -118,16 +120,6 @@ change each one in Settings → Nous.
   transcription (beta) needs an OpenAI key and desktop.
 
 Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-
-## Features
-
-- 📥 **Capture anything** — typed notes, voice memos, calls, photos, PDFs
-- 🏷️ **Tagged and linked automatically** — from a controlled vocabulary,
-  not freeform tag sprawl
-- 📖 **Self-updating wikis** — when a topic has enough notes, Nous writes a
-  hub page that collects them
-- 🔒 **Local-first** — Claude Code CLI, local whisper.cpp, and Ollama send
-  nothing off your machine. Direct API keys are opt-in
 
 ## Documentation
 

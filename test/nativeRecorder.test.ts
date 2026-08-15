@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import {
+	LIVE_NOTE_HINT_LINES,
 	NATIVE_RECORDER_ASSET,
 	buildCompletedNativeRecordingNote,
 	buildLiveNativeRecordingNote,
@@ -10,6 +11,7 @@ import {
 	hasMeaningfulNativeRecordingManualNotes,
 	interleaveMeetingTracks,
 	nativeRecorderArgs,
+	nativeRecorderLatestAssetUrl,
 	nativeRecorderReleaseAssetUrl,
 	parseLiveNativeRecordingNote,
 	parsePendingNativeRecordingNote,
@@ -78,17 +80,19 @@ test("live native recording notes expose the in-meeting writing surface", () => 
 		recordedAt: "2026-08-12 10.00",
 		status: "recording",
 	});
-	assert.match(note, /## Notes/);
+	assert.match(note, /## Meeting notes/);
 	assert.match(note, /## Transcript/);
-	// Minimal by design: no title header, no pre-made checkboxes.
+	// Minimal by design: no title header, no pre-made checkboxes, no callout
+	// (Obsidian un-renders callouts under the cursor, right where you type).
 	assert.ok(!note.includes("# Meeting live note"));
 	assert.ok(!note.includes("- [ ]"));
+	assert.ok(!note.includes("[!tip]"));
 });
 
 test("manual live notes are preserved across pending and completed native recording notes", () => {
 	const liveNote = buildLiveNativeRecordingNote(null, "2026-08-12 10.00").replace(
-		"## Notes\n",
-		"## Notes\n\n- [ ] Ask about budget\n"
+		"## Meeting notes\n",
+		"## Meeting notes\n\n- [ ] Ask about budget\n"
 	);
 	const manualNotes = extractNativeRecordingManualNotes(liveNote);
 	assert.match(manualNotes, /Ask about budget/);
@@ -213,19 +217,24 @@ test("shiftTrackSegments offsets segment timing but leaves text and null tracks 
 	assert.equal(shiftTrackSegments(cloud, 5500), cloud);
 });
 
-test("the Notes hint renders in the live note but never reaches the manual notes", () => {
-	const note = buildLiveNativeRecordingNote(null, "2026-08-15 11.00");
-	assert.match(note, /> \[!tip\] This space is yours/);
-
-	// Untouched note: the hint alone is not meaningful content.
-	const untouched = extractNativeRecordingManualNotes(note);
-	assert.ok(!untouched.includes("[!tip]"));
-	assert.equal(hasMeaningfulNativeRecordingManualNotes(untouched), false);
-
-	// Typed note with the hint left in place: the typing survives, the hint does not.
-	const typed = note.replace("## Transcript", "- [ ] Ask about budget\n\n## Transcript");
-	const manualNotes = extractNativeRecordingManualNotes(typed);
+test("legacy hint callouts are stripped from manual notes; typing survives", () => {
+	// A note created by the briefly-shipped callout variant.
+	const legacy = buildLiveNativeRecordingNote(null, "2026-08-15 11.00").replace(
+		"## Meeting notes\n",
+		`## Meeting notes\n\n${LIVE_NOTE_HINT_LINES.join("\n")}\n\n- [ ] Ask about budget\n`
+	);
+	const manualNotes = extractNativeRecordingManualNotes(legacy);
 	assert.match(manualNotes, /Ask about budget/);
 	assert.ok(!manualNotes.includes("[!tip]"));
-	assert.equal(hasMeaningfulNativeRecordingManualNotes(manualNotes), true);
+
+	// Untouched minimal note: heading alone is not meaningful content.
+	const untouched = extractNativeRecordingManualNotes(buildLiveNativeRecordingNote(null, "2026-08-15 11.00"));
+	assert.equal(hasMeaningfulNativeRecordingManualNotes(untouched), false);
+});
+
+test("nativeRecorderLatestAssetUrl points at the newest release asset", () => {
+	assert.equal(
+		nativeRecorderLatestAssetUrl(),
+		`https://github.com/AndyMDH/obsidian-nous/releases/latest/download/${NATIVE_RECORDER_ASSET}`
+	);
 });
