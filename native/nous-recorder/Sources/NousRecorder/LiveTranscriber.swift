@@ -1,17 +1,210 @@
+import AVFoundation
 import CoreMedia
 import Foundation
 import Speech
 
-// Live, on-device transcription for one audio track, streamed to a JSONL
-// file that the plugin tails. Built on Apple's Speech framework so users
-// install nothing: the OS ships the models. Every failure path degrades to
-// "no live text" - the recording itself must never be affected.
+// Live, on-device transcription. TCC forces a two-process design:
 //
-// SFSpeech buffer requests only mark results final when the audio ends, so
-// the request is rotated every ~20 seconds: the old request is closed (its
-// final text is committed) while a fresh one keeps consuming buffers. The
-// plugin shows committed lines plus the newest partial; the whisper pass at
-// stop replaces everything with the final-quality transcript.
+// - The record process must stay attributed to the launching app (Obsidian)
+//   so its existing screen/microphone grants keep working.
+// - Speech recognition must run under this binary's OWN identity, because
+//   the usage description lives in our embedded Info.plist, not Obsidian's.
+//
+// So the record process spawns `nous-recorder live` as a DISCLAIMED child
+// (responsible for itself), streams it converted PCM over stdin, and the
+// child runs Apple's recognizer and appends lines to live.jsonl. Every
+// failure on this path degrades to "no live text"; the recording itself is
+// never affected.
+
+// Private but long-stable: marks a spawned child as responsible for itself,
+// so TCC reads usage descriptions from the child's binary instead of the
+// launching app's.
+@_silgen_name("responsibility_spawnattrs_setdisclaim")
+func responsibility_spawnattrs_setdisclaim(
+	_ attrs: UnsafeMutablePointer<posix_spawnattr_t?>,
+	_ disclaim: Int32
+) -> Int32
+
+// ---------------------------------------------------------------------------
+// Shared wire format: [track: u8 (0 sys, 1 mic)][frames: u32 LE][float32 mono 16 kHz]
+
+let livePacketSampleRate = 16_000.0
+
+// ---------------------------------------------------------------------------
+// Record-process side: converts each track to 16 kHz mono and feeds the
+// disclaimed live child over a pipe.
+
+final class LiveFeeder: @unchecked Sendable {
+	private let queue = DispatchQueue(label: "nous-live-feeder")
+	private var stdinHandle: FileHandle?
+	private var childPid: pid_t = 0
+	private var converters: [UInt8: AVAudioConverter] = [:]
+	private var disabled = false
+	private let outFormat = AVAudioFormat(
+		commonFormat: .pcmFormatFloat32,
+		sampleRate: livePacketSampleRate,
+		channels: 1,
+		interleaved: false
+	)!
+
+	init?(executable: String, liveFileURL: URL) {
+		let stdinPipe = Pipe()
+
+		var fileActions: posix_spawn_file_actions_t?
+		posix_spawn_file_actions_init(&fileActions)
+		defer { posix_spawn_file_actions_destroy(&fileActions) }
+		posix_spawn_file_actions_adddup2(&fileActions, stdinPipe.fileHandleForReading.fileDescriptor, 0)
+
+		var attrs: posix_spawnattr_t?
+		posix_spawnattr_init(&attrs)
+		defer { posix_spawnattr_destroy(&attrs) }
+		_ = responsibility_spawnattrs_setdisclaim(&attrs, 1)
+
+		let args = [executable, "live", "--output", liveFileURL.path]
+		let argv: [UnsafeMutablePointer<CChar>?] = args.map { strdup($0) } + [nil]
+		defer { argv.forEach { free($0) } }
+
+		var pid: pid_t = 0
+		let result = posix_spawn(&pid, executable, &fileActions, &attrs, argv, environ)
+		try? stdinPipe.fileHandleForReading.close()
+		guard result == 0 else {
+			fputs("nous-recorder: could not spawn live transcriber (posix_spawn \(result)); live transcript disabled\n", stderr)
+			return nil
+		}
+		childPid = pid
+		stdinHandle = stdinPipe.fileHandleForWriting
+	}
+
+	func append(track: UInt8, sampleBuffer: CMSampleBuffer) {
+		queue.async {
+			guard !self.disabled, let stdin = self.stdinHandle else { return }
+			guard let payload = self.convert(track: track, sampleBuffer: sampleBuffer) else { return }
+			var packet = Data([track])
+			var frames = UInt32(payload.count / 4).littleEndian
+			withUnsafeBytes(of: &frames) { packet.append(contentsOf: $0) }
+			packet.append(payload)
+			do {
+				try stdin.write(contentsOf: packet)
+			} catch {
+				// Child gone (denied permission, crash) - stop feeding, keep recording.
+				self.disabled = true
+				try? stdin.close()
+				self.stdinHandle = nil
+			}
+		}
+	}
+
+	func finish() {
+		queue.sync {
+			try? self.stdinHandle?.close()
+			self.stdinHandle = nil
+		}
+		// Give the child a moment to commit its last line, then make sure it
+		// is gone - it must never outlive the recording.
+		var status: Int32 = 0
+		for _ in 0..<20 {
+			if waitpid(childPid, &status, WNOHANG) == childPid { return }
+			usleep(100_000)
+		}
+		kill(childPid, SIGTERM)
+		_ = waitpid(childPid, &status, 0)
+	}
+
+	// Runs on `queue`.
+	private func convert(track: UInt8, sampleBuffer: CMSampleBuffer) -> Data? {
+		guard let description = CMSampleBufferGetFormatDescription(sampleBuffer) else { return nil }
+		let inFormat = AVAudioFormat(cmAudioFormatDescription: description)
+		let frameCount = AVAudioFrameCount(CMSampleBufferGetNumSamples(sampleBuffer))
+		guard frameCount > 0, let inBuffer = AVAudioPCMBuffer(pcmFormat: inFormat, frameCapacity: frameCount) else {
+			return nil
+		}
+		inBuffer.frameLength = frameCount
+		let copyStatus = CMSampleBufferCopyPCMDataIntoAudioBufferList(
+			sampleBuffer,
+			at: 0,
+			frameCount: Int32(frameCount),
+			into: inBuffer.mutableAudioBufferList
+		)
+		guard copyStatus == noErr else { return nil }
+
+		if converters[track] == nil {
+			converters[track] = AVAudioConverter(from: inFormat, to: outFormat)
+		}
+		guard let converter = converters[track] else { return nil }
+
+		let capacity = AVAudioFrameCount(Double(frameCount) * livePacketSampleRate / inFormat.sampleRate) + 16
+		guard let outBuffer = AVAudioPCMBuffer(pcmFormat: outFormat, frameCapacity: capacity) else { return nil }
+		var served = false
+		var conversionError: NSError?
+		converter.convert(to: outBuffer, error: &conversionError) { _, status in
+			if served {
+				status.pointee = .noDataNow
+				return nil
+			}
+			served = true
+			status.pointee = .haveData
+			return inBuffer
+		}
+		guard conversionError == nil, outBuffer.frameLength > 0, let channel = outBuffer.floatChannelData else {
+			return nil
+		}
+		return Data(bytes: channel[0], count: Int(outBuffer.frameLength) * 4)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Disclaimed child: owns Speech authorization and recognition.
+
+func runLiveSubcommand(outputURL: URL) {
+	guard requestSpeechAuthorization() else {
+		fputs("nous-recorder live: speech recognition not authorized; exiting\n", stderr)
+		return
+	}
+	let writer = LiveTranscriptWriter(url: outputURL)
+	var transcribers: [UInt8: LiveTranscriber] = [:]
+	let trackNames: [UInt8: String] = [0: "sys", 1: "mic"]
+
+	let stdin = FileHandle.standardInput
+	var buffer = Data()
+	while true {
+		guard let chunk = try? stdin.read(upToCount: 65_536), !chunk.isEmpty else { break }
+		buffer.append(chunk)
+		while buffer.count >= 5 {
+			let track = buffer[buffer.startIndex]
+			let frames = buffer.subdata(in: buffer.startIndex + 1..<buffer.startIndex + 5).withUnsafeBytes {
+				UInt32(littleEndian: $0.load(as: UInt32.self))
+			}
+			let payloadBytes = Int(frames) * 4
+			guard buffer.count >= 5 + payloadBytes else { break }
+			let payload = buffer.subdata(in: buffer.startIndex + 5..<buffer.startIndex + 5 + payloadBytes)
+			buffer.removeFirst(5 + payloadBytes)
+
+			guard let name = trackNames[track] else { continue }
+			if transcribers[track] == nil {
+				transcribers[track] = LiveTranscriber(track: name, writer: writer)
+			}
+			transcribers[track]?.append(pcm: payload)
+		}
+	}
+	for transcriber in transcribers.values {
+		transcriber.finish()
+	}
+	writer.flush()
+}
+
+private func requestSpeechAuthorization(timeoutSeconds: Double = 60) -> Bool {
+	if SFSpeechRecognizer.authorizationStatus() == .authorized { return true }
+	let semaphore = DispatchSemaphore(value: 0)
+	var granted = false
+	SFSpeechRecognizer.requestAuthorization { status in
+		granted = status == .authorized
+		semaphore.signal()
+	}
+	// Generous timeout: the user may be reading the permission prompt.
+	_ = semaphore.wait(timeout: .now() + timeoutSeconds)
+	return granted
+}
+
 final class LiveTranscriptWriter: @unchecked Sendable {
 	private let queue = DispatchQueue(label: "nous-live-writer")
 	private let url: URL
@@ -33,6 +226,10 @@ final class LiveTranscriptWriter: @unchecked Sendable {
 			try? handle.write(contentsOf: Data("\n".utf8))
 		}
 	}
+
+	func flush() {
+		queue.sync {}
+	}
 }
 
 final class LiveTranscriber: @unchecked Sendable {
@@ -40,18 +237,26 @@ final class LiveTranscriber: @unchecked Sendable {
 	private let writer: LiveTranscriptWriter
 	private let recognizer: SFSpeechRecognizer
 	private let queue = DispatchQueue(label: "nous-live-transcriber")
+	private let format = AVAudioFormat(
+		commonFormat: .pcmFormatFloat32,
+		sampleRate: livePacketSampleRate,
+		channels: 1,
+		interleaved: false
+	)!
 	private var request: SFSpeechAudioBufferRecognitionRequest?
 	private var task: SFSpeechRecognitionTask?
 	private var latestPartial = ""
 	private var stopped = false
 	private var rotationTimer: DispatchSourceTimer?
 
-	// nil when live transcription is unavailable - the caller records without it.
 	init?(track: String, writer: LiveTranscriptWriter) {
 		guard let recognizer = SFSpeechRecognizer(locale: Locale.current) ?? SFSpeechRecognizer() else {
 			return nil
 		}
-		guard recognizer.isAvailable, recognizer.supportsOnDeviceRecognition else { return nil }
+		guard recognizer.isAvailable, recognizer.supportsOnDeviceRecognition else {
+			fputs("nous-recorder live: on-device recognition unavailable for \(track)\n", stderr)
+			return nil
+		}
 		self.track = track
 		self.writer = writer
 		self.recognizer = recognizer
@@ -65,22 +270,21 @@ final class LiveTranscriber: @unchecked Sendable {
 		rotationTimer = timer
 	}
 
-	static func requestAuthorization(timeoutSeconds: Double = 3) -> Bool {
-		if SFSpeechRecognizer.authorizationStatus() == .authorized { return true }
-		let semaphore = DispatchSemaphore(value: 0)
-		var granted = false
-		SFSpeechRecognizer.requestAuthorization { status in
-			granted = status == .authorized
-			semaphore.signal()
-		}
-		_ = semaphore.wait(timeout: .now() + timeoutSeconds)
-		return granted
-	}
-
-	func append(_ sampleBuffer: CMSampleBuffer) {
+	func append(pcm: Data) {
 		queue.async {
-			guard !self.stopped else { return }
-			self.request?.appendAudioSampleBuffer(sampleBuffer)
+			guard !self.stopped, let request = self.request else { return }
+			let frames = AVAudioFrameCount(pcm.count / 4)
+			guard frames > 0, let buffer = AVAudioPCMBuffer(pcmFormat: self.format, frameCapacity: frames) else {
+				return
+			}
+			buffer.frameLength = frames
+			pcm.withUnsafeBytes { raw in
+				buffer.floatChannelData![0].update(
+					from: raw.bindMemory(to: Float.self).baseAddress!,
+					count: Int(frames)
+				)
+			}
+			request.append(buffer)
 		}
 	}
 
@@ -91,7 +295,6 @@ final class LiveTranscriber: @unchecked Sendable {
 			self.rotationTimer = nil
 			self.request?.endAudio()
 		}
-		// Give the recognizer a moment to deliver the last final result.
 		Thread.sleep(forTimeInterval: 0.8)
 		queue.sync {
 			self.task?.cancel()

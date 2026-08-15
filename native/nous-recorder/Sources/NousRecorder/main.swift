@@ -101,7 +101,7 @@ struct NousRecorderCLI {
 	private static func run(_ options: Options) async throws {
 		switch options.command {
 		case "version":
-			print("nous-recorder 0.2.0")
+			print("nous-recorder 0.2.1")
 		case "status":
 			let dir = try requiredRecordingsDir(options)
 			let state = readState(in: dir)
@@ -116,6 +116,11 @@ struct NousRecorderCLI {
 			try await stop(options)
 		case "record":
 			try await record(options)
+		case "live":
+			guard let output = options.output else {
+				throw RecorderError.usage("live requires --output <live.jsonl>.")
+			}
+			runLiveSubcommand(outputURL: output)
 		default:
 			throw RecorderError.usage("Unknown command: \(options.command)\n\n\(Options.help)")
 		}
@@ -250,6 +255,8 @@ struct NousRecorderCLI {
 		await recorder.stop()
 	}
 
+	static func selfPath() -> String { selfExecutableURL().path }
+
 	private static func recordingStamp() -> String {
 		let formatter = DateFormatter()
 		formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -302,8 +309,7 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 	// the two tracks before interleaving them into a dialogue.
 	private var firstSystemPTS: Double?
 	private var firstMicPTS: Double?
-	private var sysLive: LiveTranscriber?
-	private var micLive: LiveTranscriber?
+	private var liveFeeder: LiveFeeder?
 
 	init(outputFolder: URL) throws {
 		self.outputFolder = outputFolder
@@ -345,25 +351,19 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 		try await stream.startCapture()
 		self.stream = stream
 
-		// Live transcription is strictly best-effort: no permission, no
-		// on-device model, no live text - the recording is unaffected.
-		if LiveTranscriber.requestAuthorization() {
-			let writer = LiveTranscriptWriter(url: outputFolder.appendingPathComponent("live.jsonl"))
-			sysLive = LiveTranscriber(track: "sys", writer: writer)
-			if #available(macOS 15.0, *) {
-				micLive = LiveTranscriber(track: "mic", writer: writer)
-			}
-		} else {
-			fputs("nous-recorder: speech recognition not authorized; live transcript disabled\n", stderr)
-		}
+		// Live transcription is strictly best-effort: the disclaimed child
+		// owns Speech authorization under this binary's own identity, so a
+		// missing permission can never crash or affect the recording.
+		liveFeeder = LiveFeeder(
+			executable: NousRecorderCLI.selfPath(),
+			liveFileURL: outputFolder.appendingPathComponent("live.jsonl")
+		)
 	}
 
 	func stop() async {
 		try? await stream?.stopCapture()
-		sysLive?.finish()
-		micLive?.finish()
-		sysLive = nil
-		micLive = nil
+		liveFeeder?.finish()
+		liveFeeder = nil
 		await systemWriter.finish()
 		await micWriter.finish()
 		writeTrackTiming()
@@ -375,11 +375,11 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 		case .audio:
 			if firstSystemPTS == nil { firstSystemPTS = sampleBuffer.presentationTimeStamp.seconds }
 			systemWriter.append(sampleBuffer)
-			sysLive?.append(sampleBuffer)
+			liveFeeder?.append(track: 0, sampleBuffer: sampleBuffer)
 		case .microphone:
 			if firstMicPTS == nil { firstMicPTS = sampleBuffer.presentationTimeStamp.seconds }
 			micWriter.append(sampleBuffer)
-			micLive?.append(sampleBuffer)
+			liveFeeder?.append(track: 1, sampleBuffer: sampleBuffer)
 		default:
 			return
 		}
