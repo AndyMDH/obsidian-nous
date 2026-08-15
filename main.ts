@@ -55,10 +55,12 @@ import {
 	buildPendingNativeRecordingNote,
 	LIVE_NOTE_NOTES_HEADING,
 	LIVE_NOTE_TYPING_HINT,
+	LIVE_TRANSCRIPT_FILENAME,
 	extractNativeRecordingManualNotes,
 	hasMeaningfulNativeRecordingManualNotes,
 	interleaveMeetingTracks,
 	nativeRecorderArgs,
+	renderLiveTranscript,
 	shiftTrackSegments,
 	trackStartDeltasMs,
 	nativeRecorderLatestAssetUrl,
@@ -205,6 +207,7 @@ export default class NousPlugin extends Plugin {
 	private meetingPollInterval: number | null = null;
 	private nativeRecorderLastProblem: string | null = null;
 	private meetingTranscribing = false;
+	private liveTranscriptInterval: number | null = null;
 	private activeNativeMeetingNotePath: string | null = null;
 	// Live transcripts already known by the time a voice recording is saved
 	// (see saveVoiceRecording()) - checked by processFile()/
@@ -294,6 +297,7 @@ export default class NousPlugin extends Plugin {
 			}, 5000);
 			this.register(() => {
 				if (this.meetingPollInterval !== null) window.clearInterval(this.meetingPollInterval);
+				this.stopLiveTranscriptSync();
 			});
 		}
 
@@ -1224,6 +1228,7 @@ export default class NousPlugin extends Plugin {
 			const recordingDir = stopped.output ?? status.output;
 			this.setMeetingRecordingIndicator(false);
 			this.activeNativeMeetingNotePath = null;
+			this.stopLiveTranscriptSync();
 			if (recordingDir) {
 				this.setMeetingTranscribingIndicator(true);
 				void this.ingestNativeMeetingRecording(recordingDir, liveNote?.path ?? null);
@@ -1262,6 +1267,9 @@ export default class NousPlugin extends Plugin {
 		new Notice("Nous: 🔴 recording this meeting - toggle again to stop.", 4000);
 		try {
 			this.activeNativeMeetingNotePath = await this.createLiveNativeMeetingNote(next.output);
+			if (next.output && this.activeNativeMeetingNotePath) {
+				this.startLiveTranscriptSync(next.output, this.activeNativeMeetingNotePath);
+			}
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
 			await this.appendLog(`ERROR: could not create live meeting note: ${msg}`);
@@ -1595,6 +1603,50 @@ export default class NousPlugin extends Plugin {
 		const base = recordingDir.split(/[\\/]/).pop() ?? "";
 		const match = base.match(/^(\d{4}-\d{2}-\d{2} \d{2}\.\d{2})/);
 		return match ? match[1] : window.moment().format("YYYY-MM-DD HH.mm");
+	}
+
+	// Tail the recorder's live.jsonl and mirror it into the live note's
+	// Transcript section every couple of seconds. Strictly best-effort, and
+	// self-disarming: it only ever writes to a note that still carries the
+	// live-recording frontmatter, so a late tick can never touch the
+	// finished note.
+	private startLiveTranscriptSync(recordingDir: string, notePath: string) {
+		this.stopLiveTranscriptSync();
+		let lastRendered = "";
+		this.liveTranscriptInterval = window.setInterval(() => {
+			void (async () => {
+				try {
+					const { fs, path } = await loadNodeModules();
+					const raw = await fs
+						.readFile(path.join(recordingDir, LIVE_TRANSCRIPT_FILENAME), "utf8")
+						.catch(() => null);
+					if (!raw) return;
+					const text = renderLiveTranscript(raw);
+					if (!text || text === lastRendered) return;
+					lastRendered = text;
+					const file = this.app.vault.getFileByPath(notePath);
+					if (!file) {
+						this.stopLiveTranscriptSync();
+						return;
+					}
+					await this.app.vault.process(file, (content) => {
+						if (!parseLiveNativeRecordingNote(content)) return content;
+						const idx = content.indexOf("\n## Transcript");
+						if (idx === -1) return content;
+						return `${content.slice(0, idx)}\n## Transcript\n\n${text}\n`;
+					});
+				} catch {
+					// Live view is a nicety; the recording and final pass are not.
+				}
+			})();
+		}, 2000);
+	}
+
+	private stopLiveTranscriptSync() {
+		if (this.liveTranscriptInterval !== null) {
+			window.clearInterval(this.liveTranscriptInterval);
+			this.liveTranscriptInterval = null;
+		}
 	}
 
 	private async createLiveNativeMeetingNote(recordingDir: string | null): Promise<string> {

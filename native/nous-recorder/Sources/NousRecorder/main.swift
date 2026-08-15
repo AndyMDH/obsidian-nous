@@ -101,7 +101,7 @@ struct NousRecorderCLI {
 	private static func run(_ options: Options) async throws {
 		switch options.command {
 		case "version":
-			print("nous-recorder 0.1.0")
+			print("nous-recorder 0.2.0")
 		case "status":
 			let dir = try requiredRecordingsDir(options)
 			let state = readState(in: dir)
@@ -302,6 +302,8 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 	// the two tracks before interleaving them into a dialogue.
 	private var firstSystemPTS: Double?
 	private var firstMicPTS: Double?
+	private var sysLive: LiveTranscriber?
+	private var micLive: LiveTranscriber?
 
 	init(outputFolder: URL) throws {
 		self.outputFolder = outputFolder
@@ -342,10 +344,26 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 		}
 		try await stream.startCapture()
 		self.stream = stream
+
+		// Live transcription is strictly best-effort: no permission, no
+		// on-device model, no live text - the recording is unaffected.
+		if LiveTranscriber.requestAuthorization() {
+			let writer = LiveTranscriptWriter(url: outputFolder.appendingPathComponent("live.jsonl"))
+			sysLive = LiveTranscriber(track: "sys", writer: writer)
+			if #available(macOS 15.0, *) {
+				micLive = LiveTranscriber(track: "mic", writer: writer)
+			}
+		} else {
+			fputs("nous-recorder: speech recognition not authorized; live transcript disabled\n", stderr)
+		}
 	}
 
 	func stop() async {
 		try? await stream?.stopCapture()
+		sysLive?.finish()
+		micLive?.finish()
+		sysLive = nil
+		micLive = nil
 		await systemWriter.finish()
 		await micWriter.finish()
 		writeTrackTiming()
@@ -357,9 +375,11 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 		case .audio:
 			if firstSystemPTS == nil { firstSystemPTS = sampleBuffer.presentationTimeStamp.seconds }
 			systemWriter.append(sampleBuffer)
+			sysLive?.append(sampleBuffer)
 		case .microphone:
 			if firstMicPTS == nil { firstMicPTS = sampleBuffer.presentationTimeStamp.seconds }
 			micWriter.append(sampleBuffer)
+			micLive?.append(sampleBuffer)
 		default:
 			return
 		}

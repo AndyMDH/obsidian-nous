@@ -157,6 +157,40 @@ export const LIVE_NOTE_HINT_LINES = [
 	"> Type questions, decisions, and thoughts here during the call - everything is kept in the finished note.",
 ];
 
+export const LIVE_TRANSCRIPT_FILENAME = "live.jsonl";
+
+// Renders the recorder's live JSONL stream into transcript text: committed
+// lines in arrival order, then the newest partial per track. Speaker labels
+// appear only when both tracks are present (same rule as the final pass).
+export function renderLiveTranscript(raw: string): string {
+	const finals: { track: string; text: string }[] = [];
+	const partials: Record<string, string> = {};
+	for (const line of raw.split("\n")) {
+		if (!line.trim()) continue;
+		let event: { type?: unknown; track?: unknown; text?: unknown };
+		try {
+			event = JSON.parse(line) as { type?: unknown; track?: unknown; text?: unknown };
+		} catch {
+			continue;
+		}
+		if (typeof event.track !== "string" || typeof event.text !== "string" || event.text.length === 0) continue;
+		if (event.type === "final") {
+			finals.push({ track: event.track, text: event.text });
+			delete partials[event.track];
+		} else if (event.type === "partial") {
+			partials[event.track] = event.text;
+		}
+	}
+	const tracks = new Set([...finals.map((f) => f.track), ...Object.keys(partials)]);
+	const both = tracks.has("sys") && tracks.has("mic");
+	const label = (track: string) => (both ? (track === "mic" ? "Me: " : "Them: ") : "");
+	const lines = finals.map((f) => `${label(f.track)}${f.text}`);
+	for (const track of ["sys", "mic"]) {
+		if (partials[track]) lines.push(`${label(track)}${partials[track]} …`);
+	}
+	return lines.join("\n\n");
+}
+
 export const LIVE_NOTE_NOTES_HEADING = "## Meeting notes";
 
 // Deliberately minimal: no title header (the filename is the title), no

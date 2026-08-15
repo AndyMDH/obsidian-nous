@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.3.0
+
+Live meeting transcription, fully on-device.
+
+- While a meeting records, the transcript streams into the live note as
+  people talk - committed lines plus the sentence in progress. Built on
+  Apple's built-in speech engine: nothing to install, nothing sent
+  anywhere. macOS asks once for speech recognition permission.
+- The live text is a fast draft. On stop, the whisper pass replaces it
+  with the final transcript, exactly as before.
+- Degrades safely: no permission or no on-device model means no live
+  view, and the recording is untouched.
+- Each tour step now says when to use it, and in-person meetings produce
+  an unlabeled room transcript instead of a wrong "Me:" label.
+
 ## 2.2.0
 
 The onboarding release.
