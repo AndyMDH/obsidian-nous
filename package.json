@@ -1,6 +1,6 @@
 {
   "name": "obsidian-nous",
-  "version": "2.0.12",
+  "version": "2.0.13",
   "description": "Nous (Greek for 'mind') turns meeting recordings, voice memos, photos, and PDFs into a tagged, linked knowledge graph, right inside Obsidian - auto-summarized, cross-linked, and organized into wiki pages. Works with Claude, GPT, Gemini, GLM, a local model, or your Claude subscription.",
   "main": "main.js",
   "type": "module",
