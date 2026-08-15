@@ -1,3 +1,5 @@
+import { RangeSetBuilder } from "@codemirror/state";
+import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import {
 	App,
 	FileSystemAdapter,
@@ -220,6 +222,21 @@ export default class NousPlugin extends Plugin {
 		await this.loadSettings();
 		document.body.toggleClass("nous-styled-notes", this.settings.styledNotes);
 		this.register(() => document.body.removeClass("nous-styled-notes"));
+
+		// Reading view: tag every block at or below the "## Transcript"
+		// heading. Per-block classes survive Obsidian's virtualized preview,
+		// where a sibling-selector anchor scrolls out of the DOM.
+		this.registerMarkdownPostProcessor((el, ctx) => {
+			const info = ctx.getSectionInfo(el);
+			if (!info) return;
+			const lines = info.text.split("\n");
+			const headingLine = lines.findIndex((line) => line.trim() === "## Transcript");
+			if (headingLine === -1 || info.lineStart < headingLine) return;
+			el.addClass("nous-transcript-block");
+		});
+
+		// Editing view: same treatment via line decorations.
+		this.registerEditorExtension(nousTranscriptDimmer);
 		this.addSettingTab(new NousSettingTab(this.app, this));
 
 		this.addCommand({
@@ -3187,6 +3204,49 @@ class VoiceCaptureSetupModal extends Modal {
 
 // First-run setup: pick how notes are written, prove it works, then show
 // the optional voice/meeting setup state before the user leaves the wizard.
+// Dim every line at or below a "## Transcript" heading in the editor.
+// Purely visual (gated by body.nous-styled-notes in the stylesheet); the
+// file content is untouched.
+const nousTranscriptDimmer = ViewPlugin.fromClass(
+	class {
+		decorations: DecorationSet;
+
+		constructor(view: EditorView) {
+			this.decorations = buildTranscriptDecorations(view);
+		}
+
+		update(update: ViewUpdate) {
+			if (update.docChanged || update.viewportChanged) {
+				this.decorations = buildTranscriptDecorations(update.view);
+			}
+		}
+	},
+	{ decorations: (value) => value.decorations }
+);
+
+function buildTranscriptDecorations(view: EditorView): DecorationSet {
+	const doc = view.state.doc;
+	let headingFrom = -1;
+	for (let i = 1; i <= doc.lines; i++) {
+		if (doc.line(i).text.trim() === "## Transcript") {
+			headingFrom = doc.line(i).from;
+			break;
+		}
+	}
+	const builder = new RangeSetBuilder<Decoration>();
+	if (headingFrom === -1) return builder.finish();
+	const lineDeco = Decoration.line({ class: "nous-transcript-line" });
+	for (const range of view.visibleRanges) {
+		let pos = Math.max(range.from, headingFrom);
+		while (pos <= range.to) {
+			const line = doc.lineAt(pos);
+			if (line.from >= headingFrom) builder.add(line.from, line.from, lineDeco);
+			pos = line.to + 1;
+		}
+	}
+	return builder.finish();
+}
+
 const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" width="72" height="72" aria-hidden="true"><rect x="4" y="4" width="104" height="104" rx="28" fill="#f5f5f5" stroke="#d5d9e0" stroke-width="2"/><path d="M 38 80 L 38 50 Q 38 42 48 42 L 60 42 Q 74 42 74 56 L 74 80" fill="none" stroke="#2d3142" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="82" cy="30" r="7" fill="#eb6c36"/></svg>`;
 
 class OnboardingModal extends Modal {

@@ -279,14 +279,16 @@ body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-proper
 	width: 17px;
 	height: 17px;
 }
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Transcript"]),
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Transcript"]) ~ div {
+/* Transcript = archive, in BOTH views: reading blocks are tagged by the
+   post-processor, editor lines by a CodeMirror decoration. */
+body.nous-styled-notes .nous-transcript-block,
+body.nous-styled-notes .cm-line.nous-transcript-line {
 	opacity: 0.62;
 	font-size: 0.85em;
 	line-height: 1.45;
 }
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Transcript"]):hover,
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Transcript"]) ~ div:hover {
+body.nous-styled-notes .nous-transcript-block:hover,
+body.nous-styled-notes .cm-line.nous-transcript-line:hover {
 	opacity: 1;
 }
 
