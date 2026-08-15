@@ -236,3 +236,22 @@
 .nous-live-note .cm-line.HyperMD-header-2:first-of-type {
 	margin-bottom: 4px;
 }
+
+/* Settings tab: brand accents match the modals */
+.nous-settings button.mod-cta {
+	background-color: #eb6c36;
+	color: #ffffff;
+}
+.nous-settings button.mod-cta:hover {
+	background-color: #d95f2d;
+}
+.nous-settings .checkbox-container.is-enabled {
+	background-color: #eb6c36;
+}
+
+/* Properties stay hidden in live notes across both view modes */
+.markdown-source-view.nous-live-note .metadata-container,
+.markdown-reading-view .nous-live-note .metadata-container,
+.nous-live-note .metadata-container {
+	display: none !important;
+}

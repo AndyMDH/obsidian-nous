@@ -2445,6 +2445,7 @@ class NousSettingTab extends PluginSettingTab {
 
 	private renderLegacySettings(): void {
 		this.containerEl.empty();
+		this.containerEl.addClass("nous-settings");
 		// None of this class's render callbacks use the group param below -
 		// avoid constructing a real SettingGroup (Obsidian 1.11.0+ only) so
 		// this fallback keeps working on the older versions it exists for.
@@ -2478,6 +2479,7 @@ class NousSettingTab extends PluginSettingTab {
 		items.push({
 			name: "",
 			render: (setting) => {
+				this.containerEl.addClass("nous-settings");
 				setting.settingEl.addClass("nous-settings-header");
 				setting.settingEl.empty();
 				const head = setting.settingEl.createDiv({ cls: "nous-settings-header-inner" });
@@ -2496,8 +2498,8 @@ class NousSettingTab extends PluginSettingTab {
 				setting
 					.setDesc(
 						this.plugin.settings.executionMode === "cli"
-							? "Shells out to the Claude Code CLI, using whatever auth it already has (subscription or API key) - no separate billing, but desktop only and requires Claude Code installed."
-							: "Calls a model API directly (Anthropic, OpenAI, Gemini, or a local model) - works on mobile too (except Local, which needs a reachable server), but is billed separately from a Claude subscription/Claude Code login."
+							? "Uses the Claude Code CLI and its login. No extra billing. Desktop only."
+							: "Calls a model API directly. Works on mobile. Billed separately."
 					)
 					.addDropdown((dropdown) => {
 						dropdown
@@ -2546,7 +2548,7 @@ class NousSettingTab extends PluginSettingTab {
 				render: (setting) => {
 					setting
 						.setDesc(
-							'Command or full path to the Claude Code CLI. Obsidian (an Electron app) often starts with a slimmer PATH than your terminal, so if "claude" isn\'t found, try the full path (e.g. from running `which claude` in your terminal).'
+							'Command or full path. If "claude" is not found, paste the output of `which claude`.'
 						)
 						.addText((text) =>
 							text
@@ -2575,7 +2577,7 @@ class NousSettingTab extends PluginSettingTab {
 				render: (setting) => {
 					setting
 						.setDesc(
-							'Which model API to call directly. "local" needs no API key and sends nothing off this machine (e.g. Ollama).'
+							'"local" (for example Ollama) needs no key and sends nothing off this machine.'
 						)
 						.addDropdown((dropdown) => {
 							dropdown
@@ -2625,7 +2627,7 @@ class NousSettingTab extends PluginSettingTab {
 					render: (setting) => {
 						setting
 							.setDesc(
-								'Z.ai OpenAI-compatible endpoint. The coding endpoint is "https://api.z.ai/api/coding/paas/v4" if you have a Coding Plan.'
+								'For a Coding Plan, use "https://api.z.ai/api/coding/paas/v4".'
 							)
 							.addText((text) =>
 								text.setValue(this.plugin.settings.glmBaseUrl).onChange(async (value) => {
@@ -2641,7 +2643,7 @@ class NousSettingTab extends PluginSettingTab {
 					render: (setting) => {
 						setting
 							.setDesc(
-								`Stored locally in this vault's ${this.app.vault.configDir}/plugins/nous/data.json - keep this vault out of any repo or sync you don't fully control.`
+								"Stored locally in this vault. Keep the vault out of repos and syncs that you do not control."
 							)
 							.addText((text) => {
 								text.inputEl.type = "password";
@@ -2719,8 +2721,8 @@ class NousSettingTab extends PluginSettingTab {
 				setting
 					.setDesc(
 						this.plugin.settings.executionMode === "cli"
-							? "Checks that the Claude Code CLI can be found and run from Obsidian."
-							: "Makes one tiny API call with the provider, key, and model above to confirm they work."
+							? "Makes sure that Claude Code runs from Obsidian."
+							: "One tiny API call to confirm the key and model work."
 					)
 					.addButton((button) =>
 						button.setButtonText("Test").onClick(async () => {
@@ -2769,7 +2771,7 @@ class NousSettingTab extends PluginSettingTab {
 			render: (setting) => {
 				setting
 					.setDesc(
-						"On macOS, the phone button uses the native Nous recorder. Click once to start a meeting recording, then click it again to stop."
+						"The phone button records meetings. Click to start, click again to stop. macOS only."
 					)
 					.setClass("setting-item-description");
 			},
@@ -2835,7 +2837,7 @@ class NousSettingTab extends PluginSettingTab {
 				render: (setting) => {
 					setting
 						.setDesc(
-							"Command or full path to the native meeting recorder helper. The default works when the helper is installed in ~/.local/bin or another path directory."
+							"Command or full path to the recorder helper. The default usually works."
 						)
 						.addText((text) =>
 							text
@@ -2875,7 +2877,7 @@ class NousSettingTab extends PluginSettingTab {
 					render: (setting) => {
 						setting
 							.setDesc(
-								"How many of the most recent meeting notes to compare new captures against for duplicates and related-note linking."
+								"How many recent notes to check for duplicates and related links."
 							)
 							.addText((text) =>
 								text.setValue(String(this.plugin.settings.dedupLookback)).onChange(async (value) => {
@@ -2917,7 +2919,7 @@ class NousSettingTab extends PluginSettingTab {
 							return;
 						}
 						setting.setDesc(
-							"No local speech model yet. Download once (~1.6 GB) and voice transcription runs fully on this Mac. Also needs whisper-cli: \"brew install whisper-cpp\"."
+							"One download (~1.6 GB), fully private. Also needs \"brew install whisper-cpp\"."
 						);
 						setting.addButton((b) =>
 							b.setButtonText("Download model").setCta().onClick(() => {
@@ -2935,7 +2937,7 @@ class NousSettingTab extends PluginSettingTab {
 			render: (setting) => {
 				setting
 					.setDesc(
-						"Shows your words as you talk, Siri-style, instead of only after you stop. OpenAI-only for now - the only supported provider that streams your own speech live. Desktop only, reuses the OpenAI key above. Falls back to normal recording if unavailable or interrupted - nothing is lost."
+						"Shows your words as you talk. Needs the OpenAI key above. Desktop only. Falls back to normal recording - nothing is lost."
 					)
 					.addToggle((toggle) =>
 						toggle.setValue(this.plugin.settings.liveTranscriptionEnabled).onChange(async (value) => {
@@ -2963,7 +2965,7 @@ class NousSettingTab extends PluginSettingTab {
 				render: (setting) => {
 					setting
 						.setDesc(
-							'Command or full path to whisper-cli, the local transcription engine (for example, installed via "brew install whisper-cpp"). macOS only.'
+							'Command or full path to whisper-cli ("brew install whisper-cpp"). macOS only.'
 						)
 						.addText((text) =>
 							text
@@ -2982,7 +2984,7 @@ class NousSettingTab extends PluginSettingTab {
 				render: (setting) => {
 					setting
 						.setDesc(
-							`Full path to a ggml whisper model file. Leave blank to use the default location (${this.plugin.defaultWhisperModelPath()}).`
+							"Leave blank for the default location."
 						)
 						.addText((text) =>
 							text
@@ -3586,6 +3588,7 @@ class QuickCaptureModal extends Modal {
 
 	constructor(app: App, private plugin: NousPlugin) {
 		super(app);
+		this.modalEl.addClass("nous-modal");
 	}
 
 	onOpen() {
@@ -3663,6 +3666,7 @@ class LiveVoiceCaptureModal extends Modal {
 
 	constructor(app: App, private plugin: NousPlugin) {
 		super(app);
+		this.modalEl.addClass("nous-modal");
 	}
 
 	onOpen() {
@@ -3852,6 +3856,7 @@ class QueryModal extends Modal {
 
 	constructor(app: App, private onSubmit: (question: string) => void) {
 		super(app);
+		this.modalEl.addClass("nous-modal");
 	}
 
 	onOpen() {
