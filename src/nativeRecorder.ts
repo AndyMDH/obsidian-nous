@@ -132,6 +132,15 @@ export function interleaveMeetingTracks(
 	return parts.join("\n\n");
 }
 
+// The rendered hint inside the live note's Notes section. It shows as a
+// friendly callout while the meeting runs and is stripped from the manual
+// notes before they reach the finished note, so leaving it in place costs
+// the user nothing.
+export const LIVE_NOTE_HINT_LINES = [
+	"> [!tip] This space is yours",
+	"> Type questions, decisions, and thoughts here during the call - everything is kept in the finished note.",
+];
+
 // Deliberately minimal: no title header (the filename is the title), no
 // pre-made checkboxes - one open section with the cursor ready, and the
 // transcript placeholder out of the way below it.
@@ -144,10 +153,21 @@ status: recording
 ---
 ## Notes
 
+${LIVE_NOTE_HINT_LINES.join("\n")}
+
 ## Transcript
 
 *Recording - the transcript appears here when you stop.*
 `;
+}
+
+function stripLiveNoteHint(text: string): string {
+	const hints = new Set(LIVE_NOTE_HINT_LINES.map((line) => line.trim()));
+	return text
+		.split("\n")
+		.filter((line) => !hints.has(line.trim()))
+		.join("\n")
+		.replace(/\n{3,}/g, "\n\n");
 }
 
 export function parseLiveNativeRecordingNote(content: string): LiveNativeRecording | null {
@@ -184,7 +204,7 @@ export function extractNativeRecordingManualNotes(content: string): string {
 		findMarkdownHeading(body, "Pending transcript"),
 	].filter((idx) => idx > start);
 	const end = ends.length > 0 ? Math.min(...ends) : body.length;
-	return body.slice(start, end).trim();
+	return stripLiveNoteHint(body.slice(start, end)).trim();
 }
 
 export function buildCompletedNativeRecordingNote(

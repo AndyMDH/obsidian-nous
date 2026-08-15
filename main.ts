@@ -1,6 +1,7 @@
 import {
 	App,
 	FileSystemAdapter,
+	MarkdownView,
 	Modal,
 	Notice,
 	Platform,
@@ -52,6 +53,7 @@ import {
 	buildLiveNativeRecordingNote,
 	buildNativeRecordingProblemNote,
 	buildPendingNativeRecordingNote,
+	LIVE_NOTE_HINT_LINES,
 	extractNativeRecordingManualNotes,
 	hasMeaningfulNativeRecordingManualNotes,
 	interleaveMeetingTracks,
@@ -1485,9 +1487,29 @@ export default class NousPlugin extends Plugin {
 		const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${stamp} Meeting live note.md`);
 		await this.app.vault.create(notePath, buildLiveNativeRecordingNote(recordingDir, stamp));
 		const file = this.app.vault.getFileByPath(notePath);
-		if (file) await this.app.workspace.getLeaf(true).openFile(file);
+		if (file) {
+			await this.app.workspace.getLeaf(true).openFile(file);
+			this.placeCursorInLiveNoteNotes();
+		}
 		await this.appendLog(`LIVE NOTE: native meeting recording -> ${notePath}`);
 		return notePath;
+	}
+
+	// Land the cursor on the blank line after the Notes hint, ready to type.
+	// Best-effort: a failure here costs nothing but the convenience.
+	private placeCursorInLiveNoteNotes(): void {
+		try {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!view) return;
+			const lastHint = LIVE_NOTE_HINT_LINES[LIVE_NOTE_HINT_LINES.length - 1];
+			const lines = view.editor.getValue().split("\n");
+			const hintIndex = lines.findIndex((line) => line === lastHint);
+			if (hintIndex === -1) return;
+			view.editor.setCursor({ line: hintIndex + 1, ch: 0 });
+			view.editor.focus();
+		} catch {
+			// Cursor placement is a nicety only.
+		}
 	}
 
 	private async findActiveNativeMeetingNote(recordingDir: string | null = null): Promise<TFile | null> {

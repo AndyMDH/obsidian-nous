@@ -212,3 +212,20 @@ test("shiftTrackSegments offsets segment timing but leaves text and null tracks 
 	const cloud = { text: "Hi", segments: null };
 	assert.equal(shiftTrackSegments(cloud, 5500), cloud);
 });
+
+test("the Notes hint renders in the live note but never reaches the manual notes", () => {
+	const note = buildLiveNativeRecordingNote(null, "2026-08-15 11.00");
+	assert.match(note, /> \[!tip\] This space is yours/);
+
+	// Untouched note: the hint alone is not meaningful content.
+	const untouched = extractNativeRecordingManualNotes(note);
+	assert.ok(!untouched.includes("[!tip]"));
+	assert.equal(hasMeaningfulNativeRecordingManualNotes(untouched), false);
+
+	// Typed note with the hint left in place: the typing survives, the hint does not.
+	const typed = note.replace("## Transcript", "- [ ] Ask about budget\n\n## Transcript");
+	const manualNotes = extractNativeRecordingManualNotes(typed);
+	assert.match(manualNotes, /Ask about budget/);
+	assert.ok(!manualNotes.includes("[!tip]"));
+	assert.equal(hasMeaningfulNativeRecordingManualNotes(manualNotes), true);
+});
