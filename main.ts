@@ -3485,6 +3485,10 @@ class OnboardingModal extends Modal {
 			title: "Voice notes",
 			icon: "mic",
 			text: "Click, talk, click again. Transcribed on this machine.",
+			link: {
+				text: "Dictate from anywhere with Handy (optional)",
+				href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md",
+			},
 			action: (el) => {
 				new Setting(el).addButton((b) =>
 					b.setButtonText("Record now").setCta().onClick(() => {
