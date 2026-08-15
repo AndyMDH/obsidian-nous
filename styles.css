@@ -12,3 +12,10 @@
 		opacity: 0.35;
 	}
 }
+
+/* Recording must be unmissable, but respect reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+	.nous-recording {
+		animation: none;
+	}
+}

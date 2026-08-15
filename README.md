@@ -41,18 +41,14 @@ need speech-to-text or recorder setup first.
 mode). Meeting capture is macOS-only. Live voice transcription (beta) is
 desktop-only.
 
-## Features
+## Your vault as AI context
 
-- 📥 **Capture anything** — typed notes, voice memos, calls, photos, PDFs
-- 🏷️ **Tagged and linked automatically** — from a controlled vocabulary,
-  not freeform tag sprawl
-- 📖 **Self-updating wikis** — when a topic has enough notes, Nous writes a
-  hub page that collects them
-- 🤖 **Great context for AI coding assistants** — real tags and linked wikis
-  beat a pile of raw notes. Point Claude Code's global `CLAUDE.md` at your
-  vault, and every project gets that context automatically
-- 🔒 **Local-first** — Claude Code CLI, local whisper.cpp, and Ollama send
-  nothing off your machine. Direct API keys are opt-in
+A Nous vault is not only for reading back. Real tags and linked wikis are
+great context for AI coding assistants - much better than a pile of raw
+notes. Add one line to Claude Code's global `~/.claude/CLAUDE.md`, for
+example "My notes live in `~/path/to/vault` - check
+`10-Notes`/`20-Tags`/`30-Wikis` for background". Then every project gets
+that context automatically, with no extra setup.
 
 ## Install
 
@@ -123,13 +119,15 @@ change each one in Settings → Nous.
 
 Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## Your vault as AI context
+## Features
 
-A Nous vault is great context for AI coding assistants - real tags and
-linked wikis beat a pile of raw notes. Add one line to Claude Code's global
-`~/.claude/CLAUDE.md`, for example "My notes live in `~/path/to/vault` -
-check `10-Notes`/`20-Tags`/`30-Wikis` for background". Then every project
-gets that context automatically, with no extra setup.
+- 📥 **Capture anything** — typed notes, voice memos, calls, photos, PDFs
+- 🏷️ **Tagged and linked automatically** — from a controlled vocabulary,
+  not freeform tag sprawl
+- 📖 **Self-updating wikis** — when a topic has enough notes, Nous writes a
+  hub page that collects them
+- 🔒 **Local-first** — Claude Code CLI, local whisper.cpp, and Ollama send
+  nothing off your machine. Direct API keys are opt-in
 
 ## Documentation
 

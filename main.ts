@@ -1061,6 +1061,7 @@ export default class NousPlugin extends Plugin {
 		recorder.start();
 		this.voiceRecorder = recorder;
 		this.setVoiceRecordingIndicator(true);
+		new Notice("Nous: 🔴 recording - toggle again to stop.", 4000);
 	}
 
 	// Only true when every fallback condition is satisfied: opt-in toggle,
@@ -1104,6 +1105,7 @@ export default class NousPlugin extends Plugin {
 			);
 		}
 		if (this.voiceStatusBarEl) {
+			this.voiceStatusBarEl.toggleClass("nous-recording", recording);
 			if (recording) {
 				this.voiceStatusBarEl.setText("🔴 Nous recording…");
 				this.voiceStatusBarEl.show();
@@ -1180,6 +1182,7 @@ export default class NousPlugin extends Plugin {
 		}
 		this.nativeRecorderLastProblem = null;
 		this.setMeetingRecordingIndicator(true);
+		new Notice("Nous: 🔴 recording this meeting - toggle again to stop.", 4000);
 		try {
 			this.activeNativeMeetingNotePath = await this.createLiveNativeMeetingNote(next.output);
 		} catch (e) {
@@ -1566,6 +1569,7 @@ export default class NousPlugin extends Plugin {
 			);
 		}
 		if (this.meetingStatusBarEl) {
+			this.meetingStatusBarEl.toggleClass("nous-recording", recording);
 			if (recording) {
 				this.meetingTranscribing = false;
 				this.meetingStatusBarEl.setText("🔴 Nous meeting recording…");
