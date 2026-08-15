@@ -52,6 +52,11 @@ example "My notes live in `~/path/to/vault` - check
 `10-Notes`/`20-Tags`/`30-Wikis` for background". Then every project gets
 that context automatically, with no extra setup.
 
+The reasoning behind this vault structure is in
+[Personal RAG Without the Drag](https://xebia.com/blog/personal-rag-without-the-drag/) -
+why agentic search over an organized vault beats embedding pipelines for
+personal notes.
+
 ## Install
 
 1. In Obsidian, open **Settings → Community plugins**. Turn community plugins on.
