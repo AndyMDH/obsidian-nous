@@ -1,5 +1,5 @@
 export const VOICE_TRANSCRIPTION_SETUP_NOTICE =
-	"Nous: voice capture needs speech-to-text setup first - install local whisper.cpp on macOS, or add a Gemini/OpenAI key in Settings -> Nous. No recording started.";
+	"Nous: voice capture needs speech-to-text setup first - on macOS run \"brew install whisper-cpp\" and download a model (see Settings -> Nous -> Voice capture), or add a Gemini/OpenAI key. No recording started.";
 
 export const MEETING_RECORDER_MISSING_NOTICE =
 	"Nous: meeting capture needs the native Nous recorder. Open the setup wizard, or go to Settings -> Nous -> Meeting capture and click Install.";
@@ -56,7 +56,7 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 			name: "Voice notes",
 			desc: status.voiceReady
 				? "Ready - speech-to-text is configured."
-				: "Needs speech-to-text first: install local whisper.cpp on macOS, or add a Gemini/OpenAI key. Nous will not start recording until this is set.",
+				: "Needs speech-to-text first. On macOS: \"brew install whisper-cpp\" plus a model file (Settings -> Nous -> Voice capture shows the expected path). Or add a Gemini/OpenAI key. Nous will not start recording until this is set.",
 			warning: !status.voiceReady,
 		},
 		{
@@ -64,7 +64,7 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 			desc:
 				status.meeting === "ready-native"
 					? status.voiceReady
-						? "Ready - native Nous Recorder is installed and transcripts can finish automatically."
+						? "Ready - the phone button records both call sides and opens a live note for typing questions during the call."
 						: "Ready to record - native Nous Recorder is installed. Transcripts will wait in the inbox until speech-to-text is set up."
 					: status.meeting === "unsupported"
 						? "macOS only. Other platforms can still use text, file, and voice-note capture."
@@ -107,7 +107,7 @@ export function onboardingFinishNextActions(status: CapturePrerequisiteStatus): 
 	if (!status.voiceReady) {
 		actions.push({
 			name: "Voice notes",
-			desc: "Set up speech-to-text first: install local whisper.cpp on macOS, or add a Gemini/OpenAI key.",
+			desc: "Set up speech-to-text first. On macOS: \"brew install whisper-cpp\" plus a model file (Settings -> Nous -> Voice capture shows the expected path). Or add a Gemini/OpenAI key.",
 			warning: true,
 		});
 	}
@@ -130,6 +130,16 @@ export function onboardingFinishNextActions(status: CapturePrerequisiteStatus): 
 			warning: false,
 		});
 	}
+	actions.push({
+		name: "Hotkeys",
+		desc: "Every capture action is an Obsidian command. Settings -> Hotkeys, search \"Nous\", and bind the ones you use - meeting capture and voice capture are worth a key each.",
+		warning: false,
+	});
+	actions.push({
+		name: "Dictate from anywhere (optional)",
+		desc: "A system-wide dictation app like Handy can drop transcripts straight into the inbox even when Obsidian is closed - see the usage docs for the one-line capture script.",
+		warning: false,
+	});
 	return actions;
 }
 

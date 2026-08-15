@@ -62,7 +62,7 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 test("capture prerequisite checklist distinguishes native recorder readiness", () => {
 	const nativeItems = capturePrerequisiteItems({ voiceReady: true, meeting: "ready-native" });
 	assert.equal(nativeItems[2].warning, false);
-	assert.match(nativeItems[2].desc, /native Nous Recorder/);
+	assert.match(nativeItems[2].desc, /live note/);
 
 	const nativeNoTranscriptionItems = capturePrerequisiteItems({ voiceReady: false, meeting: "ready-native" });
 	assert.equal(nativeNoTranscriptionItems[2].warning, false);
@@ -100,13 +100,23 @@ test("finish screen stays truthful when optional capture setup is missing", () =
 		[
 			["Voice notes", true],
 			["Meeting capture", true],
+			["Hotkeys", false],
+			["Dictate from anywhere (optional)", false],
 		]
 	);
 
 	const ready = { voiceReady: true, meeting: "ready-native" } as const;
 	assert.equal(onboardingFinishTitle(ready), "Nous is ready");
 	assert.match(onboardingFinishIntro(ready, "00-Inbox", "10-Notes"), /voice notes, or meeting recordings/);
-	assert.deepEqual(onboardingFinishNextActions(ready), []);
+	// Even a fully-ready setup gets the non-warning tips (hotkeys, optional
+	// system-wide dictation) - never a warning.
+	assert.deepEqual(
+		onboardingFinishNextActions(ready).map((item) => [item.name, item.warning]),
+		[
+			["Hotkeys", false],
+			["Dictate from anywhere (optional)", false],
+		]
+	);
 });
 
 test("native recorder readiness text exposes status and next action", () => {
