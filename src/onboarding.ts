@@ -130,16 +130,6 @@ export function onboardingFinishNextActions(status: CapturePrerequisiteStatus): 
 			warning: false,
 		});
 	}
-	actions.push({
-		name: "Hotkeys",
-		desc: "Settings -> Hotkeys, search \"Nous\", bind the ones you use.",
-		warning: false,
-	});
-	actions.push({
-		name: "Dictate from anywhere (optional)",
-		desc: "Handy can drop transcripts into the inbox with Obsidian closed - see the usage docs.",
-		warning: false,
-	});
 	return actions;
 }
 

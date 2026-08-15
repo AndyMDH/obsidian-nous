@@ -98,23 +98,14 @@ test("finish screen stays truthful when optional capture setup is missing", () =
 		[
 			["Voice notes", true],
 			["Meeting capture", true],
-			["Hotkeys", false],
-			["Dictate from anywhere (optional)", false],
 		]
 	);
 
 	const ready = { voiceReady: true, meeting: "ready-native" } as const;
 	assert.equal(onboardingFinishTitle(ready), "Nous is ready");
 	assert.match(onboardingFinishIntro(ready, "00-Inbox", "10-Notes"), /voice notes, or meeting recordings/);
-	// Even a fully-ready setup gets the non-warning tips (hotkeys, optional
-	// system-wide dictation) - never a warning.
-	assert.deepEqual(
-		onboardingFinishNextActions(ready).map((item) => [item.name, item.warning]),
-		[
-			["Hotkeys", false],
-			["Dictate from anywhere (optional)", false],
-		]
-	);
+	// A fully-ready setup has nothing left to warn about.
+	assert.deepEqual(onboardingFinishNextActions(ready), []);
 });
 
 test("native recorder readiness text exposes status and next action", () => {

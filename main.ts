@@ -3033,16 +3033,12 @@ class VoiceCaptureSetupModal extends Modal {
 
 	onOpen() {
 		this.setTitle("Set up voice notes");
-		this.contentEl.createEl("p", {
-			text: "Voice notes need speech-to-text before Nous can start recording. Pick one path:",
-		});
+		this.contentEl.createEl("p", { cls: "nous-welcome-question", text: "Voice notes need speech-to-text. Pick one:" });
 
 		if (Platform.isMacOS) {
 			new Setting(this.contentEl)
 				.setName("Private (recommended)")
-				.setDesc(
-					'Download the local speech model (~1.6 GB, one time). Your voice never leaves this Mac. Also needs whisper-cli: "brew install whisper-cpp".'
-				)
+				.setDesc('One download (~1.6 GB). Fully private. Also needs "brew install whisper-cpp".')
 				.addButton((button) =>
 					button.setButtonText("Download model").setCta().onClick(() => {
 						button.setDisabled(true);
@@ -3054,9 +3050,7 @@ class VoiceCaptureSetupModal extends Modal {
 
 		new Setting(this.contentEl)
 			.setName("Cloud")
-			.setDesc(
-				"Add a Gemini or OpenAI key. The key is used only to turn speech into text - note-writing stays on the mode you chose."
-			)
+			.setDesc("Add a Gemini or OpenAI key - used only for speech-to-text.")
 			.addButton((button) =>
 				button.setButtonText("Open Nous settings").onClick(() => {
 					this.close();
@@ -3242,9 +3236,8 @@ class OnboardingModal extends Modal {
 		this.setTitle("Check the connection");
 		const isCli = this.plugin.settings.executionMode === "cli";
 		this.contentEl.createEl("p", {
-			text: isCli
-				? "Nous will check that Claude Code is installed and reachable. If you haven't installed it yet: docs.claude.com/claude-code (a one-time step)."
-				: "Nous will make one tiny API call to confirm your key and model work.",
+			cls: "nous-welcome-question",
+			text: isCli ? "Nous checks that Claude Code is reachable." : "One tiny API call to confirm your key works.",
 		});
 		const status = this.contentEl.createEl("p", { text: "" });
 
@@ -3363,34 +3356,26 @@ class OnboardingModal extends Modal {
 		const status = this.lastCaptureStatus;
 		this.setTitle(status ? onboardingFinishTitle(status) : "Text capture is ready");
 		this.contentEl.createEl("p", {
-			text: status
-				? onboardingFinishIntro(status, this.plugin.settings.inboxFolder, this.plugin.settings.meetingsFolder)
-				: `Text, images, and PDFs are ready now. Drop them into "${this.plugin.settings.inboxFolder}" and they come out tagged, summarized, and linked in "${this.plugin.settings.meetingsFolder}".`,
+			cls: "nous-welcome-question",
+			text: `Drop anything into "${this.plugin.settings.inboxFolder}" - it comes back tagged in "${this.plugin.settings.meetingsFolder}".`,
 		});
+		// Only warnings survive to this screen - tips live in the tour and docs.
 		if (status) {
-			const nextActions = onboardingFinishNextActions(status);
-			if (nextActions.length > 0) {
-				this.contentEl.createEl("p", { text: "Optional next steps:" });
-				for (const item of nextActions) {
-					const setting = new Setting(this.contentEl).setName(item.name).setDesc(item.desc);
-					if (item.warning) setting.setClass("mod-warning");
-				}
+			for (const item of onboardingFinishNextActions(status).filter((item) => item.warning)) {
+				new Setting(this.contentEl).setName(item.name).setDesc(item.desc).setClass("mod-warning");
 			}
 		}
-		new Setting(this.contentEl)
-			.setName("Everything else lives in the settings tab")
-			.setDesc("Providers, folders, hotkeys pointers, voice and meeting setup - all in one place.")
-			.addButton((b) =>
-				b.setButtonText("Open Nous settings").onClick(() => {
-					this.close();
-					this.plugin.openNousSettings();
-				})
-			);
 
 		new Setting(this.contentEl)
 			.addButton((b) =>
 				b.setButtonText("Finish").onClick(async () => {
 					await this.finish(false);
+				})
+			)
+			.addButton((b) =>
+				b.setButtonText("Open Nous settings").onClick(() => {
+					this.close();
+					this.plugin.openNousSettings();
 				})
 			)
 			.addButton((b) =>
