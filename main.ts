@@ -3534,6 +3534,17 @@ class OnboardingModal extends Modal {
 		}
 
 		new Setting(this.contentEl)
+			.setName("The Nous look (optional)")
+			.setDesc("Serif text, tangerine details, styled notes - a CSS snippet you can disable anytime.")
+			.addButton((b) =>
+				b.setButtonText("Install theme").onClick(async () => {
+					b.setDisabled(true);
+					await this.plugin.installEditorialSnippet();
+					b.setButtonText("Installed ✓");
+				})
+			);
+
+		new Setting(this.contentEl)
 			.addButton((b) =>
 				b.setButtonText("Finish").onClick(async () => {
 					await this.finish(false);
