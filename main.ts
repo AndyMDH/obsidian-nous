@@ -3389,10 +3389,6 @@ class OnboardingModal extends Modal {
 				})
 			);
 
-		this.contentEl.createEl("p", {
-			text: "Want to see it happen right now? Nous can drop a sample note into the inbox and enrich it while you watch.",
-		});
-
 		new Setting(this.contentEl)
 			.addButton((b) =>
 				b.setButtonText("Finish").onClick(async () => {
@@ -3400,10 +3396,133 @@ class OnboardingModal extends Modal {
 				})
 			)
 			.addButton((b) =>
-				b.setButtonText("Finish + try a sample note").setCta().onClick(async () => {
-					await this.finish(true);
+				b.setButtonText("Take the 60-second tour").setCta().onClick(() => {
+					this.renderTour(0);
 				})
 			);
+	}
+
+	// A click-through tour of the daily loop. Every step has one thing to
+	// read and, where possible, one real thing to try - the tour drives the
+	// actual features, not screenshots of them.
+	private renderTour(step: number) {
+		this.clear();
+		const steps = this.tourSteps();
+		const current = steps[Math.max(0, Math.min(step, steps.length - 1))];
+		this.setTitle(current.title);
+
+		const dots = this.contentEl.createDiv({ cls: "nous-tour-dots" });
+		steps.forEach((_, index) => {
+			dots.createSpan({ cls: index === step ? "nous-tour-dot is-active" : "nous-tour-dot" });
+		});
+
+		const body = this.contentEl.createDiv({ cls: "nous-tour-body" });
+		for (const line of current.lines) {
+			body.createEl("p", { text: line });
+		}
+		current.extra?.(body);
+
+		const nav = new Setting(this.contentEl);
+		if (step > 0) {
+			nav.addButton((b) => b.setButtonText("Back").onClick(() => this.renderTour(step - 1)));
+		}
+		if (step < steps.length - 1) {
+			nav.addButton((b) => b.setButtonText("Next").setCta().onClick(() => this.renderTour(step + 1)));
+		} else {
+			nav.addButton((b) =>
+				b.setButtonText("Finish tour").setCta().onClick(async () => {
+					await this.finish(false);
+				})
+			);
+		}
+		nav.addButton((b) =>
+			b.setButtonText("Skip").onClick(async () => {
+				await this.finish(false);
+			})
+		);
+	}
+
+	private tourSteps(): { title: string; lines: string[]; extra?: (el: HTMLElement) => void }[] {
+		const inbox = this.plugin.settings.inboxFolder;
+		const notes = this.plugin.settings.meetingsFolder;
+		const steps: { title: string; lines: string[]; extra?: (el: HTMLElement) => void }[] = [];
+
+		steps.push({
+			title: "The whole loop, once",
+			lines: [
+				`You capture something. It lands in "${inbox}". Nous turns it into a tagged, linked note in "${notes}". That is the entire product - the next steps show each door in.`,
+			],
+			extra: (el) => {
+				new Setting(el)
+					.setName("See it happen now")
+					.setDesc("Nous drops a sample note into the inbox and enriches it while you watch.")
+					.addButton((b) =>
+						b.setButtonText("Drop a sample note").onClick(async () => {
+							b.setDisabled(true);
+							await this.plugin.createSampleNote();
+							void this.plugin.processInbox();
+							new Notice(`Nous: sample note dropped - watch "${notes}".`);
+						})
+					);
+			},
+		});
+
+		steps.push({
+			title: "Type or paste anything",
+			lines: [
+				"The ➕ feather icon in the left ribbon (or the \"Quick capture\" command) takes typed text, pasted text, or a file. No folder decisions - it goes to the inbox.",
+			],
+			extra: (el) => {
+				new Setting(el).addButton((b) =>
+					b.setButtonText("Try quick capture").setCta().onClick(() => {
+						new QuickCaptureModal(this.app, this.plugin).open();
+					})
+				);
+			},
+		});
+
+		steps.push({
+			title: "Talk instead of type",
+			lines: [
+				"The 🎙️ mic icon records a voice note: click, talk, click again. Nous transcribes on this machine and the words become a note like any other.",
+			],
+			extra: (el) => {
+				new Setting(el).addButton((b) =>
+					b.setButtonText("Record a voice note now").setCta().onClick(() => {
+						this.close();
+						void this.plugin.toggleVoiceCapture();
+					})
+				);
+			},
+		});
+
+		if (Platform.isMacOS) {
+			steps.push({
+				title: "Meetings get a live note",
+				lines: [
+					"On a call, the 📞 phone icon records both sides. A live note opens with a Meeting notes section - type questions and thoughts during the call.",
+					"When you stop, the transcript fills in as a Me/Them dialogue and the note comes back tagged, with your typed notes kept.",
+					"Tip: bind a hotkey to \"Start/stop meeting recording\" in Settings → Hotkeys.",
+				],
+			});
+		}
+
+		steps.push({
+			title: "That is everything",
+			lines: [
+				"Wikis build themselves once a topic has enough notes. Settings has the rest - providers, folders, voice and meeting setup.",
+			],
+			extra: (el) => {
+				new Setting(el).addButton((b) =>
+					b.setButtonText("Open Nous settings").onClick(() => {
+						this.close();
+						this.plugin.openNousSettings();
+					})
+				);
+			},
+		});
+
+		return steps;
 	}
 
 	private async finish(withSample: boolean) {

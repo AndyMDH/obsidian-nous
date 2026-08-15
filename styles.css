@@ -108,3 +108,22 @@
 	gap: 12px;
 	font-size: var(--font-ui-small);
 }
+
+/* Onboarding tour */
+.nous-tour-dots {
+	display: flex;
+	gap: 6px;
+	margin: 4px 0 12px;
+}
+.nous-tour-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--background-modifier-border);
+}
+.nous-tour-dot.is-active {
+	background: var(--interactive-accent);
+}
+.nous-tour-body {
+	min-height: 120px;
+}
