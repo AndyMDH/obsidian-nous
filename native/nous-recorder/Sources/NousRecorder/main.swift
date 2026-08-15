@@ -101,7 +101,7 @@ struct NousRecorderCLI {
 	private static func run(_ options: Options) async throws {
 		switch options.command {
 		case "version":
-			print("nous-recorder 0.2.1")
+			print("nous-recorder 0.2.2")
 		case "status":
 			let dir = try requiredRecordingsDir(options)
 			let state = readState(in: dir)
@@ -228,6 +228,15 @@ struct NousRecorderCLI {
 				break
 			}
 			try await Task.sleep(nanoseconds: 100_000_000)
+		}
+		if isProcessAlive(state.pid) {
+			// A stop must stop. Escalate rather than report a lie.
+			kill(state.pid, SIGKILL)
+			for _ in 0..<20 {
+				if !isProcessAlive(state.pid) { break }
+				try await Task.sleep(nanoseconds: 100_000_000)
+			}
+			removeState(in: recordingsDir)
 		}
 		printJSON(["recording": false, "output": state.output])
 	}

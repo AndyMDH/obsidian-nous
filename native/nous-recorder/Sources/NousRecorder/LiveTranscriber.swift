@@ -73,6 +73,11 @@ final class LiveFeeder: @unchecked Sendable {
 		}
 		childPid = pid
 		stdinHandle = stdinPipe.fileHandleForWriting
+		// Non-blocking writes: if the child stalls (permission prompt, slow
+		// recognizer), packets are dropped instead of wedging the recorder.
+		let fd = stdinPipe.fileHandleForWriting.fileDescriptor
+		let flags = fcntl(fd, F_GETFL)
+		_ = fcntl(fd, F_SETFL, flags | O_NONBLOCK)
 	}
 
 	func append(track: UInt8, sampleBuffer: CMSampleBuffer) {
@@ -83,9 +88,15 @@ final class LiveFeeder: @unchecked Sendable {
 			var frames = UInt32(payload.count / 4).littleEndian
 			withUnsafeBytes(of: &frames) { packet.append(contentsOf: $0) }
 			packet.append(payload)
-			do {
-				try stdin.write(contentsOf: packet)
-			} catch {
+			let written = packet.withUnsafeBytes { raw -> Int in
+				Darwin.write(stdin.fileDescriptor, raw.baseAddress, raw.count)
+			}
+			if written < 0 {
+				let err = errno
+				if err == EAGAIN || err == EWOULDBLOCK {
+					// Pipe full - drop this packet, the live view just lags.
+					return
+				}
 				// Child gone (denied permission, crash) - stop feeding, keep recording.
 				self.disabled = true
 				try? stdin.close()
@@ -95,10 +106,18 @@ final class LiveFeeder: @unchecked Sendable {
 	}
 
 	func finish() {
-		queue.sync {
+		// Close the pipe without waiting on the feeder queue: with blocking
+		// writes gone this cannot wedge, but a bounded wait keeps the stop
+		// path safe against anything unexpected.
+		let semaphore = DispatchSemaphore(value: 0)
+		queue.async {
 			try? self.stdinHandle?.close()
 			self.stdinHandle = nil
+			self.disabled = true
+			semaphore.signal()
 		}
+		_ = semaphore.wait(timeout: .now() + 2)
+
 		// Give the child a moment to commit its last line, then make sure it
 		// is gone - it must never outlive the recording.
 		var status: Int32 = 0
@@ -107,6 +126,11 @@ final class LiveFeeder: @unchecked Sendable {
 			usleep(100_000)
 		}
 		kill(childPid, SIGTERM)
+		for _ in 0..<10 {
+			if waitpid(childPid, &status, WNOHANG) == childPid { return }
+			usleep(100_000)
+		}
+		kill(childPid, SIGKILL)
 		_ = waitpid(childPid, &status, 0)
 	}
 
@@ -152,14 +176,28 @@ final class LiveFeeder: @unchecked Sendable {
 	}
 }
 
+final class Atomic<T>: @unchecked Sendable {
+	private let lock = NSLock()
+	private var value: T
+	init(_ value: T) { self.value = value }
+	func get() -> T { lock.lock(); defer { lock.unlock() }; return value }
+	func set(_ newValue: T) { lock.lock(); defer { lock.unlock() }; value = newValue }
+}
+
 // ---------------------------------------------------------------------------
 // Disclaimed child: owns Speech authorization and recognition.
 
 func runLiveSubcommand(outputURL: URL) {
-	guard requestSpeechAuthorization() else {
-		fputs("nous-recorder live: speech recognition not authorized; exiting\n", stderr)
-		return
+	// Authorization may sit behind a user prompt for a while. stdin must be
+	// drained the whole time - a full pipe would stall the recorder - so the
+	// request runs in the background and packets are dropped until granted.
+	let authorized = Atomic(false)
+	let authDone = Atomic(false)
+	DispatchQueue.global().async {
+		authorized.set(requestSpeechAuthorization())
+		authDone.set(true)
 	}
+
 	let writer = LiveTranscriptWriter(url: outputURL)
 	var transcribers: [UInt8: LiveTranscriber] = [:]
 	let trackNames: [UInt8: String] = [0: "sys", 1: "mic"]
@@ -168,6 +206,17 @@ func runLiveSubcommand(outputURL: URL) {
 	var buffer = Data()
 	while true {
 		guard let chunk = try? stdin.read(upToCount: 65_536), !chunk.isEmpty else { break }
+		if authDone.get(), !authorized.get() {
+			fputs("nous-recorder live: speech recognition not authorized; draining until stop\n", stderr)
+			// Keep draining so the recorder never blocks, but do no work.
+			buffer.removeAll(keepingCapacity: false)
+			while let more = try? stdin.read(upToCount: 65_536), !more.isEmpty {}
+			return
+		}
+		if !authDone.get() {
+			// Still waiting on the prompt: drop audio, keep the pipe moving.
+			continue
+		}
 		buffer.append(chunk)
 		while buffer.count >= 5 {
 			let track = buffer[buffer.startIndex]
