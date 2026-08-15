@@ -144,7 +144,12 @@ export function interleaveMeetingTracks(
 
 // Hint lines from a briefly-shipped callout variant of the live note -
 // still stripped from manual notes so those notes stay clean.
+export const LIVE_NOTE_TYPING_HINT =
+	"*Type questions and notes here during the call - everything is kept in the finished note.*";
+
 export const LIVE_NOTE_HINT_LINES = [
+	LIVE_NOTE_TYPING_HINT,
+	// A briefly-shipped callout variant - still stripped from old notes.
 	"> [!tip] This space is yours",
 	"> Type questions, decisions, and thoughts here during the call - everything is kept in the finished note.",
 ];
@@ -166,6 +171,11 @@ cssclasses:
   - nous-live-note
 ---
 ${LIVE_NOTE_NOTES_HEADING}
+
+${LIVE_NOTE_TYPING_HINT}
+
+
+
 
 ## Transcript
 

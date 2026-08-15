@@ -54,6 +54,7 @@ import {
 	buildNativeRecordingProblemNote,
 	buildPendingNativeRecordingNote,
 	LIVE_NOTE_NOTES_HEADING,
+	LIVE_NOTE_TYPING_HINT,
 	extractNativeRecordingManualNotes,
 	hasMeaningfulNativeRecordingManualNotes,
 	interleaveMeetingTracks,
@@ -1617,9 +1618,11 @@ export default class NousPlugin extends Plugin {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (!view) return;
 			const lines = view.editor.getValue().split("\n");
+			const hintIndex = lines.findIndex((line) => line === LIVE_NOTE_TYPING_HINT);
 			const headingIndex = lines.findIndex((line) => line === LIVE_NOTE_NOTES_HEADING);
-			if (headingIndex === -1) return;
-			view.editor.setCursor({ line: headingIndex + 1, ch: 0 });
+			const anchor = hintIndex !== -1 ? hintIndex + 2 : headingIndex + 1;
+			if (hintIndex === -1 && headingIndex === -1) return;
+			view.editor.setCursor({ line: anchor, ch: 0 });
 			view.editor.focus();
 		} catch {
 			// Cursor placement is a nicety only.
