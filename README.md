@@ -115,18 +115,15 @@ change each one in Settings → Nous.
   terminal command in the whole product.
 - **The native `nous-recorder` helper records meetings on macOS** (setup
   installs it). When the recording starts, Nous opens a live note for your
-  questions - and the transcript streams into it while people talk, fully
-  on-device, with nothing to install (Apple's built-in speech engine).
-  When you stop, whisper replaces the live text with the final pass: an
-  online call becomes a `Me:`/`Them:` dialogue, an in-person meeting one
-  room transcript. Details are in the [usage docs](docs/USAGE.md).
+  questions. When you stop, an online call becomes a `Me:`/`Them:`
+  dialogue; an in-person meeting becomes one unlabeled room transcript.
+  Details are in the [usage docs](docs/USAGE.md).
 - **Privacy**: Nous sends only your captured notes and tag names to the
   provider that you chose. Local mode sends nothing anywhere. There is no
   telemetry.
 - **Limitations**: a group call shows all other participants as one
-  `Them:` speaker. Mic capture needs macOS 15 or later. The live meeting
-  transcript needs speech recognition permission and Apple's on-device
-  model. Live voice-note transcription (beta) needs an OpenAI key.
+  `Them:` speaker. Mic capture needs macOS 15 or later. Live voice
+  transcription (beta) needs an OpenAI key and desktop.
 
 Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 

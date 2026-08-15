@@ -13,16 +13,6 @@ let package = Package(
 			path: "Sources/NousRecorder",
 			swiftSettings: [
 				.unsafeFlags(["-parse-as-library"]),
-			],
-			linkerSettings: [
-				// Embed an Info.plist so the unbundled binary can request
-				// Speech authorization (TCC requires a usage description).
-				.unsafeFlags([
-					"-Xlinker", "-sectcreate",
-					"-Xlinker", "__TEXT",
-					"-Xlinker", "__info_plist",
-					"-Xlinker", "Sources/NousRecorder/Info.plist",
-				]),
 			]
 		),
 	]

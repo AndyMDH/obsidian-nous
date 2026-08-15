@@ -152,13 +152,6 @@ This works in person too: your mic hears the whole room, and the transcript
 comes back as one unlabeled conversation. Speaker labels (`Me:` / `Them:`)
 appear only on online calls, where your mic and the system audio are
 separate tracks.
-
-The transcript also streams into the note live, while people talk. This
-uses Apple's on-device speech engine - nothing extra to install, nothing
-sent anywhere. macOS asks once for speech recognition permission. The live
-text is a fast draft; when you stop, the whisper pass replaces it with the
-final transcript. If permission is denied or the on-device model is
-missing, recording works exactly as before, without the live view.
 `Me:` is your mic; `Them:` is system audio from the call, merged into one
 chronological dialogue. Mic capture needs macOS 15+ — on macOS 14 the
 transcript is `Them:`-only.

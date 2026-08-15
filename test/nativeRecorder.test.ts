@@ -17,7 +17,6 @@ import {
 	parsePendingNativeRecordingNote,
 	parseNativeRecorderChecksum,
 	parseNativeRecorderStatus,
-	renderLiveTranscript,
 	shiftTrackSegments,
 	trackStartDeltasMs,
 } from "../src/nativeRecorder.ts";
@@ -254,22 +253,3 @@ test("the Me/Them legend appears only on labeled transcripts", () => {
 	assert.ok(!buildCompletedNativeRecordingNote("2026-08-15 15.00", "One voice, one room.").includes("Me = my mic"));
 });
 
-test("renderLiveTranscript orders finals, keeps the newest partial, labels only two-track streams", () => {
-	const raw = [
-		'{"type":"partial","track":"sys","text":"Let us start"}',
-		'{"type":"final","track":"sys","text":"Let us start with the roadmap."}',
-		'{"type":"partial","track":"mic","text":"What about"}',
-		'{"type":"partial","track":"mic","text":"What about the budget"}',
-	].join("\n");
-	assert.equal(
-		renderLiveTranscript(raw),
-		"Them: Let us start with the roadmap.\n\nMe: What about the budget …"
-	);
-
-	// Single-track stream (in-person): no labels.
-	const solo = '{"type":"final","track":"mic","text":"One voice in a room."}';
-	assert.equal(renderLiveTranscript(solo), "One voice in a room.");
-
-	// Garbage lines are skipped, not fatal.
-	assert.equal(renderLiveTranscript("not json\n" + solo), "One voice in a room.");
-});

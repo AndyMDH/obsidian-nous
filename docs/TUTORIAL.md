@@ -143,11 +143,9 @@ section and the cursor ready. Type anything there during the meeting:
 questions, decisions, reminders. Checkboxes (`- [ ]`) work if you want a
 tick-off list.
 
-While people talk, the transcript streams into the note's **Transcript**
-section - fully on-device, nothing to install (macOS asks once for speech
-recognition permission). This works on calls and in person. When you stop,
-Nous replaces the live draft with the final transcript, and the note comes
-back enriched, same as everything else.
+This works on calls and in person. When you stop recording, Nous adds the
+transcript to that same note, and it comes back enriched, same as
+everything else.
 
 If speech-to-text is not ready yet, Nous still saves the recording. It leaves
 a note in `00-Inbox` that says the meeting needs transcription. Your typed

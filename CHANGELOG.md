@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.3
+
+Live meeting transcription (2.3.0-2.3.2) is removed. The feature fought
+macOS permission attribution and introduced process-management risk to
+the one flow that must never break - recording. Meetings work as in
+2.2.x: record, stop, whisper transcribes, the note comes back enriched.
+The stop-path hardening from 2.3.2 stays.
+
 ## 2.3.0
 
 Live meeting transcription, fully on-device.
