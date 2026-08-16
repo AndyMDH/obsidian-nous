@@ -18,14 +18,13 @@
 
 <p align="center">
   <a href="https://obsidian.md/plugins?id=nous"><img alt="Get it from Obsidian" src="https://img.shields.io/badge/Obsidian-Get%20the%20plugin-EB6C36?logo=obsidian&logoColor=white"></a>
-  <!-- TODO: swap back to the dynamic downloads badge once "nous" has an
-       entry in obsidianmd/obsidian-releases community-plugin-stats.json -
-       it doesn't yet, so the dynamic query badge renders broken. -->
-  <img alt="New Obsidian plugin" src="https://img.shields.io/badge/Obsidian-new%20plugin-EB6C36?logo=obsidian&logoColor=white">
+  <a href="https://obsidian.md/plugins?id=nous"><img alt="Obsidian downloads" src="https://img.shields.io/badge/dynamic/json?logo=obsidian&color=EB6C36&label=downloads&query=%24%5B%27nous%27%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json"></a>
+  <a href="https://github.com/AndyMDH/obsidian-nous/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/AndyMDH/obsidian-nous?color=EB6C36&label=stars"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-EB6C36"></a>
   <a href="https://github.com/AndyMDH/obsidian-nous/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/AndyMDH/obsidian-nous?color=EB6C36&label=version"></a>
   <a href="https://github.com/AndyMDH/obsidian-nous/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/AndyMDH/obsidian-nous/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="Last commit" src="https://img.shields.io/github/last-commit/AndyMDH/obsidian-nous?color=EB6C36">
+  <a href="CONTRIBUTING.md"><img alt="PRs welcome" src="https://img.shields.io/badge/PRs-welcome-EB6C36.svg"></a>
 </p>
 
 <p align="center">
@@ -42,6 +41,32 @@ opt-in.
 **Works on:** Desktop (macOS, Windows, Linux) and Mobile (API-key or local-model
 mode). Meeting capture is macOS-only. Live voice transcription (beta) is
 desktop-only.
+
+## Contents
+
+- [Features](#features)
+- [Your vault as AI context](#your-vault-as-ai-context)
+- [Install](#install)
+- [Quickstart](#quickstart)
+- [How it works, briefly](#how-it-works-briefly)
+- [Documentation](#documentation)
+- [For developers](#for-developers)
+- [License](#license)
+
+## Features
+
+- 🎙️ **Capture anything** — Type, paste, drop a file, record a voice note, or
+  record a meeting on macOS.
+- 🏷️ **Automatic tags** — Every capture gets tags from a controlled
+  vocabulary. No manual sorting.
+- 🔗 **Automatic links** — Related notes connect to each other without
+  manual work.
+- 📖 **Self-updating wiki pages** — When a topic has enough notes, Nous
+  writes a wiki page for it. The page stays current.
+- 🔒 **Local-first** — Claude Code CLI, local whisper.cpp, and Ollama keep
+  data on your machine. API keys are optional.
+- 📱 **Desktop and mobile** — The full pipeline runs on desktop. Mobile
+  supports API-key or local-model mode.
 
 ## Your vault as AI context
 
