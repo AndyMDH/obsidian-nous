@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.5.3
+
+- Welcome screen: "I want a free local model" and "I have an API key"
+  led to the exact same form, just with a different provider
+  preselected - merged into one card that opens a new choice screen
+  first.
+
 ## 2.5.2
 
 - Fixed the onboarding wizard rendering washed-out and barely legible
