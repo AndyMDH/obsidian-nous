@@ -3235,7 +3235,7 @@ class VoiceCaptureSetupModal extends Modal {
 
 	onOpen() {
 		this.setTitle("Set up voice notes");
-		this.contentEl.createEl("p", { cls: "nous-welcome-question", text: "Voice notes need speech-to-text. Pick one:" });
+		this.contentEl.createEl("p", { cls: "nous-wizard-body", text: "Voice notes need speech-to-text. Pick one:" });
 
 		if (Platform.isMacOS) {
 			new Setting(this.contentEl)
@@ -3324,6 +3324,14 @@ const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 
 
 class OnboardingModal extends Modal {
 	private lastCaptureStatus: CapturePrerequisiteStatus | null = null;
+	// The chevron+dots row (docs/NOUS-REDESIGN.md §3, step 1) sits above
+	// this.titleEl, not inside contentEl - Obsidian renders titleEl as a
+	// fixed sibling before contentEl regardless of when setTitle() is
+	// called, so it has to be inserted there directly via the public
+	// titleEl reference. Tracked here so clear() can remove the previous
+	// screen's row before the next screen decides whether to draw its own
+	// (Welcome draws none at all, per spec).
+	private topRowEl: HTMLElement | null = null;
 
 	// "tour" reopens straight to the 60-second walkthrough, skipping setup -
 	// lets a user who is already connected revisit it later without redoing
@@ -3340,13 +3348,44 @@ class OnboardingModal extends Modal {
 
 	private clear() {
 		this.contentEl.empty();
+		this.topRowEl?.remove();
+		this.topRowEl = null;
 	}
 
-	private renderDots(step: number, total = 4) {
-		const dots = this.contentEl.createDiv({ cls: "nous-tour-dots" });
-		for (let i = 0; i < total; i++) {
-			dots.createSpan({ cls: i === step ? "nous-tour-dot is-active" : "nous-tour-dot" });
+	// Every screen but Welcome gets this: a back chevron (only when a
+	// previous step exists) and step dots on the left. The close "x" is
+	// Obsidian's own modalCloseButtonEl, already at top-right - no need to
+	// hand-roll one just to match the spec's "✕ right" half of the row.
+	private renderTopRow(step: number, total: number, onBack?: () => void) {
+		const row = createDiv({ cls: "nous-wizard-toprow" });
+		if (onBack) {
+			const back = row.createDiv({ cls: "nous-wizard-back" });
+			back.setAttribute("role", "button");
+			back.setAttribute("tabindex", "0");
+			back.setAttribute("aria-label", "Back");
+			setIcon(back, "chevron-left");
+			back.addEventListener("click", onBack);
+			back.addEventListener("keydown", (event) => {
+				if (event.key === "Enter" || event.key === " ") {
+					event.preventDefault();
+					onBack();
+				}
+			});
 		}
+		const dots = row.createDiv({ cls: "nous-wizard-dots" });
+		for (let i = 0; i < total; i++) {
+			dots.createSpan({ cls: i === step ? "nous-wizard-dot is-active" : "nous-wizard-dot" });
+		}
+		this.titleEl.insertAdjacentElement("beforebegin", row);
+		this.topRowEl = row;
+	}
+
+	// Which of the three screen shapes (§3, step 3) this render pass is -
+	// only affects title alignment and a couple of layout tweaks via CSS.
+	private setScreenMode(mode: "hero" | "form" | "list") {
+		this.modalEl.toggleClass("is-hero", mode === "hero");
+		this.modalEl.toggleClass("is-form", mode === "form");
+		this.modalEl.toggleClass("is-list", mode === "list");
 	}
 
 	private renderLogo() {
@@ -3355,23 +3394,79 @@ class OnboardingModal extends Modal {
 		holder.appendChild(document.importNode(doc.documentElement, true));
 	}
 
+	// The hero-tile version of the mark: a bordered white 56px tile holding
+	// an outline Lucide icon in accent color (§3, step 2). Used on every
+	// hero screen except Welcome/Done, which use the logo badge instead.
+	private renderHeroIcon(icon: string) {
+		const tile = this.contentEl.createDiv({ cls: "nous-hero-tile" });
+		setIcon(tile, icon);
+	}
+
+	private renderBody(text: string, opts: { center?: boolean } = {}) {
+		this.contentEl.createEl("p", { cls: opts.center ? "nous-wizard-body is-center" : "nous-wizard-body", text });
+	}
+
+	// The one full-width moss primary button (§3, step 5). Returns the
+	// button so callers that need to relabel/disable it while async work is
+	// in flight (the capture-prerequisites check) can hold onto it.
+	private renderPrimary(label: string, onClick: () => void | Promise<void>): ButtonComponent {
+		let ref!: ButtonComponent;
+		new Setting(this.contentEl).setClass("nous-wizard-primary").addButton((b) => {
+			ref = b;
+			b.setButtonText(label)
+				.setCta()
+				.onClick(() => void onClick());
+		});
+		return ref;
+	}
+
+	// The one quiet centered text link below the primary button (§3, step
+	// 5) - never a button, never paired with anything else on its row.
+	private renderSkip(label: string, onClick: () => void | Promise<void>) {
+		const link = this.contentEl.createDiv({ cls: "nous-wizard-skip" });
+		link.setAttribute("role", "button");
+		link.setAttribute("tabindex", "0");
+		link.setText(label);
+		const go = () => void onClick();
+		link.addEventListener("click", go);
+		link.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				go();
+			}
+		});
+	}
+
+	// Raw error text never sits inline in a screen's body (§3 "Error" spec)
+	// - it always lands in this centered mono well instead.
+	private renderErrorWell(message: string) {
+		this.contentEl.createDiv({ cls: "nous-well", text: message });
+	}
+
 	private renderWelcome() {
 		this.clear();
+		this.setScreenMode("hero");
 		this.setTitle("Welcome to Nous");
-		this.renderDots(0);
+		// No dots/back chevron on Welcome - it's the first screen (§3
+		// Welcome spec: "✕ only (no dots)").
 		this.renderLogo();
+		this.renderBody("Your vault, thinking with you. Pick a brain to start.", { center: true });
 
 		const cards = this.contentEl.createDiv({ cls: "nous-mode-cards" });
 		const addCard = (options: {
 			title: string;
-			desc: string;
+			sub: string;
+			filled?: boolean;
 			onChoose: () => void | Promise<void>;
 		}) => {
-			const card = cards.createDiv({ cls: "nous-mode-card" });
+			const card = cards.createDiv({ cls: options.filled ? "nous-mode-card is-filled" : "nous-mode-card" });
 			card.setAttribute("role", "button");
 			card.setAttribute("tabindex", "0");
-			card.createDiv({ cls: "nous-mode-card-title", text: options.title });
-			card.createDiv({ cls: "nous-mode-card-desc", text: options.desc });
+			const text = card.createDiv({ cls: "nous-mode-card-text" });
+			text.createDiv({ cls: "nous-mode-card-title", text: options.title });
+			text.createDiv({ cls: "nous-mode-card-sub", text: options.sub });
+			const arrow = card.createDiv({ cls: "nous-mode-card-arrow" });
+			setIcon(arrow, "chevron-right");
 			const choose = () => void options.onChoose();
 			card.addEventListener("click", choose);
 			card.addEventListener("keydown", (event) => {
@@ -3384,7 +3479,8 @@ class OnboardingModal extends Modal {
 
 		addCard({
 			title: "I have a Claude subscription",
-			desc: "No extra billing. Desktop only.",
+			sub: "No extra billing · desktop only",
+			filled: true,
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "cli";
 				await this.plugin.saveSettings();
@@ -3393,7 +3489,7 @@ class OnboardingModal extends Modal {
 		});
 		addCard({
 			title: "I want a free local model",
-			desc: "Free, private, ~2 min setup.",
+			sub: "Free and private · 2-min setup",
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "api";
 				this.plugin.settings.apiProvider = "local";
@@ -3403,7 +3499,10 @@ class OnboardingModal extends Modal {
 		});
 		addCard({
 			title: "I have an API key",
-			desc: "Anthropic, OpenAI, Gemini, Z.ai. Works on mobile.",
+			// Z.ai/GLM stays a real option in the provider dropdown on the
+			// next screen - this line is just the marketing-copy summary,
+			// which the redesign spec trims to the three best-known names.
+			sub: "Anthropic, OpenAI, Gemini, etc.",
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "api";
 				await this.plugin.saveSettings();
@@ -3411,31 +3510,24 @@ class OnboardingModal extends Modal {
 			},
 		});
 
-		new Setting(this.contentEl)
-			.setName("Not now")
-			.setDesc("Rerun anytime from the command palette.")
-			.addButton((b) =>
-				b.setButtonText("Skip").onClick(async () => {
-					this.plugin.settings.onboarded = true;
-					await this.plugin.saveSettings();
-					// Every other exit from this wizard seeds the vault via
-					// finish() - a full skip must too, or the vault is left
-					// without 00-Inbox/10-Notes/20-Tags/30-Wikis until the
-					// user's first capture happens to trigger folder creation.
-					await this.plugin.ensureCoreFolders();
-					this.close();
-				})
-			);
+		this.renderSkip("Not now", async () => {
+			this.plugin.settings.onboarded = true;
+			await this.plugin.saveSettings();
+			// Every other exit from this wizard seeds the vault via
+			// finish() - a full skip must too, or the vault is left
+			// without 00-Inbox/10-Notes/20-Tags/30-Wikis until the
+			// user's first capture happens to trigger folder creation.
+			await this.plugin.ensureCoreFolders();
+			this.close();
+		});
 	}
 
 	private renderApiSetup() {
 		this.clear();
+		this.setScreenMode("form");
 		this.setTitle("Connect a provider");
-		this.renderDots(0);
-		this.contentEl.createEl("p", {
-			cls: "nous-welcome-question",
-			text: "You can change this anytime from Nous settings.",
-		});
+		this.renderTopRow(0, 4, () => this.renderWelcome());
+		this.renderBody("Changeable anytime in settings.");
 
 		const provider = () => this.plugin.settings.apiProvider;
 
@@ -3458,12 +3550,13 @@ class OnboardingModal extends Modal {
 			new Setting(this.contentEl)
 				.setName("Base URL")
 				.setDesc("Your OpenAI-compatible endpoint.")
-				.addText((text) =>
+				.addText((text) => {
+					text.inputEl.addClass("nous-mono-input");
 					text.setValue(this.plugin.settings.localBaseUrl).onChange(async (value) => {
 						this.plugin.settings.localBaseUrl = value.trim() || DEFAULT_SETTINGS.localBaseUrl;
 						await this.plugin.saveSettings();
-					})
-				);
+					});
+				});
 		} else if (provider() === "glm") {
 			new Setting(this.contentEl)
 				.setName("GLM API key")
@@ -3479,12 +3572,13 @@ class OnboardingModal extends Modal {
 			new Setting(this.contentEl)
 				.setName("Base URL")
 				.setDesc('Z.ai OpenAI-compatible endpoint. Use "https://api.z.ai/api/coding/paas/v4" for the Coding Plan.')
-				.addText((text) =>
+				.addText((text) => {
+					text.inputEl.addClass("nous-mono-input");
 					text.setValue(this.plugin.settings.glmBaseUrl).onChange(async (value) => {
 						this.plugin.settings.glmBaseUrl = value.trim() || DEFAULT_SETTINGS.glmBaseUrl;
 						await this.plugin.saveSettings();
-					})
-				);
+					});
+				});
 		} else {
 			new Setting(this.contentEl)
 				.setName("API key")
@@ -3499,88 +3593,90 @@ class OnboardingModal extends Modal {
 				});
 		}
 
-		new Setting(this.contentEl)
-			.setClass("nous-wizard-nav")
-			.addButton((b) => b.setButtonText("Back").onClick(() => this.renderWelcome()))
-			.addButton((b) => b.setButtonText("Continue").setCta().onClick(() => this.renderTest()));
+		this.renderPrimary("Continue", () => this.renderTest());
 	}
 
 	private renderTest() {
 		this.clear();
-		this.setTitle("Checking the connection…");
-		this.renderDots(1);
+		this.setScreenMode("hero");
 		const isCli = this.plugin.settings.executionMode === "cli";
-		this.contentEl.createEl("p", {
-			cls: "nous-welcome-question",
-			text: isCli ? "Making sure Claude Code is reachable." : "One tiny API call to confirm your key works.",
-		});
-		const status = this.contentEl.createEl("p", { text: "" });
-		const helpEl = this.contentEl.createDiv();
+		this.renderTopRow(1, 4, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
+		this.setTitle("Checking the connection…");
+		this.renderHeroIcon("plug");
+		this.renderBody(
+			isCli ? "Making sure Claude Code is reachable." : "One tiny API call to confirm your key works.",
+			{ center: true }
+		);
 
-		// A failed CLI check is a dead end for someone who has never installed
-		// Claude Code - hand them the install command instead of an error.
-		const showCliInstallHelp = () => {
-			helpEl.empty();
-			const installCommand = "curl -fsSL https://claude.ai/install.sh | bash";
-			new Setting(helpEl)
-				.setName("Install Claude Code")
-				.setDesc(`Run this in Terminal, then run "claude" once to log in: ${installCommand}`)
-				.addButton((b) =>
-					b.setButtonText("Copy command").onClick(async () => {
-						await navigator.clipboard.writeText(installCommand);
-						new Notice("Nous: command copied.");
-					})
-				);
-			const links = helpEl.createDiv({ cls: "nous-tour-links" });
-			links.createEl("a", { text: "Claude Code install guide", href: "https://docs.claude.com/en/docs/claude-code/setup" });
-		};
-
-		let retryButton: ButtonComponent | null = null;
 		const runCheck = async () => {
-			status.setText("Checking…");
-			helpEl.empty();
-			retryButton?.setDisabled(true);
 			try {
 				await this.plugin.testConnection();
-				status.setText("✓ Connected.");
-				window.setTimeout(() => this.renderCapturePrerequisites(), 400);
+				this.renderCapturePrerequisites();
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				this.setTitle("Connection check failed");
-				status.setText(`✗ ${msg}`);
-				if (isCli) showCliInstallHelp();
-				retryButton?.setDisabled(false);
+				this.renderConnectionError(isCli, msg);
 			}
 		};
-
-		new Setting(this.contentEl)
-			.setClass("nous-wizard-nav")
-			.addButton((b) => b.setButtonText("Back").onClick(() => (isCli ? this.renderWelcome() : this.renderApiSetup())))
-			.addButton((b) => {
-				retryButton = b;
-				b.setButtonText("Retry").setCta().setDisabled(true).onClick(() => void runCheck());
-			})
-			.addButton((b) => b.setButtonText("Skip").onClick(() => this.renderCapturePrerequisites()));
-
 		void runCheck();
+	}
+
+	// The wizard's one "Error" screen (§3 "Error" spec): hero alert-circle
+	// icon (accent, not red), a truthful one-line summary, the raw error in
+	// a mono well - never inline in the body - Retry as the primary action,
+	// Skip underneath.
+	private renderConnectionError(isCli: boolean, message: string) {
+		this.clear();
+		this.setScreenMode("hero");
+		this.renderTopRow(1, 4, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
+		this.setTitle("Couldn't connect");
+		this.renderHeroIcon("alert-circle");
+		const line = isCli
+			? "Claude Code didn't respond. Is it installed and logged in?"
+			: this.plugin.settings.apiProvider === "local"
+				? "Nothing answered. Is Ollama running?"
+				: "Nothing answered. Check your key and connection.";
+		this.renderBody(line, { center: true });
+		this.renderErrorWell(message);
+		// A failed CLI check is a dead end for someone who has never
+		// installed Claude Code - the one allowed extra link (§3, step 4)
+		// points straight at the install guide instead of a raw error.
+		if (isCli) {
+			const links = this.contentEl.createDiv({ cls: "nous-wizard-link-row" });
+			links.createEl("a", {
+				text: "Claude Code install guide",
+				href: "https://docs.claude.com/en/docs/claude-code/setup",
+			});
+		}
+		this.renderPrimary("Retry", () => this.renderTest());
+		this.renderSkip("Skip", () => this.renderCapturePrerequisites());
 	}
 
 	private renderCapturePrerequisites() {
 		this.clear();
+		this.setScreenMode("list");
+		this.renderTopRow(2, 4, () => this.renderTest());
 		this.setTitle("What works now");
-		this.renderDots(2);
 		const statusEl = this.contentEl.createDiv({ cls: "nous-capture-checklist" });
-		statusEl.createEl("p", { text: "Checking capture setup..." });
-		let continueButton: ButtonComponent | null = null;
+		statusEl.createEl("p", { cls: "nous-wizard-body", text: "Checking capture setup..." });
+		const continueButton = this.renderPrimary("Checking...", () => this.renderFinish());
+		continueButton.setDisabled(true);
 		void this.plugin
 			.getCapturePrerequisiteStatus()
 			.then((status) => {
 				this.lastCaptureStatus = status;
 				statusEl.empty();
-				for (const item of capturePrerequisiteItems(status)) {
-					const setting = new Setting(statusEl).setName(item.name).setDesc(item.desc);
-					if (item.warning) setting.setClass("mod-warning");
-				}
+				// Numbered hairline rows (§3 "What works now" spec) - 01/02/03
+				// plus the item name and its one-line status.
+				const list = statusEl.createDiv({ cls: "nous-numbered-list" });
+				capturePrerequisiteItems(status).forEach((item, index) => {
+					const row = list.createDiv({
+						cls: item.warning ? "nous-numbered-row is-warning" : "nous-numbered-row",
+					});
+					row.createDiv({ cls: "nous-numbered-index", text: String(index + 1).padStart(2, "0") });
+					const text = row.createDiv({ cls: "nous-numbered-text" });
+					text.createDiv({ cls: "nous-numbered-name", text: item.name });
+					text.createDiv({ cls: "nous-numbered-desc", text: item.desc });
+				});
 				if (Platform.isMacOS) {
 					const recorderStatusSetting = new Setting(statusEl)
 						.setName("Meeting recorder")
@@ -3651,34 +3747,28 @@ class OnboardingModal extends Modal {
 							})
 						);
 				}
-				continueButton?.setButtonText(capturePrerequisitesContinueText(status)).setDisabled(false);
+				continueButton.setButtonText(capturePrerequisitesContinueText(status)).setDisabled(false);
 			})
 			.catch((e) => {
 				const msg = e instanceof Error ? e.message : String(e);
-				statusEl.setText(`Could not check capture setup: ${msg}`);
-				continueButton?.setButtonText("Continue anyway").setDisabled(false);
-			});
-
-		new Setting(this.contentEl)
-			.setClass("nous-wizard-nav")
-			.addButton((b) => b.setButtonText("Back").onClick(() => this.renderTest()))
-			.addButton((b) => {
-				continueButton = b;
-				b.setButtonText("Checking...").setCta().setDisabled(true).onClick(() => this.renderFinish());
+				statusEl.empty();
+				statusEl.createEl("p", { cls: "nous-wizard-body", text: "Could not check capture setup." });
+				statusEl.createDiv({ cls: "nous-well", text: msg });
+				continueButton.setButtonText("Continue anyway").setDisabled(false);
 			});
 	}
 
 	private renderFinish() {
 		this.clear();
+		this.setScreenMode("hero");
+		this.renderTopRow(3, 4, () => this.renderCapturePrerequisites());
 		const status = this.lastCaptureStatus;
 		this.setTitle(status ? onboardingFinishTitle(status) : "Text capture is ready");
-		this.renderDots(3);
-		const mark = this.contentEl.createDiv({ cls: "nous-tour-icon" });
-		setIcon(mark, "check-circle-2");
-		this.contentEl.createEl("p", {
-			cls: "nous-welcome-question",
-			text: `Drop anything into "${this.plugin.settings.inboxFolder}" - it comes back tagged in "${this.plugin.settings.meetingsFolder}".`,
-		});
+		this.renderLogo();
+		const body = this.contentEl.createEl("p", { cls: "nous-wizard-body is-center" });
+		body.appendText("Drop anything in ");
+		body.createEl("code", { text: this.plugin.settings.inboxFolder });
+		body.appendText(". It comes back tagged.");
 		// Only warnings survive to this screen - tips live in the tour and docs.
 		if (status) {
 			for (const item of onboardingFinishNextActions(status).filter((item) => item.warning)) {
@@ -3686,74 +3776,42 @@ class OnboardingModal extends Modal {
 			}
 		}
 
-		// The theme snippet is one click away in Nous settings (below) -
-		// keeping it off this screen too keeps "you're done" reading as
-		// exactly that, not a second decision to make before you're free to go.
-		new Setting(this.contentEl)
-			.setClass("nous-wizard-nav")
-			.addButton((b) =>
-				b.setButtonText("Finish").onClick(async () => {
-					await this.finish();
-				})
-			)
-			.addButton((b) =>
-				b.setButtonText("Open Nous settings").onClick(() => {
-					this.close();
-					this.plugin.openNousSettings();
-				})
-			)
-			.addButton((b) =>
-				b.setButtonText("Take the 60-second tour").setCta().onClick(() => {
-					this.renderTour(0);
-				})
-			);
+		// The theme snippet is one click away in Nous settings, and so is
+		// plain Finish's destination - keeping both off this screen keeps
+		// "you're done" reading as exactly that, one decision (tour or not),
+		// not several (§3 Done spec: primary "Take the tour", quiet "Finish").
+		this.renderPrimary("Take the tour", () => this.renderTour(0));
+		this.renderSkip("Finish", () => this.finish());
 	}
 
-	// A click-through tour of the daily loop: one tangerine icon, one grey
-	// line, one real action per step.
+	// A click-through tour of the daily loop: one hero icon, one line, one
+	// primary button per step - same grammar as every other wizard screen
+	// (§3 "Tour slides" spec). Earlier revisions surfaced a per-step
+	// shortcut button (record now, drop a sample note, open settings)
+	// alongside Back/Next/Skip; the spec's tour screens only ever call for
+	// hero+title+line+primary, so those shortcuts are gone - each action is
+	// still reachable from its own command/ribbon icon, just not duplicated
+	// here.
 	private renderTour(step: number) {
 		this.clear();
+		this.setScreenMode("hero");
 		const steps = this.tourSteps();
 		const current = steps[Math.max(0, Math.min(step, steps.length - 1))];
+		this.renderTopRow(step, steps.length, step > 0 ? () => this.renderTour(step - 1) : undefined);
 		this.setTitle(current.title);
-
-		const dots = this.contentEl.createDiv({ cls: "nous-tour-dots" });
-		steps.forEach((_, index) => {
-			dots.createSpan({ cls: index === step ? "nous-tour-dot is-active" : "nous-tour-dot" });
-		});
-
-		const body = this.contentEl.createDiv({ cls: "nous-tour-body" });
-		const iconEl = body.createDiv({ cls: "nous-tour-icon" });
-		setIcon(iconEl, current.icon);
-		body.createEl("p", { cls: "nous-tour-text", text: current.text });
+		this.renderHeroIcon(current.icon);
+		this.renderBody(current.text, { center: true });
 		if (current.link) {
-			const links = body.createDiv({ cls: "nous-tour-links" });
+			const links = this.contentEl.createDiv({ cls: "nous-wizard-link-row" });
 			links.createEl("a", { text: current.link.text, href: current.link.href });
 		}
 
-		// One row: Back, this step's highlighted action (if any), Next/Finish,
-		// Skip - in that DOM order. Merged into a single nav Setting rather
-		// than a separate row per action, per feedback that stacked/separate
-		// button groups felt like too many.
-		const nav = new Setting(this.contentEl).setClass("nous-wizard-nav");
-		if (step > 0) {
-			nav.addButton((b) => b.setButtonText("Back").onClick(() => this.renderTour(step - 1)));
-		}
-		current.action?.(nav);
-		if (step < steps.length - 1) {
-			nav.addButton((b) => b.setButtonText("Next").setCta().onClick(() => this.renderTour(step + 1)));
-		} else {
-			nav.addButton((b) =>
-				b.setButtonText("Finish").setCta().onClick(async () => {
-					await this.finish();
-				})
-			);
-		}
-		nav.addButton((b) =>
-			b.setButtonText("Skip").onClick(async () => {
-				await this.finish();
-			})
-		);
+		const isLast = step === steps.length - 1;
+		this.renderPrimary(isLast ? "Finish" : "Next", () => {
+			if (isLast) return this.finish();
+			this.renderTour(step + 1);
+		});
+		this.renderSkip("Skip", () => this.finish());
 	}
 
 	private tourSteps(): {
@@ -3761,7 +3819,6 @@ class OnboardingModal extends Modal {
 		icon: string;
 		text: string;
 		link?: { text: string; href: string };
-		action?: (nav: Setting) => void;
 	}[] {
 		const steps: ReturnType<OnboardingModal["tourSteps"]> = [];
 
@@ -3769,32 +3826,19 @@ class OnboardingModal extends Modal {
 			title: "One loop",
 			icon: "refresh-cw",
 			text: `Capture anything. It comes back tagged and linked in ${this.plugin.settings.meetingsFolder}.`,
-			action: (nav) => {
-				nav.addButton((b) =>
-					b.setButtonText("Drop a sample note").setCta().onClick(async () => {
-						b.setDisabled(true);
-						await this.plugin.createSampleNote();
-						void this.plugin.processInbox();
-					})
-				);
-			},
 		});
 
 		steps.push({
 			title: "Voice notes",
 			icon: "mic",
-			text: "For your own voice - ideas, memos, thoughts. Click, talk, click again. Transcribed on this machine.",
+			// Doesn't say "transcribed on this machine" - that's only true
+			// with local whisper.cpp set up; the cloud (Gemini/OpenAI key)
+			// path is just as real a default, so the tour stays silent on
+			// which one runs (§3 Tour slides spec).
+			text: "Click, talk, click again. It becomes a note.",
 			link: {
 				text: "Dictate from anywhere with Handy (optional)",
 				href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md",
-			},
-			action: (nav) => {
-				nav.addButton((b) =>
-					b.setButtonText("Record now").setCta().onClick(() => {
-						this.close();
-						void this.plugin.toggleVoiceCapture();
-					})
-				);
 			},
 		});
 
@@ -3817,14 +3861,6 @@ class OnboardingModal extends Modal {
 			link: {
 				text: "Read the docs",
 				href: "https://github.com/AndyMDH/obsidian-nous/tree/main/docs",
-			},
-			action: (nav) => {
-				nav.addButton((b) =>
-					b.setButtonText("Open Nous settings").onClick(() => {
-						this.close();
-						this.plugin.openNousSettings();
-					})
-				);
 			},
 		});
 

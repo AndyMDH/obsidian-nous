@@ -99,35 +99,384 @@
 	color: #eb6c36;
 }
 
-/* Setup wizard: execution-mode choice cards */
+/* ------------------------------------------------------------------ */
+/* Onboarding wizard grammar (docs/NOUS-REDESIGN.md §3). Every screen:
+   chevron+dots row above the title, one hero (icon tile or logo badge),
+   one line of body copy, one full-width moss primary button, one quiet
+   centered skip link. Modal shape/shadow from §1's shape & spacing table. */
+.nous-modal {
+	width: 380px;
+	max-width: 90vw;
+	background: var(--nous-paper);
+	border-radius: var(--nous-radius-modal);
+	box-shadow: 0 24px 60px rgba(30, 28, 24, 0.16);
+	font-family: var(--nous-font-ui);
+}
+.theme-dark .nous-modal {
+	box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+}
+.nous-modal .modal-content {
+	padding: 28px 26px 26px;
+	color: var(--nous-text);
+}
+.nous-modal .modal-title {
+	margin: 4px 0 4px;
+	font-size: 21px;
+	font-weight: 600;
+	text-align: left;
+	color: var(--nous-text);
+}
+.nous-modal.is-hero .modal-title {
+	text-align: center;
+}
+
+/* Top row: back chevron (only when a previous step exists) + step dots on
+   the left. Obsidian's own close "x" already sits top-right - this row is
+   inserted as a sibling immediately before titleEl, so it reads as one row
+   with it. */
+.nous-wizard-toprow {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 2px;
+	min-height: 20px;
+}
+.nous-wizard-back {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	margin-left: -2px;
+	color: var(--nous-muted);
+	cursor: pointer;
+}
+.nous-wizard-back:hover,
+.nous-wizard-back:focus-visible {
+	color: var(--nous-text);
+	outline: none;
+}
+.nous-wizard-back svg {
+	width: 18px;
+	height: 18px;
+}
+.nous-wizard-dots {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+.nous-wizard-dot {
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background: var(--nous-faint);
+}
+.nous-wizard-dot.is-active {
+	width: 16px;
+	height: 5px;
+	border-radius: var(--nous-radius-pill);
+	background: var(--nous-accent);
+}
+
+/* Hero: a bordered white 56px tile holding an outline icon in accent color
+   (tour/status screens), or the logo badge (Welcome/Done). */
+.nous-hero-tile {
+	width: 56px;
+	height: 56px;
+	margin: 4px auto 16px;
+	border-radius: 18px;
+	background: var(--nous-surface);
+	border: 1px solid var(--nous-border);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.nous-hero-tile svg {
+	width: 26px;
+	height: 26px;
+	stroke-width: 1.8;
+	color: var(--nous-accent);
+}
+.nous-wizard-logo {
+	display: flex;
+	justify-content: center;
+	margin: 4px 0 16px;
+}
+.nous-wizard-logo svg {
+	width: 56px;
+	height: 56px;
+}
+
+/* Body: one line, muted, centered on hero screens, left on form/list
+   screens. */
+.nous-wizard-body {
+	color: var(--nous-muted);
+	font-size: 14px;
+	line-height: 1.5;
+	margin: 0 0 16px;
+	max-width: 240px;
+}
+.nous-wizard-body.is-center {
+	text-align: center;
+	margin-left: auto;
+	margin-right: auto;
+}
+.nous-modal.is-form .nous-wizard-body,
+.nous-modal.is-list .nous-wizard-body {
+	max-width: none;
+}
+.nous-wizard-body code {
+	font-family: var(--nous-font-mono);
+	font-size: 0.9em;
+	background: var(--nous-well);
+	color: var(--nous-text);
+	padding: 1px 5px;
+	border-radius: 4px;
+}
+
+/* Optional single underlined link below the body (install guides, docs). */
+.nous-wizard-link-row {
+	text-align: center;
+	margin: -8px 0 16px;
+}
+.nous-wizard-link-row a {
+	font-size: 12px;
+	color: var(--nous-accent);
+	text-decoration: underline;
+	text-decoration-color: var(--nous-accent-soft);
+}
+
+/* The raw-error mono well (§3 "Error" spec) - never raw text inline. */
+.nous-well {
+	background: var(--nous-well);
+	border-radius: var(--nous-radius-well);
+	padding: 10px 14px;
+	margin: 4px 0 16px;
+	font-family: var(--nous-font-mono);
+	font-size: 12px;
+	line-height: 1.5;
+	color: var(--nous-muted);
+	text-align: center;
+	overflow-wrap: anywhere;
+}
+
+/* The one full-width moss primary button. */
+.nous-wizard-primary .setting-item {
+	border: none;
+	padding: 4px 0 0;
+}
+.nous-wizard-primary .setting-item-info {
+	display: none;
+}
+.nous-wizard-primary .setting-item-control {
+	width: 100%;
+}
+.nous-modal button.mod-cta {
+	background: var(--nous-accent);
+	color: var(--nous-on-accent);
+}
+.nous-modal button.mod-cta:hover {
+	background: var(--nous-accent);
+	filter: brightness(1.08);
+}
+.nous-wizard-primary button.mod-cta {
+	width: 100%;
+	justify-content: center;
+	border-radius: var(--nous-radius-pill);
+	padding: 12px;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+/* The one quiet centered skip link below the primary button. */
+.nous-wizard-skip {
+	text-align: center;
+	margin-top: 12px;
+	font-size: 13px;
+	color: var(--nous-faint);
+	cursor: pointer;
+}
+.nous-wizard-skip:hover,
+.nous-wizard-skip:focus-visible {
+	color: var(--nous-muted);
+	outline: none;
+}
+
+/* Form screens (Connect a provider): label above input rather than
+   Setting's default name-left/control-right row - the grammar Setting's
+   layout can't produce on its own. */
+.nous-modal.is-form .setting-item {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 6px;
+	padding: 12px 0;
+	border: none;
+}
+.nous-modal.is-form .setting-item-info {
+	margin-right: 0;
+}
+.nous-modal.is-form .setting-item-name {
+	font-size: 13px;
+	font-weight: 600;
+}
+.nous-modal.is-form .setting-item-description {
+	font-size: 12px;
+	color: var(--nous-muted);
+}
+.nous-modal.is-form .setting-item-control {
+	width: 100%;
+	justify-content: stretch;
+}
+.nous-modal input[type="text"],
+.nous-modal input[type="password"],
+.nous-modal select {
+	background: var(--nous-surface);
+	border: 1px solid var(--nous-border);
+	border-radius: var(--nous-radius-input);
+	color: var(--nous-text);
+}
+.nous-modal.is-form input[type="text"],
+.nous-modal.is-form input[type="password"],
+.nous-modal.is-form select {
+	width: 100%;
+	padding: 8px 10px;
+}
+.nous-mono-input {
+	font-family: var(--nous-font-mono);
+	font-size: 12px;
+}
+
+/* List screens (What works now): numbered hairline rows. */
+.nous-modal.is-list .modal-title,
+.nous-modal.is-list .nous-wizard-body {
+	text-align: left;
+}
+.nous-numbered-list {
+	display: flex;
+	flex-direction: column;
+	margin: 4px 0 16px;
+}
+.nous-numbered-row {
+	display: flex;
+	align-items: baseline;
+	gap: 12px;
+	padding: 12px 0;
+	border-top: 1px solid var(--nous-hairline-2);
+}
+.nous-numbered-row:first-child {
+	border-top: none;
+}
+.nous-numbered-index {
+	flex-shrink: 0;
+	font-family: var(--nous-font-mono);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+	color: var(--nous-faint);
+}
+.nous-numbered-text {
+	flex: 1;
+	min-width: 0;
+}
+.nous-numbered-name {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--nous-text);
+}
+.nous-numbered-desc {
+	font-size: 12px;
+	color: var(--nous-muted);
+	margin-top: 2px;
+}
+.nous-numbered-row.is-warning .nous-numbered-name {
+	color: var(--nous-accent);
+}
+/* Extra actionable rows below the checklist (recorder status, model
+   download, recorder install) keep Setting's normal row layout, just
+   quieter than the wizard's default 16px padding. */
+.nous-capture-checklist .setting-item {
+	padding: 10px 0;
+	border-top: 1px solid var(--nous-hairline-2);
+	border-bottom: none;
+}
+
+/* Every other setting row in the wizard (mode cards' skip row spacing,
+   warning rows on Done) gets a little more room and no divider - spacing
+   alone separates rows. */
+.nous-modal .setting-item {
+	padding: 14px 0;
+	border: none;
+	box-shadow: none;
+}
+/* No red anywhere (spec §1): warnings on the Done screen read in normal
+   text weight/color, not Obsidian's default error-red mod-warning. */
+.nous-modal .setting-item.mod-warning,
+.nous-modal .setting-item.mod-warning .setting-item-name {
+	color: var(--nous-text);
+}
+.nous-modal .setting-item.mod-warning .setting-item-description {
+	color: var(--nous-muted);
+}
+
+/* Welcome screen: three provider rows, first pre-lit as a filled moss
+   card. */
 .nous-mode-cards {
-	display: grid;
+	display: flex;
+	flex-direction: column;
 	gap: 10px;
-	margin: 16px 0 24px;
+	margin: 4px 0 20px;
 }
 .nous-mode-card {
-	margin: 0;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 14px;
-	padding: 16px 18px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 16px;
+	border: 1px solid var(--nous-border);
+	border-radius: var(--nous-radius-card);
+	background: var(--nous-surface);
 	cursor: pointer;
-	background: var(--background-secondary);
 	transition: border-color 0.12s ease;
 }
 .nous-mode-card:hover,
 .nous-mode-card:focus-visible {
-	border-color: #eb6c36;
+	border-color: var(--nous-accent);
+	outline: none;
+}
+.nous-mode-card-text {
+	flex: 1;
+	min-width: 0;
 }
 .nous-mode-card-title {
 	font-weight: 600;
-	margin-bottom: 2px;
+	font-size: 14px;
+	color: var(--nous-text);
 }
-.nous-mode-card-desc {
-	color: var(--text-muted);
-	font-size: var(--font-ui-small);
+.nous-mode-card-sub {
+	color: var(--nous-muted);
+	font-size: 12px;
+	margin-top: 2px;
 }
-.nous-mode-cards + .setting-item {
-	margin-top: 6px;
+.nous-mode-card-arrow {
+	flex-shrink: 0;
+	display: flex;
+	color: var(--nous-faint);
+}
+.nous-mode-card-arrow svg {
+	width: 16px;
+	height: 16px;
+}
+.nous-mode-card.is-filled {
+	background: var(--nous-accent);
+	border-color: var(--nous-accent);
+}
+.nous-mode-card.is-filled .nous-mode-card-title {
+	color: var(--nous-on-accent);
+}
+.nous-mode-card.is-filled .nous-mode-card-sub {
+	color: var(--nous-accent-soft);
+}
+.nous-mode-card.is-filled .nous-mode-card-arrow {
+	color: var(--nous-accent-soft);
 }
 
 /* Settings tab header strip */
@@ -156,132 +505,6 @@
 	display: flex;
 	gap: 12px;
 	font-size: var(--font-ui-small);
-}
-
-/* ------------------------------------------------------------------ */
-/* Onboarding wizard: narrow, tall, quiet - a portrait card rather than a
-   wide banner. Every wizard screen shares this shape. */
-.nous-modal {
-	width: 340px;
-	max-width: 90vw;
-}
-.nous-modal .modal-content {
-	padding: 22px 26px 26px;
-}
-.nous-modal .modal-title {
-	margin-bottom: 12px;
-	text-align: center;
-}
-
-/* Brand CTAs inside Nous modals: tangerine, not the theme accent */
-.nous-modal button.mod-cta {
-	background-color: #eb6c36;
-	color: #ffffff;
-}
-.nous-modal button.mod-cta:hover {
-	background-color: #d95f2d;
-}
-
-/* Step dots - sit close under the title, and close above whatever follows
-   (icon or content), rather than floating in its own band of whitespace. */
-.nous-tour-dots {
-	display: flex;
-	justify-content: center;
-	gap: 6px;
-	margin: 0 0 10px;
-}
-.nous-tour-dot {
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
-	background: var(--background-modifier-border);
-}
-.nous-tour-dot.is-active {
-	background: #eb6c36;
-}
-
-/* Tour steps: one centered icon, one centered line, one action */
-.nous-tour-body {
-	min-height: 150px;
-	padding: 6px 0;
-	text-align: center;
-}
-.nous-tour-icon {
-	color: #eb6c36;
-	margin: 10px auto 16px;
-}
-.nous-tour-icon svg {
-	width: 52px;
-	height: 52px;
-}
-.nous-tour-text {
-	color: var(--text-muted);
-	margin: 0 auto 14px;
-	line-height: 1.5;
-}
-.nous-tour-links {
-	margin-bottom: 8px;
-}
-.nous-tour-links a {
-	font-size: var(--font-ui-small);
-}
-
-/* Wizard body copy - centered, matching the centered title above it. */
-.nous-welcome-question {
-	color: var(--text-muted);
-	margin: 6px 0 20px;
-	line-height: 1.5;
-	text-align: center;
-}
-
-/* Every setting row in the wizard gets a little more room to breathe, and
-   no divider lines - spacing alone separates rows. !important because the
-   base theme's row divider outranks a plain .nous-modal .setting-item
-   border rule on specificity/order. */
-.nous-modal .setting-item {
-	padding: 16px 0;
-	border: none !important;
-	box-shadow: none !important;
-}
-
-/* The capture-status checklist ("What works now") - short one-word status
-   per row, so it doesn't need the same generous padding as a button row. */
-.nous-capture-checklist .setting-item {
-	padding: 10px 0;
-}
-
-/* Pure navigation rows (Back/Continue, Finish/Settings/Tour, etc.) - no
-   name or description, just buttons. Every button in a row is equal width,
-   so a row always reads as aligned regardless of label length; a button
-   left alone on a wrapped line fills that line instead of floating at its
-   own content width. Order in the DOM is preserved; the CTA is still
-   picked out by color, not position. */
-.nous-wizard-nav {
-	border: none;
-	padding-top: 8px;
-}
-.nous-wizard-nav .setting-item-info {
-	display: none;
-}
-.nous-wizard-nav .setting-item-control {
-	justify-content: center;
-	flex-wrap: wrap;
-	gap: 8px;
-	width: 100%;
-}
-.nous-wizard-nav .setting-item-control button {
-	flex: 1 1 0;
-	min-width: 84px;
-	padding: 6px 10px;
-	font-size: var(--font-ui-small);
-	margin: 0;
-}
-
-/* Wizard brand moment */
-.nous-wizard-logo {
-	display: flex;
-	justify-content: center;
-	margin: 4px 0 16px;
 }
 
 /* The live note's frontmatter is machinery (recording flags, paths) - hide
