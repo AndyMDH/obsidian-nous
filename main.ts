@@ -3533,6 +3533,7 @@ class OnboardingModal extends Modal {
 			try {
 				await this.plugin.installWarmPaperTheme();
 				themeLink.setText("Warm Paper installed ✓");
+				nousNotice("Warm Paper installed and switched on.");
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
 				nousNotice(`Couldn't install Warm Paper - ${msg}`, 10000);
