@@ -74,6 +74,12 @@ Click the **🎙️ mic icon** in the left sidebar (or command palette →
 That's the whole thing — the recording drops into the inbox and comes back
 as a tagged, summarized note with the audio still playable inside.
 
+Obsidian's own built-in Audio Recorder (a separate core feature, not part
+of Nous) also adds a mic icon and looks similar. Recordings made with it
+stay as plain audio files — no transcription, no tags, no enrichment. If
+you don't need it separately, turn it off in **Settings → Core plugins →
+Audio recorder** so there's only one mic icon to click.
+
 Voice notes need speech-to-text before they can become notes. On macOS, Nous
 can use local `whisper.cpp` if `whisper-cli` and a model are installed. If
 not, add a Gemini or OpenAI API key; that key is used only for transcription

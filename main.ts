@@ -2656,8 +2656,8 @@ class NousSettingTab extends PluginSettingTab {
 				setting
 					.setDesc(
 						this.plugin.settings.executionMode === "cli"
-							? "Uses the Claude Code CLI and its login. No extra billing. Desktop only."
-							: "Calls a model API directly. Works on mobile. Billed separately."
+							? "No extra billing. Desktop only."
+							: "Works on mobile. Billed separately."
 					)
 					.addDropdown((dropdown) => {
 						dropdown
@@ -2690,7 +2690,7 @@ class NousSettingTab extends PluginSettingTab {
 			name: "Advanced settings",
 			render: (setting) => {
 				setting
-					.setDesc("CLI/recorder/whisper paths, folder names, and tuning thresholds - defaults work for almost everyone.")
+					.setDesc("Defaults work for almost everyone.")
 					.addToggle((toggle) =>
 						toggle.setValue(this.showAdvanced).onChange((value) => {
 							this.showAdvanced = value;
@@ -2879,8 +2879,8 @@ class NousSettingTab extends PluginSettingTab {
 				setting
 					.setDesc(
 						this.plugin.settings.executionMode === "cli"
-							? "Makes sure that Claude Code runs from Obsidian."
-							: "One tiny API call to confirm the key and model work."
+							? "Confirms Claude Code is reachable."
+							: "Confirms the key and model work."
 					)
 					.addButton((button) =>
 						button.setButtonText("Test").onClick(async () => {
@@ -2907,7 +2907,7 @@ class NousSettingTab extends PluginSettingTab {
 			name: "Auto-process on capture",
 			render: (setting) => {
 				setting
-					.setDesc("Enrich a new inbox note within a couple seconds of it being created, instead of only on manual runs.")
+					.setDesc("Enrich new notes automatically, within seconds.")
 					.addToggle((toggle) =>
 						toggle.setValue(this.plugin.settings.autoProcessOnCreate).onChange(async (value) => {
 							this.plugin.settings.autoProcessOnCreate = value;

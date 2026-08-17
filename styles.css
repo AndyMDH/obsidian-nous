@@ -746,15 +746,18 @@
 .nous-settings .checkbox-container.is-enabled {
 	background-color: var(--nous-accent);
 }
-/* Off-state track: --nous-border is too close in value to the card
-   background it sits on (both derive from the same neutral family now
-   that colors are theme-adaptive), making it hard to tell which side the
-   knob is resting on. --nous-muted is a visibly darker/lighter grey
-   regardless of theme, so the pill's outline - and therefore the knob's
-   position - stays legible. */
+/* Off-state track: a border alone wasn't enough contrast against the
+   card (still hard to tell on/off apart in practice). Switched to a
+   color-mix wash instead of any named surface/border token - those all
+   derive from the same light neutral family (theme-adaptive now), so
+   whatever the user's actual accent/background pairing is, a flat
+   token-vs-token comparison can end up close in value. A wash mixed
+   from --nous-text is guaranteed visibly darker than the card behind
+   it, in any theme, without depending on which exact tokens happen to
+   contrast today. */
 .nous-settings .checkbox-container:not(.is-enabled) {
-	background-color: var(--nous-surface-2);
-	border: 1.5px solid var(--nous-muted);
+	background-color: color-mix(in srgb, var(--nous-text) 22%, transparent);
+	border: 1px solid color-mix(in srgb, var(--nous-text) 35%, transparent);
 }
 
 /* Properties stay hidden in live notes across both view modes */
