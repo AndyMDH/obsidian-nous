@@ -3545,22 +3545,28 @@ class OnboardingModal extends Modal {
 			},
 		});
 
-		new Setting(this.contentEl)
-			.setName("Prefer a different look?")
-			.setDesc("\"Warm Paper\" - a companion theme built alongside Nous. Quiet surfaces, one moss accent.")
-			.addButton((b) =>
-				b.setButtonText("Install & switch").onClick(async () => {
-					b.setButtonText("Installing…").setDisabled(true);
-					try {
-						await this.plugin.installWarmPaperTheme();
-						b.setButtonText("Installed ✓");
-					} catch (e) {
-						const msg = e instanceof Error ? e.message : String(e);
-						nousNotice(`Couldn't install Warm Paper - ${msg}`, 10000);
-						b.setButtonText("Install & switch").setDisabled(false);
-					}
-				})
-			);
+		const themeLink = this.contentEl.createDiv({ cls: "nous-wizard-skip" });
+		themeLink.setAttribute("role", "button");
+		themeLink.setAttribute("tabindex", "0");
+		themeLink.setText("Try our Warm Paper theme");
+		const installTheme = async () => {
+			themeLink.setText("Installing…");
+			try {
+				await this.plugin.installWarmPaperTheme();
+				themeLink.setText("Warm Paper installed ✓");
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				nousNotice(`Couldn't install Warm Paper - ${msg}`, 10000);
+				themeLink.setText("Try our Warm Paper theme");
+			}
+		};
+		themeLink.addEventListener("click", () => void installTheme());
+		themeLink.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				void installTheme();
+			}
+		});
 
 		this.renderSkip("Not now", async () => {
 			this.plugin.settings.onboarded = true;

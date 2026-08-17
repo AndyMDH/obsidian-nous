@@ -38,10 +38,6 @@
 	   which theme/accent color is active, so this derives a lighter blend
 	   from the accent rather than reusing it flat. */
 	--nous-accent-soft: color-mix(in srgb, var(--interactive-accent) 55%, var(--text-on-accent, #ffffff) 45%);
-	/* Not every theme is guaranteed to set --text-on-accent, but it's a
-	   long-standing standard Obsidian variable (e.g. active nav-item text) -
-	   the literal fallback covers the themes that never touch it. */
-	--nous-on-accent: var(--text-on-accent, #ffffff);
 	/* A translucent wash of the current text color rather than a separate
 	   light/dark swatch pair - automatically reads as a dark wash on a
 	   light theme or a light wash on a dark one, because it's derived from
@@ -325,14 +321,14 @@
 .nous-wizard-primary .setting-item-control {
 	width: 100%;
 }
-.nous-modal button.mod-cta {
-	background: var(--nous-accent);
-	color: var(--nous-on-accent);
-}
-.nous-modal button.mod-cta:hover {
-	background: var(--nous-accent);
-	filter: brightness(1.08);
-}
+/* Deliberately NOT overriding .mod-cta's background/color here. Nous's own
+   --nous-accent/--nous-on-accent are theme-adaptive (pull from whatever
+   accent the user's active theme sets), but the pairing isn't guaranteed
+   safe - a light accent with a hardcoded-light on-accent fallback reads as
+   invisible white-on-white. Obsidian's native .mod-cta styling is set by
+   the theme itself and is already correct for it everywhere else in the
+   app, so trusting it here removes the risk entirely instead of trying to
+   out-guess an unknown accent's contrast. */
 /* Every plain (non-CTA) button in the wizard - Back, Skip, Test, Install,
    etc. - gets the same light-grey rounded-rect wash on hover as the
    mode-cards and skip link, instead of relying on Obsidian's own default
@@ -540,26 +536,23 @@
 	width: 16px;
 	height: 16px;
 }
+/* Was a solid accent fill with --nous-on-accent text - unsafe once accent
+   is theme-adaptive (a light accent + a light on-accent fallback reads as
+   invisible white-on-white, which is exactly what happened). A tinted
+   wash + accent border marks this card as "the recommended one" without
+   ever needing text color to contrast against an unknown fill: title/sub
+   stay the same --nous-text/--nous-muted every other card already uses
+   safely. */
 .nous-mode-card.is-filled {
-	background: var(--nous-accent);
+	background: color-mix(in srgb, var(--nous-accent) 12%, var(--nous-surface));
 	border-color: var(--nous-accent);
 }
-/* Already moss-filled - a grey hover wash would just muddy it, so hover
-   here brightens instead of overlaying --nous-surface-2 like the plain
-   cards above. */
 .nous-mode-card.is-filled:hover,
 .nous-mode-card.is-filled:focus-visible {
-	background: var(--nous-accent);
-	filter: brightness(1.06);
-}
-.nous-mode-card.is-filled .nous-mode-card-title {
-	color: var(--nous-on-accent);
-}
-.nous-mode-card.is-filled .nous-mode-card-sub {
-	color: var(--nous-accent-soft);
+	background: color-mix(in srgb, var(--nous-accent) 18%, var(--nous-surface));
 }
 .nous-mode-card.is-filled .nous-mode-card-arrow {
-	color: var(--nous-accent-soft);
+	color: var(--nous-accent);
 }
 
 /* ------------------------------------------------------------------ */
@@ -661,8 +654,8 @@
 }
 
 /* Test/Refresh/Install/Download as small outlined pills - CTAs (Download
-   model, Install) stay filled moss via the shared button.mod-cta rule
-   below; everything else is quiet and bordered. */
+   model, Install) use Obsidian's own native .mod-cta styling, unstyled by
+   us (see below); everything else is quiet and bordered. */
 .nous-settings button:not(.mod-cta) {
 	background: var(--nous-surface);
 	border: 1px solid var(--nous-border);
@@ -730,15 +723,10 @@
 	margin-bottom: 4px;
 }
 
-/* Settings tab: moss accents, not the theme accent. */
-.nous-settings button.mod-cta {
-	background-color: var(--nous-accent);
-	color: var(--nous-on-accent);
-}
-.nous-settings button.mod-cta:hover {
-	background-color: var(--nous-accent);
-	filter: brightness(1.08);
-}
+/* Deliberately not re-coloring .mod-cta here either - see the identical
+   reasoning where this was removed from the wizard's button.mod-cta rule
+   above. Trusting Obsidian's native cta styling, not an unverified
+   accent/on-accent pairing. */
 /* Toggle pills: moss when on. Only background/border are overridden, not
    width/height - Obsidian's own toggle sizes its sliding knob off its
    default dimensions, and forcing a custom size here risks breaking that
@@ -846,8 +834,8 @@ body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-proper
 	color: var(--nous-muted);
 }
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="type"] {
-	background: var(--nous-accent);
-	color: var(--nous-on-accent);
+	background: color-mix(in srgb, var(--nous-accent) 16%, var(--nous-surface));
+	color: var(--nous-accent);
 }
 body.nous-styled-notes
 	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
@@ -910,9 +898,9 @@ body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-proper
 }
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="tags"] .multi-select-pill,
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="tags"] .multi-select-pill {
-	background: var(--nous-accent);
+	background: color-mix(in srgb, var(--nous-accent) 16%, var(--nous-surface));
 	border: none;
-	color: var(--nous-on-accent);
+	color: var(--nous-accent);
 }
 
 /* Title: 24-26px 700, tight tracking. Tag page title is mono instead. */
@@ -985,8 +973,13 @@ body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-proper
 	background: var(--nous-surface);
 	cursor: pointer;
 }
+/* A checkmark drawn in --nous-accent on a lightly-tinted background, not
+   the usual solid-accent-fill-with-white-checkmark convention - same
+   reasoning as the mode-card/tag-pill fixes above: an unknown theme
+   accent paired with an assumed-safe on-accent color is what broke, so
+   this pairs the accent only against a near-neutral surface instead. */
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Action items"]) + div li.task-list-item.is-checked .task-list-item-checkbox {
-	background: var(--nous-accent);
+	background: color-mix(in srgb, var(--nous-accent) 16%, var(--nous-surface));
 	border-color: var(--nous-accent);
 }
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Action items"]) + div li.task-list-item.is-checked .task-list-item-checkbox::after {
@@ -996,7 +989,7 @@ body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-proper
 	top: 1px;
 	width: 4px;
 	height: 7px;
-	border: solid var(--nous-on-accent);
+	border: solid var(--nous-accent);
 	border-width: 0 1.5px 1.5px 0;
 	transform: rotate(45deg);
 }
