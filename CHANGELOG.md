@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.2
+
+Status bar recording/transcribing indicators use real icons and a
+live timer now instead of emoji text - a pulsing-dot recording icon
+with "REC 00:42", and a spinning icon while transcribing.
+
 ## 2.6.1
 
 - Registered warm-paper's custom clip-n icons so they're available
