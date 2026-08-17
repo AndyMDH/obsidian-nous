@@ -1,3 +1,59 @@
+/* ------------------------------------------------------------------ */
+/* Nous "warm paper" design tokens (docs/NOUS-REDESIGN.md §1). Namespaced
+   custom properties, not overrides of Obsidian's own --background-*/
+   --text-* variables - scoped to Obsidian's ambient .theme-light/
+   .theme-dark body classes so every Nous element can just reference
+   var(--nous-*) and get the right palette for the active theme. */
+.theme-light {
+	--nous-paper: #f5f2ed;
+	--nous-surface: #ffffff;
+	--nous-surface-2: #f3f0ea;
+	--nous-well: #ede9e1;
+	--nous-border: #e7e2da;
+	--nous-hairline: #ebe6de;
+	--nous-hairline-2: #e1dcd3;
+	--nous-text: #1c1b19;
+	--nous-body-serif: #3a3733;
+	--nous-muted: #8a857d;
+	--nous-faint: #a6a199;
+	--nous-accent: #4c5138;
+	--nous-accent-soft: #c7c9b4;
+}
+.theme-dark {
+	--nous-paper: #1e1d1b;
+	--nous-surface: #262522;
+	--nous-surface-2: #24231f;
+	--nous-well: #24231f;
+	--nous-border: #35322d;
+	--nous-hairline: #2c2a26;
+	--nous-hairline-2: #2c2a26;
+	--nous-text: #edeae4;
+	--nous-body-serif: #edeae4;
+	--nous-muted: #8a857d;
+	--nous-faint: #6b6660;
+	--nous-accent: #5e6647;
+	--nous-accent-soft: #a9af8c;
+}
+/* Content drawn on a solid moss fill (primary buttons, the logo badge's
+   wire, filled provider/tag pills) - always paper-light, in both themes,
+   matching the logo badge spec (§2: wire is always #F5F2ED). */
+.theme-light,
+.theme-dark {
+	--nous-on-accent: #f5f2ed;
+}
+
+/* Shape & spacing (§1) */
+:root {
+	--nous-radius-modal: 24px;
+	--nous-radius-card: 16px;
+	--nous-radius-input: 12px;
+	--nous-radius-well: 10px;
+	--nous-radius-pill: 99px;
+	--nous-font-ui: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+	--nous-font-serif: Georgia, "Iowan Old Style", Palatino, serif;
+	--nous-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
 .nous-recording {
 	color: var(--text-error);
 	animation: nous-recording-pulse 1.4s ease-in-out infinite;
