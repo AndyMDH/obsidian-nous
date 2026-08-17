@@ -15,8 +15,10 @@ import {
 	requireApiVersion,
 	setIcon,
 	type ButtonComponent,
+	type SettingDefinition,
 	type SettingDefinitionItem,
 	type SettingGroup,
+	type SettingGroupItem,
 } from "obsidian";
 import type {
 	ApiProvider,
@@ -2651,12 +2653,31 @@ class NousSettingTab extends PluginSettingTab {
 		// avoid constructing a real SettingGroup (Obsidian 1.11.0+ only) so
 		// this fallback keeps working on the older versions it exists for.
 		const group = undefined as unknown as SettingGroup;
-		for (const item of this.getSettingDefinitions()) {
-			if (!("render" in item) || typeof item.render !== "function") continue;
-			const setting = new Setting(this.containerEl);
+		const renderInto = (item: SettingDefinition, container: HTMLElement) => {
+			if (!("render" in item) || typeof item.render !== "function") return;
+			const setting = new Setting(container);
 			if (item.name) setting.setName(item.name);
 			if (item.desc) setting.setDesc(item.desc);
 			item.render(setting, group);
+		};
+		for (const item of this.getSettingDefinitions()) {
+			// getSettingDefinitions() now nests each section's settings inside a
+			// SettingDefinitionGroup instead of a flat setHeading() item (see
+			// its comment) - the native 1.13.0+ renderer draws those as real
+			// boxed sections on its own, but this fallback still has to build
+			// that shape by hand: a heading Setting styled the same way
+			// setHeading() items always were, then every nested item rendered
+			// the same way a flat item would be. Groups don't nest inside
+			// groups (per Obsidian's own type), so one level of unwrapping is
+			// enough.
+			if ("type" in item && (item.type === "group" || item.type === "list")) {
+				if (item.heading) new Setting(this.containerEl).setName(item.heading).setHeading();
+				for (const nested of item.items ?? []) {
+					renderInto(nested, this.containerEl);
+				}
+				continue;
+			}
+			renderInto(item as SettingDefinition, this.containerEl);
 		}
 	}
 
@@ -2695,13 +2716,15 @@ class NousSettingTab extends PluginSettingTab {
 			},
 		});
 
-		items.push({
-			name: "Provider",
-			render: (setting) => {
-				setting.setHeading();
-			},
-		});
-		items.push({
+		// Each section becomes a real SettingDefinitionGroup instead of a flat
+		// setHeading() item - Obsidian's native 1.13.0+ renderer draws groups
+		// as proper boxed sections on its own (no CSS needed for the box);
+		// renderLegacySettings() above rebuilds the same setHeading() look by
+		// hand for pre-1.13.0 installs. Every conditional below is unchanged
+		// from before this restructure - only *where* each item gets pushed
+		// (a section's local items array, wrapped in one group) changed.
+		const providerItems: SettingGroupItem[] = [];
+		providerItems.push({
 			name: "Execution mode",
 			render: (setting) => {
 				setting
@@ -2725,7 +2748,7 @@ class NousSettingTab extends PluginSettingTab {
 		});
 
 		if (!Platform.isDesktopApp && this.plugin.settings.executionMode === "cli") {
-			items.push({
+			providerItems.push({
 				name: "",
 				render: (setting) => {
 					setting
@@ -2737,7 +2760,7 @@ class NousSettingTab extends PluginSettingTab {
 			});
 		}
 
-		items.push({
+		providerItems.push({
 			name: "Advanced settings",
 			render: (setting) => {
 				setting
@@ -2752,7 +2775,7 @@ class NousSettingTab extends PluginSettingTab {
 		});
 
 		if (this.plugin.settings.executionMode === "cli" && this.showAdvanced) {
-			items.push({
+			providerItems.push({
 				name: "Claude CLI path",
 				render: (setting) => {
 					setting
@@ -2781,7 +2804,7 @@ class NousSettingTab extends PluginSettingTab {
 				local: "Local",
 			}[provider];
 
-			items.push({
+			providerItems.push({
 				name: "Provider",
 				render: (setting) => {
 					setting
@@ -2806,7 +2829,7 @@ class NousSettingTab extends PluginSettingTab {
 			});
 
 			if (provider === "local") {
-				items.push({
+				providerItems.push({
 					name: "Base URL",
 					render: (setting) => {
 						setting.setDesc(LOCAL_BASE_URL_DESC).addText((text) =>
@@ -2818,7 +2841,7 @@ class NousSettingTab extends PluginSettingTab {
 					},
 				});
 			} else if (provider === "glm") {
-				items.push({
+				providerItems.push({
 					name: "GLM API key",
 					render: (setting) => {
 						setting.setDesc("Your Z.ai API key - stored locally in this vault.").addText((text) => {
@@ -2831,7 +2854,7 @@ class NousSettingTab extends PluginSettingTab {
 						});
 					},
 				});
-				items.push({
+				providerItems.push({
 					name: "Base URL",
 					render: (setting) => {
 						setting
@@ -2847,7 +2870,7 @@ class NousSettingTab extends PluginSettingTab {
 					},
 				});
 			} else {
-				items.push({
+				providerItems.push({
 					name: `${providerLabel} API key`,
 					render: (setting) => {
 						setting
@@ -2867,7 +2890,7 @@ class NousSettingTab extends PluginSettingTab {
 			}
 
 			if (provider === "local") {
-				items.push({
+				providerItems.push({
 					name: "Model",
 					render: (setting) => {
 						setting
@@ -2885,7 +2908,7 @@ class NousSettingTab extends PluginSettingTab {
 				const current = this.plugin.settings.models[provider];
 				const isListed = options.some((o) => o.id === current);
 				const showCustom = !isListed || this.customModelFor === provider;
-				items.push({
+				providerItems.push({
 					name: "Model",
 					render: (setting) => {
 						setting
@@ -2907,7 +2930,7 @@ class NousSettingTab extends PluginSettingTab {
 					},
 				});
 				if (showCustom) {
-					items.push({
+					providerItems.push({
 						name: "Custom model ID",
 						render: (setting) => {
 							setting
@@ -2924,7 +2947,7 @@ class NousSettingTab extends PluginSettingTab {
 			}
 		}
 
-		items.push({
+		providerItems.push({
 			name: "Test connection",
 			render: (setting) => {
 				setting
@@ -2954,7 +2977,7 @@ class NousSettingTab extends PluginSettingTab {
 			},
 		});
 
-		items.push({
+		providerItems.push({
 			name: "Auto-process on capture",
 			render: (setting) => {
 				setting
@@ -2968,14 +2991,10 @@ class NousSettingTab extends PluginSettingTab {
 				);
 			},
 		});
+		items.push({ type: "group", heading: "Provider", items: providerItems });
 
-		items.push({
-			name: "Meeting capture",
-			render: (setting) => {
-				setting.setHeading();
-			},
-		});
-		items.push({
+		const meetingItems: SettingGroupItem[] = [];
+		meetingItems.push({
 			name: "",
 			render: (setting) => {
 				setting
@@ -2987,7 +3006,7 @@ class NousSettingTab extends PluginSettingTab {
 		});
 
 		if (Platform.isMacOS && this.showAdvanced) {
-			items.push({
+			meetingItems.push({
 				name: "Native recorder status",
 				render: (setting) => {
 					const refreshStatus = async (button?: ButtonComponent) => {
@@ -3017,7 +3036,7 @@ class NousSettingTab extends PluginSettingTab {
 					void refreshStatus();
 				},
 			});
-			items.push({
+			meetingItems.push({
 				name: "Native recorder helper",
 				render: (setting) => {
 					setting
@@ -3042,7 +3061,7 @@ class NousSettingTab extends PluginSettingTab {
 		}
 
 		if (this.showAdvanced && Platform.isMacOS) {
-			items.push({
+			meetingItems.push({
 				name: "Nous Recorder path",
 				render: (setting) => {
 					setting
@@ -3063,7 +3082,7 @@ class NousSettingTab extends PluginSettingTab {
 		}
 
 		if (this.showAdvanced) {
-			items.push({
+			meetingItems.push({
 				name: "Wiki threshold",
 				render: (setting) => {
 					setting
@@ -3082,7 +3101,7 @@ class NousSettingTab extends PluginSettingTab {
 
 			if (this.plugin.settings.executionMode === "api") {
 				// CLI mode's duplicate check lives in the skill - nothing to configure here.
-				items.push({
+				meetingItems.push({
 					name: "Duplicate-check lookback",
 					render: (setting) => {
 						setting
@@ -3102,14 +3121,10 @@ class NousSettingTab extends PluginSettingTab {
 				});
 			}
 		}
+		items.push({ type: "group", heading: "Meeting capture", items: meetingItems });
 
-		items.push({
-			name: "Appearance",
-			render: (setting) => {
-				setting.setHeading();
-			},
-		});
-		items.push({
+		const appearanceItems: SettingGroupItem[] = [];
+		appearanceItems.push({
 			name: "Styled Nous notes",
 			render: (setting) => {
 				setting
@@ -3123,7 +3138,7 @@ class NousSettingTab extends PluginSettingTab {
 					);
 			},
 		});
-		items.push({
+		appearanceItems.push({
 			name: "Editorial theme (optional)",
 			render: (setting) => {
 				setting
@@ -3137,14 +3152,10 @@ class NousSettingTab extends PluginSettingTab {
 					);
 			},
 		});
+		items.push({ type: "group", heading: "Appearance", items: appearanceItems });
 
-		items.push({
-			name: "Voice capture",
-			render: (setting) => {
-				setting.setHeading();
-			},
-		});
-		items.push({
+		const voiceItems: SettingGroupItem[] = [];
+		voiceItems.push({
 			name: "",
 			render: (setting) => {
 				setting
@@ -3154,7 +3165,7 @@ class NousSettingTab extends PluginSettingTab {
 		});
 
 		if (Platform.isMacOS) {
-			items.push({
+			voiceItems.push({
 				name: "Speech model",
 				render: (setting) => {
 					setting.setDesc("Checking…");
@@ -3177,7 +3188,7 @@ class NousSettingTab extends PluginSettingTab {
 			});
 		}
 
-		items.push({
+		voiceItems.push({
 			name: "Live voice transcription (beta)",
 			render: (setting) => {
 				setting
@@ -3194,7 +3205,7 @@ class NousSettingTab extends PluginSettingTab {
 			},
 		});
 		if (this.plugin.settings.liveTranscriptionEnabled && !this.plugin.settings.apiKeys.openai) {
-			items.push({
+			voiceItems.push({
 				name: "",
 				render: (setting) => {
 					setting
@@ -3205,7 +3216,7 @@ class NousSettingTab extends PluginSettingTab {
 		}
 
 		if (this.showAdvanced) {
-			items.push({
+			voiceItems.push({
 				name: "Whisper CLI path",
 				render: (setting) => {
 					setting
@@ -3224,7 +3235,7 @@ class NousSettingTab extends PluginSettingTab {
 				},
 			});
 
-			items.push({
+			voiceItems.push({
 				name: "Whisper model path",
 				render: (setting) => {
 					setting
@@ -3242,15 +3253,14 @@ class NousSettingTab extends PluginSettingTab {
 						);
 				},
 			});
+		}
+		items.push({ type: "group", heading: "Voice capture", items: voiceItems });
 
-			items.push({
-				name: "Vault",
-				render: (setting) => {
-					setting.setHeading();
-				},
-			});
-
-			const folderSetting = (key: keyof NousSettings, name: string): SettingDefinitionItem => ({
+		// Vault is its own group, but - same as before this restructure -
+		// only shown at all once Advanced settings is on.
+		if (this.showAdvanced) {
+			const vaultItems: SettingGroupItem[] = [];
+			const folderSetting = (key: keyof NousSettings, name: string): SettingGroupItem => ({
 				name,
 				render: (setting) => {
 					setting.addText((text) => {
@@ -3264,11 +3274,12 @@ class NousSettingTab extends PluginSettingTab {
 					});
 				},
 			});
-			items.push(folderSetting("inboxFolder", "Inbox folder"));
-			items.push(folderSetting("meetingsFolder", "Meetings folder"));
-			items.push(folderSetting("wikisFolder", "Wikis folder"));
-			items.push(folderSetting("tagsFolder", "Tags folder"));
-			items.push(folderSetting("queriesFolder", "Queries folder"));
+			vaultItems.push(folderSetting("inboxFolder", "Inbox folder"));
+			vaultItems.push(folderSetting("meetingsFolder", "Meetings folder"));
+			vaultItems.push(folderSetting("wikisFolder", "Wikis folder"));
+			vaultItems.push(folderSetting("tagsFolder", "Tags folder"));
+			vaultItems.push(folderSetting("queriesFolder", "Queries folder"));
+			items.push({ type: "group", heading: "Vault", items: vaultItems });
 		}
 
 		// Footer (§4): quiet underlined links, mono-adjacent to the header's

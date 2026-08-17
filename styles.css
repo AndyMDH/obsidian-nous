@@ -627,8 +627,15 @@
 	font-size: 12px;
 }
 
-/* Small-caps section labels (Provider/Meeting capture/Appearance/Voice
-   capture/Vault - all rendered via Setting.setHeading()). */
+/* Small-caps section labels. Only reachable on the pre-1.13.0
+   renderLegacySettings() fallback in main.ts, which still builds each
+   section's heading via Setting.setHeading() the same way this whole tab
+   used to - Obsidian 1.13.0+ renders getSettingDefinitions()'s "group"
+   items (Provider/Meeting capture/Appearance/Voice capture/Vault) as real
+   boxed sections through its own native markup instead, which this
+   selector doesn't reach and isn't meant to: that native styling is
+   Obsidian's own, not ours to reproduce here without a way to see it
+   rendered and check what we'd even be targeting. */
 .nous-settings .setting-item.setting-item-heading {
 	border: none;
 	padding: 22px 0 4px;
