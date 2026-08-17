@@ -29,6 +29,12 @@
 	   badge's wire, filled provider/tag pills) - always paper-light in
 	   both themes, matching the logo badge spec (§2: wire is #F5F2ED). */
 	--nous-on-accent: #f5f2ed;
+	/* A translucent dark wash, not another near-white swatch - every
+	   named surface token in this palette is close in value to --nous-paper
+	   by design (quiet, low-contrast), which made hover states using
+	   --nous-surface-2 effectively invisible. A translucent overlay stays
+	   visible against any surface it's used on top of. */
+	--nous-hover: rgba(28, 27, 25, 0.07);
 }
 .theme-dark {
 	--nous-paper: #1e1d1b;
@@ -44,6 +50,8 @@
 	--nous-faint: #6b6660;
 	--nous-accent: #5e6647;
 	--nous-accent-soft: #a9af8c;
+	/* Light-on-dark wash for dark mode - see the :root definition above. */
+	--nous-hover: rgba(237, 234, 228, 0.08);
 }
 /* Belt-and-suspenders for the same class-inheritance risk that broke the
    light tokens: if .theme-dark somehow doesn't match an ancestor of a
@@ -66,6 +74,7 @@
 		--nous-faint: #6b6660;
 		--nous-accent: #5e6647;
 		--nous-accent-soft: #a9af8c;
+		--nous-hover: rgba(237, 234, 228, 0.08);
 	}
 }
 
@@ -216,7 +225,7 @@
 }
 .nous-wizard-back:hover,
 .nous-wizard-back:focus-visible {
-	background: var(--nous-surface-2);
+	background: var(--nous-hover);
 	color: var(--nous-text);
 	outline: none;
 }
@@ -353,7 +362,7 @@
 }
 .nous-modal button:not(.mod-cta):hover,
 .nous-modal button:not(.mod-cta):focus-visible {
-	background: var(--nous-surface-2);
+	background: var(--nous-hover);
 }
 .nous-wizard-primary button.mod-cta {
 	width: 100%;
@@ -379,7 +388,7 @@
 }
 .nous-wizard-skip:hover,
 .nous-wizard-skip:focus-visible {
-	background: var(--nous-surface-2);
+	background: var(--nous-hover);
 	color: var(--nous-muted);
 	outline: none;
 }
@@ -524,7 +533,7 @@
 .nous-mode-card:hover,
 .nous-mode-card:focus-visible {
 	border-color: var(--nous-accent);
-	background: var(--nous-surface-2);
+	background: var(--nous-hover);
 	outline: none;
 }
 .nous-mode-card-text {
