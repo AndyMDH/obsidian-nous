@@ -78,15 +78,14 @@
 
 /* Live meeting notes (cssclasses: nous-live-note) - branded while the
    recording or transcription is in flight; the class disappears when the
-   enricher rewrites the note. Theme-aware: follows the user's accent color,
-   falling back to Nous tangerine. */
+   enricher rewrites the note. */
 .nous-live-note h2,
 .nous-live-note .cm-header-2,
 .markdown-source-view.nous-live-note .cm-header-2 {
-	color: #eb6c36;
+	color: var(--nous-accent);
 }
 .markdown-reading-view .nous-live-note h2 {
-	border-bottom: 1px solid rgba(235, 108, 54, 0.3);
+	border-bottom: 1px solid var(--nous-accent-soft);
 	padding-bottom: 4px;
 }
 .nous-live-note em,
@@ -96,7 +95,7 @@
 
 /* Transcription-in-flight status bar state */
 .nous-transcribing {
-	color: #eb6c36;
+	color: var(--nous-accent);
 }
 
 /* ------------------------------------------------------------------ */

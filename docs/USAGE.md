@@ -242,12 +242,12 @@ Every step is logged to `.nous/pipeline.log` in the vault.
 ## The Nous look (optional)
 
 Nous-generated notes get an editorial layout in reading view by default:
-the summary reads as a lede, decisions render as accent cards, and the
-transcript sits dimmed and small below your notes (hover to read it at
-full strength). Turn this off in Settings → Nous → Appearance.
+a chip row replaces the raw properties table, section headings render in
+small caps, and the transcript sits collapsed in a folded callout below
+your notes. Turn this off in Settings → Nous → Appearance.
 
-For the vault-wide look - serif text, tangerine tag chips, a `> [!nous]`
+For the vault-wide look - serif text, moss tag chips, a `> [!nous]`
 callout - click **Install** under Settings → Nous → Appearance →
 Editorial theme. It lands as a normal CSS snippet you can disable in
 Appearance → CSS snippets. For the full effect, set Appearance → Accent
-color to `#eb6c36`.
+color to `#4C5138`.

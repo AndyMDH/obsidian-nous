@@ -977,7 +977,7 @@ export default class NousPlugin extends Plugin {
 		enabled.add(EDITORIAL_SNIPPET_FILENAME.replace(/\.css$/, ""));
 		appearance.enabledCssSnippets = [...enabled].sort();
 		await adapter.write(appearancePath, JSON.stringify(appearance, null, 2));
-		new Notice("Nous: editorial theme installed. Set the accent color to #eb6c36 for the full effect.", 8000);
+		new Notice("Nous: editorial theme installed. Set the accent color to #4c5138 for the full effect.", 8000);
 	}
 
 	private getVaultBasePath(): string | null {
