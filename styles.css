@@ -101,6 +101,13 @@
    already what these helpers do. */
 .notice:has(.nous-notice-icon) {
 	background: var(--nous-surface);
+	/* Obsidian's own notice styling gives toasts a translucent/blurred
+	   "glass" look by default in recent versions - background-color alone
+	   doesn't cancel that, opacity and backdrop-filter are separate
+	   properties layered on top of it. Force both off so the solid
+	   --nous-surface fill actually reads as solid. */
+	opacity: 1;
+	backdrop-filter: none;
 	border: 1px solid var(--nous-border);
 	border-radius: var(--nous-radius-input);
 	color: var(--nous-text);

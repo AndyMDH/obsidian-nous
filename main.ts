@@ -578,7 +578,7 @@ export default class NousPlugin extends Plugin {
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
 			await this.appendLog(`ERROR: speech-model download failed: ${msg}`);
-			notice.setMessage(nousNoticeFragment("model download failed - see .nous/pipeline.log"));
+			notice.setMessage(nousNoticeFragment("model download failed - more in your Nous log"));
 			window.setTimeout(() => notice.hide(), 10000);
 			return false;
 		}
@@ -1345,7 +1345,7 @@ export default class NousPlugin extends Plugin {
 			const result = await this.runNativeRecorder("stop");
 			if (result.code !== 0) {
 				await this.appendLog(`ERROR: native recorder failed to stop: ${cliErrorDetail(result)}`);
-				nousNotice("Recorder wouldn't stop - details in .nous/pipeline.log", 10000);
+				nousNotice("Recorder wouldn't stop - more in your Nous log", 10000);
 				return;
 			}
 			const stopped = parseNativeRecorderStatus(result.stdout);
@@ -1369,7 +1369,7 @@ export default class NousPlugin extends Plugin {
 			const detail = cliErrorDetail(result);
 			this.nativeRecorderLastProblem = detail || "The helper could not start.";
 			await this.appendLog(`ERROR: native recorder failed to start: ${detail}`);
-			nousNotice("Recorder wouldn't start - details in .nous/pipeline.log", 10000);
+			nousNotice("Recorder wouldn't start - more in your Nous log", 10000);
 			return;
 		}
 		await new Promise((resolve) => window.setTimeout(resolve, 1500));
@@ -1590,7 +1590,7 @@ export default class NousPlugin extends Plugin {
 					await this.appendLog(`ERROR: could not recover live meeting note after transcription failure: ${problemMsg}`);
 				});
 			}
-			nousNotice("Transcription hit a snag - don't worry, your notes and audio are safe. See .nous/pipeline.log", 10000);
+			nousNotice("Transcription hit a snag - don't worry, your notes and audio are safe. More in your Nous log", 10000);
 			await this.appendLog(`ERROR: native recording transcription failed: ${msg}`);
 		} finally {
 			this.setMeetingTranscribingIndicator(false);
@@ -1883,7 +1883,7 @@ export default class NousPlugin extends Plugin {
 				if (await this.processFile(file)) enriched++;
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				nousNotice(`Stumbled on "${file.name}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`Stumbled on "${file.name}" - more in your Nous log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - ${msg}`);
 			}
 		}
@@ -1950,7 +1950,7 @@ export default class NousPlugin extends Plugin {
 				await this.appendLog(`TRANSCRIBED: ${file.name} -> ${notePath}`);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				nousNotice(`Couldn't transcribe "${file.name}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`Couldn't transcribe "${file.name}" - more in your Nous log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - transcription failed: ${msg}`);
 			}
 		}
@@ -1991,7 +1991,7 @@ export default class NousPlugin extends Plugin {
 				await this.archiveNativeRecording(pending.recordingDir);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				nousNotice(`Couldn't transcribe "${file.name}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`Couldn't transcribe "${file.name}" - more in your Nous log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - pending native recording transcription failed: ${msg}`);
 			}
 		}
@@ -2014,7 +2014,7 @@ export default class NousPlugin extends Plugin {
 				`ERROR: meeting-enricher CLI exited ${enrichResult.code} - ${cliErrorDetail(enrichResult)}`
 			);
 			nousNotice(
-				"Enrichment hit a snag - see .nous/pipeline.log",
+				"Enrichment hit a snag - more in your Nous log",
 				10000
 			);
 			return;
@@ -2029,7 +2029,7 @@ export default class NousPlugin extends Plugin {
 			await this.appendLog(
 				`ERROR: wiki-builder CLI exited ${wikiResult.code} - ${cliErrorDetail(wikiResult)}`
 			);
-			nousNotice("Wiki building hit a snag - see .nous/pipeline.log", 10000);
+			nousNotice("Wiki building hit a snag - more in your Nous log", 10000);
 			return;
 		}
 
@@ -2042,10 +2042,10 @@ export default class NousPlugin extends Plugin {
 			nousNotice(`✨ ${parts.join(", ")}.`);
 		}
 		if (summary.errors > 0) {
-			nousNotice(`${summary.errors} error${summary.errors === 1 ? "" : "s"} - see .nous/pipeline.log`, 8000);
+			nousNotice(`${summary.errors} error${summary.errors === 1 ? "" : "s"} - more in your Nous log`, 8000);
 		} else if (summary.skipped > 0) {
 			nousNotice(
-				`${summary.skipped} item${summary.skipped === 1 ? "" : "s"} skipped - see .nous/pipeline.log`,
+				`${summary.skipped} item${summary.skipped === 1 ? "" : "s"} skipped - more in your Nous log`,
 				8000
 			);
 		}
@@ -2070,7 +2070,7 @@ export default class NousPlugin extends Plugin {
 		);
 		if (result.code !== 0) {
 			await this.appendLog(`ERROR: wiki-builder CLI exited ${result.code} - ${cliErrorDetail(result)}`);
-			nousNotice("Wiki building hit a snag - see .nous/pipeline.log", 10000);
+			nousNotice("Wiki building hit a snag - more in your Nous log", 10000);
 			return;
 		}
 		const summary = summarizeLogLines(await this.readLogSince(before));
@@ -2104,7 +2104,7 @@ export default class NousPlugin extends Plugin {
 		);
 		if (result.code !== 0) {
 			await this.appendLog(`ERROR: vault-query CLI exited ${result.code} - ${cliErrorDetail(result)}`);
-			nousNotice("Search hit a snag - see .nous/pipeline.log", 10000);
+			nousNotice("Search hit a snag - more in your Nous log", 10000);
 			return;
 		}
 
@@ -2183,7 +2183,7 @@ export default class NousPlugin extends Plugin {
 					} catch (e) {
 						const msg = e instanceof Error ? e.message : String(e);
 						nousNotice(
-							`Couldn't convert "${file.name}" (needs macOS's sips tool) - see .nous/pipeline.log`,
+							`Couldn't convert "${file.name}" (needs macOS's sips tool) - more in your Nous log`,
 							10000
 						);
 						await this.appendLog(`ERROR: ${file.name} - HEIC conversion failed: ${msg}`);
@@ -2348,7 +2348,7 @@ export default class NousPlugin extends Plugin {
 			return true;
 		} catch (e) {
 			if (e instanceof LlmApiError) {
-				nousNotice(`API error (${e.status}) on "${file.name}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`API error (${e.status}) on "${file.name}" - more in your Nous log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - ${this.settings.apiProvider} API ${e.status}: ${e.body.slice(0, 300)}`);
 				return false;
 			}
@@ -2415,7 +2415,7 @@ export default class NousPlugin extends Plugin {
 				}
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				nousNotice(`Wiki hit a snag for "${cluster.tag}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`Wiki hit a snag for "${cluster.tag}" - more in your Nous log`, 10000);
 				await this.appendLog(`ERROR: wiki ${cluster.tag} - ${msg}`);
 			}
 		}
