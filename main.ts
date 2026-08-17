@@ -3487,6 +3487,30 @@ class OnboardingModal extends Modal {
 		this.contentEl.createDiv({ cls: "nous-well", text: message });
 	}
 
+	// Shared by Welcome and renderConnectChoice - both are plain lists of
+	// clickable mode-cards, just with different content.
+	private addModeCard(
+		container: HTMLElement,
+		options: { title: string; sub: string; filled?: boolean; onChoose: () => void | Promise<void> }
+	) {
+		const card = container.createDiv({ cls: options.filled ? "nous-mode-card is-filled" : "nous-mode-card" });
+		card.setAttribute("role", "button");
+		card.setAttribute("tabindex", "0");
+		const text = card.createDiv({ cls: "nous-mode-card-text" });
+		text.createDiv({ cls: "nous-mode-card-title", text: options.title });
+		text.createDiv({ cls: "nous-mode-card-sub", text: options.sub });
+		const arrow = card.createDiv({ cls: "nous-mode-card-arrow" });
+		setIcon(arrow, "chevron-right");
+		const choose = () => void options.onChoose();
+		card.addEventListener("click", choose);
+		card.addEventListener("keydown", (event) => {
+			if (event.key === "Enter" || event.key === " ") {
+				event.preventDefault();
+				choose();
+			}
+		});
+	}
+
 	private renderWelcome() {
 		this.clear();
 		this.setScreenMode("hero");
@@ -3497,31 +3521,7 @@ class OnboardingModal extends Modal {
 		this.renderBody("Your vault, thinking with you. Pick a brain to start.", { center: true });
 
 		const cards = this.contentEl.createDiv({ cls: "nous-mode-cards" });
-		const addCard = (options: {
-			title: string;
-			sub: string;
-			filled?: boolean;
-			onChoose: () => void | Promise<void>;
-		}) => {
-			const card = cards.createDiv({ cls: options.filled ? "nous-mode-card is-filled" : "nous-mode-card" });
-			card.setAttribute("role", "button");
-			card.setAttribute("tabindex", "0");
-			const text = card.createDiv({ cls: "nous-mode-card-text" });
-			text.createDiv({ cls: "nous-mode-card-title", text: options.title });
-			text.createDiv({ cls: "nous-mode-card-sub", text: options.sub });
-			const arrow = card.createDiv({ cls: "nous-mode-card-arrow" });
-			setIcon(arrow, "chevron-right");
-			const choose = () => void options.onChoose();
-			card.addEventListener("click", choose);
-			card.addEventListener("keydown", (event) => {
-				if (event.key === "Enter" || event.key === " ") {
-					event.preventDefault();
-					choose();
-				}
-			});
-		};
-
-		addCard({
+		this.addModeCard(cards, {
 			title: "I have a Claude subscription",
 			sub: "No extra billing · desktop only",
 			filled: true,
@@ -3531,27 +3531,10 @@ class OnboardingModal extends Modal {
 				this.renderTest();
 			},
 		});
-		addCard({
-			title: "I want a free local model",
-			sub: "Free and private · 2-min setup",
-			onChoose: async () => {
-				this.plugin.settings.executionMode = "api";
-				this.plugin.settings.apiProvider = "local";
-				await this.plugin.saveSettings();
-				this.renderApiSetup();
-			},
-		});
-		addCard({
-			title: "I have an API key",
-			// Z.ai/GLM stays a real option in the provider dropdown on the
-			// next screen - this line is just the marketing-copy summary,
-			// which the redesign spec trims to the three best-known names.
-			sub: "Anthropic, OpenAI, Gemini, etc.",
-			onChoose: async () => {
-				this.plugin.settings.executionMode = "api";
-				await this.plugin.saveSettings();
-				this.renderApiSetup();
-			},
+		this.addModeCard(cards, {
+			title: "I have an API key or local model",
+			sub: "Anthropic, OpenAI, Gemini, or run free & local",
+			onChoose: () => this.renderConnectChoice(),
 		});
 
 		const themeLink = this.contentEl.createDiv({ cls: "nous-wizard-skip" });
@@ -3590,11 +3573,48 @@ class OnboardingModal extends Modal {
 		});
 	}
 
+	// Sits between Welcome and renderApiSetup - both used to be separate
+	// Welcome cards ("free local model" / "API key") going straight to the
+	// same form; now Welcome has one combined card that lands here first.
+	// Shares step 0 with renderApiSetup rather than getting its own dot -
+	// they're two halves of the same "connect a provider" stage.
+	private renderConnectChoice() {
+		this.clear();
+		this.setScreenMode("hero");
+		this.renderTopRow(0, 4, () => this.renderWelcome());
+		this.setTitle("Connect a provider");
+		this.renderBody("Pick whichever works for you.", { center: true });
+
+		const cards = this.contentEl.createDiv({ cls: "nous-mode-cards" });
+		this.addModeCard(cards, {
+			title: "I want a free local model",
+			sub: "Free and private · 2-min setup",
+			onChoose: async () => {
+				this.plugin.settings.executionMode = "api";
+				this.plugin.settings.apiProvider = "local";
+				await this.plugin.saveSettings();
+				this.renderApiSetup();
+			},
+		});
+		this.addModeCard(cards, {
+			title: "I have an API key",
+			// Z.ai/GLM stays a real option in the provider dropdown on the
+			// next screen - this line is just the marketing-copy summary,
+			// which the redesign spec trims to the three best-known names.
+			sub: "Anthropic, OpenAI, Gemini, etc.",
+			onChoose: async () => {
+				this.plugin.settings.executionMode = "api";
+				await this.plugin.saveSettings();
+				this.renderApiSetup();
+			},
+		});
+	}
+
 	private renderApiSetup() {
 		this.clear();
 		this.setScreenMode("form");
 		this.setTitle("Connect a provider");
-		this.renderTopRow(0, 4, () => this.renderWelcome());
+		this.renderTopRow(0, 4, () => this.renderConnectChoice());
 		this.renderBody("Changeable anytime in settings.");
 
 		const provider = () => this.plugin.settings.apiProvider;
