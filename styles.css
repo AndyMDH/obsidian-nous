@@ -441,6 +441,10 @@
 .nous-modal.is-form select {
 	width: 100%;
 	padding: 8px 10px;
+	/* Obsidian gives select a fixed default height - this padding made the
+	   content taller than that box, clipping the top of the text. */
+	height: auto;
+	line-height: normal;
 }
 .nous-mono-input {
 	font-family: var(--nous-font-mono);
@@ -689,6 +693,8 @@
 	color: var(--nous-text);
 	font-size: 13px;
 	padding: 5px 26px 5px 10px;
+	height: auto;
+	line-height: normal;
 }
 
 /* Test/Refresh/Install/Download as small outlined pills - CTAs (Download
