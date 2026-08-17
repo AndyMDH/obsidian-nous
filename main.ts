@@ -998,26 +998,6 @@ export default class NousPlugin extends Plugin {
 		new Notice(fragment, timeoutMs);
 	}
 
-	async installEditorialSnippet(): Promise<void> {
-		const snippetsDir = `${this.app.vault.configDir}/snippets`;
-		const adapter = this.app.vault.adapter;
-		if (!(await adapter.exists(snippetsDir))) await adapter.mkdir(snippetsDir);
-		await adapter.write(`${snippetsDir}/${EDITORIAL_SNIPPET_FILENAME}`, EDITORIAL_SNIPPET);
-
-		const appearancePath = `${this.app.vault.configDir}/appearance.json`;
-		let appearance: { enabledCssSnippets?: string[] } = {};
-		try {
-			appearance = JSON.parse(await adapter.read(appearancePath)) as { enabledCssSnippets?: string[] };
-		} catch {
-			// Missing or malformed - start fresh.
-		}
-		const enabled = new Set(appearance.enabledCssSnippets ?? []);
-		enabled.add(EDITORIAL_SNIPPET_FILENAME.replace(/\.css$/, ""));
-		appearance.enabledCssSnippets = [...enabled].sort();
-		await adapter.write(appearancePath, JSON.stringify(appearance, null, 2));
-		nousNotice("Theme installed! Set your accent color to #4c5138 to see it in full bloom.", 8000);
-	}
-
 	private getVaultBasePath(): string | null {
 		return this.app.vault.adapter instanceof FileSystemAdapter
 			? this.app.vault.adapter.getBasePath()
@@ -2532,60 +2512,6 @@ export default class NousPlugin extends Plugin {
 	}
 }
 
-const EDITORIAL_SNIPPET_FILENAME = "nous-editorial.css";
-// Kept in sync with examples/nous-editorial-theme.css in the repository.
-const EDITORIAL_SNIPPET = `/* Nous editorial theme - optional vault snippet. Remove or disable in
-   Appearance -> CSS snippets. For the full effect, set Appearance ->
-   Accent color to #4C5138. */
-body {
-	--font-text: "Iowan Old Style", Palatino, Georgia, serif;
-	--line-height-normal: 1.6;
-}
-.inline-title,
-.markdown-preview-view h1 {
-	font-family: "Iowan Old Style", Palatino, Georgia, serif;
-	letter-spacing: -0.01em;
-}
-.tag,
-.cm-hashtag {
-	color: #4c5138 !important;
-	background-color: rgba(76, 81, 56, 0.08);
-	border: 1px solid rgba(76, 81, 56, 0.35);
-}
-.metadata-property[data-property-key="tags"] .multi-select-pill {
-	color: #4c5138;
-	background-color: rgba(76, 81, 56, 0.08);
-	border: 1px solid rgba(76, 81, 56, 0.35);
-}
-.metadata-property-key .metadata-property-key-input {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 12px;
-	color: var(--text-muted);
-}
-.metadata-properties-heading .metadata-properties-title {
-	font-size: 12px;
-	letter-spacing: 0.08em;
-	text-transform: uppercase;
-	color: var(--text-muted);
-}
-.markdown-preview-view blockquote,
-.markdown-source-view .HyperMD-quote {
-	border-left: 2px solid rgba(76, 81, 56, 0.5);
-}
-input[type="checkbox"]:checked {
-	background-color: #4c5138;
-	border-color: #4c5138;
-}
-.workspace-tab-header.is-active .workspace-tab-header-inner-title,
-.nav-file-title.is-active {
-	color: #4c5138;
-}
-.callout[data-callout="nous"] {
-	--callout-color: 76, 81, 56;
-	--callout-icon: lucide-sparkles;
-}
-`;
-
 // Bulk-rewrites real vault files - shown before every migration run, no
 // auto-run and no skipping this even in tests/dev.
 class ConfirmTranscriptMigrationModal extends Modal {
@@ -2991,7 +2917,7 @@ class NousSettingTab extends PluginSettingTab {
 				);
 			},
 		});
-		items.push({ type: "group", heading: "Provider", items: providerItems });
+		items.push({ type: "group", heading: "Provider", cls: "nous-settings-group", items: providerItems });
 
 		const meetingItems: SettingGroupItem[] = [];
 		meetingItems.push({
@@ -3121,38 +3047,7 @@ class NousSettingTab extends PluginSettingTab {
 				});
 			}
 		}
-		items.push({ type: "group", heading: "Meeting capture", items: meetingItems });
-
-		const appearanceItems: SettingGroupItem[] = [];
-		appearanceItems.push({
-			name: "Styled Nous notes",
-			render: (setting) => {
-				setting
-					.setDesc("Meeting notes and wikis that Nous generates get the editorial layout in reading view.")
-					.addToggle((toggle) =>
-						toggle.setValue(this.plugin.settings.styledNotes).onChange(async (value) => {
-							this.plugin.settings.styledNotes = value;
-							document.body.toggleClass("nous-styled-notes", value);
-							await this.plugin.saveSettings();
-						})
-					);
-			},
-		});
-		appearanceItems.push({
-			name: "Editorial theme (optional)",
-			render: (setting) => {
-				setting
-					.setDesc("Vault-wide look: serif text, moss tags and details, a branded callout. Installs as a CSS snippet you can disable anytime.")
-					.addButton((b) =>
-						b.setButtonText("Install").onClick(async () => {
-							b.setDisabled(true);
-							await this.plugin.installEditorialSnippet();
-							b.setDisabled(false);
-						})
-					);
-			},
-		});
-		items.push({ type: "group", heading: "Appearance", items: appearanceItems });
+		items.push({ type: "group", heading: "Meeting capture", cls: "nous-settings-group", items: meetingItems });
 
 		const voiceItems: SettingGroupItem[] = [];
 		voiceItems.push({
@@ -3254,7 +3149,7 @@ class NousSettingTab extends PluginSettingTab {
 				},
 			});
 		}
-		items.push({ type: "group", heading: "Voice capture", items: voiceItems });
+		items.push({ type: "group", heading: "Voice capture", cls: "nous-settings-group", items: voiceItems });
 
 		// Vault is its own group, but - same as before this restructure -
 		// only shown at all once Advanced settings is on.
@@ -3279,7 +3174,7 @@ class NousSettingTab extends PluginSettingTab {
 			vaultItems.push(folderSetting("wikisFolder", "Wikis folder"));
 			vaultItems.push(folderSetting("tagsFolder", "Tags folder"));
 			vaultItems.push(folderSetting("queriesFolder", "Queries folder"));
-			items.push({ type: "group", heading: "Vault", items: vaultItems });
+			items.push({ type: "group", heading: "Vault", cls: "nous-settings-group", items: vaultItems });
 		}
 
 		// Footer (§4): quiet underlined links, mono-adjacent to the header's

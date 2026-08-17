@@ -600,6 +600,15 @@
 	font-size: 12px;
 }
 
+/* Breathing room between native (1.13.0+) group cards - each group is
+   tagged with this class via SettingDefinitionGroup's own `cls` field
+   (main.ts), rather than guessing at Obsidian's internal group-container
+   class name. Without this, consecutive cards sat close enough that the
+   last row of one and the heading of the next read as running together. */
+.nous-settings-group {
+	margin-bottom: 20px;
+}
+
 /* Small-caps section labels. Only reachable on the pre-1.13.0
    renderLegacySettings() fallback in main.ts, which still builds each
    section's heading via Setting.setHeading() the same way this whole tab
@@ -737,9 +746,15 @@
 .nous-settings .checkbox-container.is-enabled {
 	background-color: var(--nous-accent);
 }
+/* Off-state track: --nous-border is too close in value to the card
+   background it sits on (both derive from the same neutral family now
+   that colors are theme-adaptive), making it hard to tell which side the
+   knob is resting on. --nous-muted is a visibly darker/lighter grey
+   regardless of theme, so the pill's outline - and therefore the knob's
+   position - stays legible. */
 .nous-settings .checkbox-container:not(.is-enabled) {
 	background-color: var(--nous-surface-2);
-	border: 1px solid var(--nous-border);
+	border: 1.5px solid var(--nous-muted);
 }
 
 /* Properties stay hidden in live notes across both view modes */

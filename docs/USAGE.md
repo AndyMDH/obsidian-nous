@@ -239,15 +239,10 @@ Every step is logged to `.nous/pipeline.log` in the vault.
   are ever sent to the provider you chose. Local mode sends nothing
   anywhere. No telemetry, ever.
 
-## The Nous look (optional)
+## The Nous look
 
-Nous-generated notes get an editorial layout in reading view by default:
-a chip row replaces the raw properties table, section headings render in
-small caps, and the transcript sits collapsed in a folded callout below
-your notes. Turn this off in Settings → Nous → Appearance.
-
-For the vault-wide look - serif text, moss tag chips, a `> [!nous]`
-callout - click **Install** under Settings → Nous → Appearance →
-Editorial theme. It lands as a normal CSS snippet you can disable in
-Appearance → CSS snippets. For the full effect, set Appearance → Accent
-color to `#4C5138`.
+Nous-generated notes get an editorial layout in reading view: a chip row
+replaces the raw properties table, section headings render in small caps,
+and the transcript sits collapsed in a folded callout below your notes.
+This is always on and follows your own Obsidian theme and accent color -
+there is no separate Nous color scheme to install or turn off.
