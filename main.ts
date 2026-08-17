@@ -2986,7 +2986,7 @@ class NousSettingTab extends PluginSettingTab {
 			},
 		});
 
-		if (Platform.isMacOS) {
+		if (Platform.isMacOS && this.showAdvanced) {
 			items.push({
 				name: "Native recorder status",
 				render: (setting) => {
