@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.4.3
+
+- Transcript sections now render as a collapsed callout instead of a
+  plain heading, so a long transcript doesn't dominate the note. A
+  one-time command converts notes written before this change.
+- Quick capture is removed. Type or paste into a note in the inbox
+  instead - one less way in to maintain, same result.
+- Onboarding wizard: a full skip from the welcome screen now seeds the
+  vault folders like every other exit path did already. Finishing the
+  wizard always drops and enriches a sample note, not just the optional
+  tour - you see the capture -> enrichment loop happen either way. Added
+  a "Show quick tour" command to revisit the walkthrough without
+  redoing provider setup. Fixed the provider-connection screen missing
+  its progress dots, a missing intro line on the same screen, and a
+  capture-status screen that could show two rows both saying "it works."
+- `30-Wikis` gets a placeholder note explaining it starts empty until a
+  tag has enough notes - it looked broken before.
+
 ## 2.3.3
 
 Live meeting transcription (2.3.0-2.3.2) is removed. The feature fought
