@@ -188,7 +188,7 @@ test("buildMeetingMarkdown keeps typed meeting notes above Transcript", () => {
 		"## Questions to ask\n\n- [ ] Ask about budget\n\n## Live notes\n\nNeed a follow-up owner."
 	);
 	const notesIdx = md.indexOf("## Notes taken during meeting");
-	const transcriptIdx = md.indexOf("[!note]- Transcript");
+	const transcriptIdx = md.indexOf("[!transcript]- Transcript");
 	assert.ok(notesIdx > -1);
 	assert.ok(transcriptIdx > notesIdx);
 	assert.match(md, /### Questions to ask/);
@@ -209,13 +209,13 @@ test("buildMeetingMarkdown Related section includes tags, related notes, and wik
 
 test("toCollapsedCallout quotes each body line, using a bare '>' for blank lines", () => {
 	const callout = toCollapsedCallout("Transcript", "line one\n\nline two");
-	assert.equal(callout, "> [!note]- Transcript\n> line one\n>\n> line two");
+	assert.equal(callout, "> [!transcript]- Transcript\n> line one\n>\n> line two");
 });
 
 test("buildMeetingMarkdown output round-trips through extractTranscriptSnippet and extractEnrichedSections", () => {
 	const raw = "Tom: hello.\n\nAndy: hi there.";
 	const md = buildMeetingMarkdown(baseResult(), raw, "2026-07-02T12:00:00.000Z", null);
-	assert.ok(md.includes("> [!note]- Transcript"));
+	assert.ok(md.includes("> [!transcript]- Transcript"));
 
 	const snippetText = extractTranscriptSnippet(md, 500);
 	assert.ok(snippetText.includes("Tom: hello."));
@@ -240,11 +240,23 @@ test("legacy '## Transcript' notes still parse correctly through extractTranscri
 	assert.ok(!sections.includes("[[tag]]"));
 });
 
+test("legacy '[!note]- Transcript' callouts (pre-rename) still parse correctly through extractTranscriptSnippet and extractEnrichedSections", () => {
+	const note = `---\ntype: meeting\n---\n\n## Summary\n\nThis is the summary text, not the transcript.\n\n> [!note]- Transcript\n> Tom said hello and then we discussed the roadmap in detail.\n\n## Related\n\n- [[tag]]`;
+	const snippetText = extractTranscriptSnippet(note, 500);
+	assert.ok(snippetText.includes("Tom said hello"));
+	assert.ok(!snippetText.includes("This is the summary text"));
+
+	const sections = extractEnrichedSections(note);
+	assert.ok(sections.includes("This is the summary text"));
+	assert.ok(!sections.includes("Tom said hello"));
+	assert.ok(!sections.includes("[[tag]]"));
+});
+
 test("convertLegacyTranscriptToCallout converts a legacy '## Transcript' heading to a collapsed callout", () => {
 	const legacy = `---\ntype: meeting\n---\n\n## Summary\n\nKickoff call summary.\n\n## Key points\n\n- Point one\n- Point two\n\n## Transcript\n\nTom: hello.\n\nAndy: hi there.\n\n## Related\n\n- [[external]]\n- [[project]]`;
 	const converted = convertLegacyTranscriptToCallout(legacy);
 	assert.ok(converted !== null);
-	assert.ok(converted.includes("> [!note]- Transcript"));
+	assert.ok(converted.includes("> [!transcript]- Transcript"));
 	assert.ok(converted.includes("> Tom: hello."));
 	assert.ok(converted.includes("> Andy: hi there."));
 	assert.ok(!converted.includes("## Transcript"));
