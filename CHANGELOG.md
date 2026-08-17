@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.5.2
+
+- Fixed the onboarding wizard rendering washed-out and barely legible
+  in dark mode.
+- Fixed dropdown selects (Provider, etc.) showing a tiled row of
+  arrow icons instead of Obsidian's normal single dropdown arrow.
+- Fixed stray divider lines on the "Connect a provider" screen.
+- Fixed the Base URL field truncating long values in the settings tab.
+- Fixed "Meeting capture" rendering as an empty heading with nothing
+  under it unless Advanced settings was turned on.
+
 ## 2.5.1
 
 - Fixed the welcome screen's mode cards ("I have a Claude
