@@ -107,13 +107,13 @@
 .nous-notice-icon {
 	display: inline-flex;
 	align-items: center;
-	vertical-align: -2px;
-	margin-right: 6px;
+	vertical-align: -4px;
+	margin-right: 7px;
 	color: var(--nous-accent);
 }
 .nous-notice-icon svg {
-	width: 14px;
-	height: 14px;
+	width: 20px;
+	height: 20px;
 }
 
 .nous-recording {
