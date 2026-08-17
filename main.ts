@@ -3357,7 +3357,7 @@ class OnboardingModal extends Modal {
 		this.renderDots(0);
 		this.renderLogo();
 		this.contentEl.createEl("p", {
-			cls: "nous-welcome-question",
+			cls: "nous-welcome-question nous-welcome-hero-text",
 			text: "How should Nous write your notes?",
 		});
 
@@ -3435,6 +3435,10 @@ class OnboardingModal extends Modal {
 		this.clear();
 		this.setTitle("Connect a provider");
 		this.renderDots(0);
+		this.contentEl.createEl("p", {
+			cls: "nous-welcome-question",
+			text: "You can change this anytime from Nous settings.",
+		});
 
 		const provider = () => this.plugin.settings.apiProvider;
 
@@ -3585,6 +3589,16 @@ class OnboardingModal extends Modal {
 					void this.plugin
 						.getNativeRecorderReadiness()
 						.then((readiness) => {
+							// A healthy, idle recorder adds nothing the
+							// "Meeting capture" item above didn't already say
+							// ("Ready.") - two rows both saying "it works" is
+							// noise. Only keep this row when it has something
+							// the generic item can't say: an install/permission
+							// problem, or that it's recording right now.
+							if (readiness.state === "installed") {
+								recorderStatusSetting.settingEl.remove();
+								return;
+							}
 							// State only here - the full path/version detail
 							// stays in the settings tab.
 							recorderStatusSetting.setDesc(nativeRecorderReadinessText(readiness).split(" Path:")[0]);

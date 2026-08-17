@@ -221,7 +221,14 @@
 .nous-wizard-logo {
 	display: flex;
 	justify-content: center;
-	margin: 4px 0 12px;
+	margin: 0 0 12px;
+}
+
+/* The one line of copy directly under the centered logo mark - centered to
+   match it. Every other screen's body text (no centered mark above it)
+   stays left-aligned via the shared .nous-welcome-question rule. */
+.nous-welcome-hero-text {
+	text-align: center;
 }
 
 /* The live note's frontmatter is machinery (recording flags, paths) - hide
