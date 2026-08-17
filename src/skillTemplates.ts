@@ -197,7 +197,7 @@ Summary framing — just summarize the idea.
 
 - ...
 
-> [!transcript]- Transcript
+> [!note]- Transcript
 > <original raw text, unmodified, one '>' per line, collapsed under this callout>
 \`\`\`
 
@@ -208,7 +208,7 @@ inbox file did not contain \`## Meeting notes\`, \`## Notes\`, \`## Questions to
 invent decisions or action items that aren't actually in the transcript.
 
 **Never delete, summarize away, or paraphrase the original transcript text.**
-It moves intact, verbatim, under the collapsed \`> [!transcript]- Transcript\`
+It moves intact, verbatim, under the collapsed \`> [!note]- Transcript\`
 callout. Enrichment adds structure above it; it does not touch the source
 material.
 

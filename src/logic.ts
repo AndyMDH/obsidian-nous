@@ -70,36 +70,33 @@ export function snippet(body: string, maxChars = 200): string {
 	return truncate(body.replace(/^---\n[\s\S]*?\n---\n/, ""), maxChars);
 }
 
-// Callout marker for the collapsed Transcript section. "[!transcript]" is
-// the current type - a custom callout so the warm-paper theme can restyle
-// it without touching every "[!note]" a user writes elsewhere in their
-// vault. "[!note]- Transcript" is the marker notes written before this
-// rename still carry (or forever, if a user never re-enriches them) - kept
-// recognized here so duplicate-detection and wiki synthesis still work on
-// them, though only new notes get the redesigned callout look.
-const TRANSCRIPT_CALLOUT_MARKER = "[!transcript]- Transcript";
-const LEGACY_TRANSCRIPT_CALLOUT_MARKER = "[!note]- Transcript";
+// Callout marker for the collapsed Transcript section - present in every
+// note written since the collapsed-transcript change; legacy notes still
+// have the plain "## Transcript" heading until migrated (or forever, if a
+// user skips the migration command).
+//
+// This stays "[!note]" rather than a custom type: Obsidian's Live Preview
+// only renders its known, built-in callout types (note, tip, quote, etc.)
+// with real icon/color/fold chrome - an unrecognized type like
+// "[!transcript]" falls back to a generic blue "pick a real type" editing
+// widget instead of a normal callout, no matter what CSS targets it. The
+// warm-paper theme restyles [!note] itself (see its own callout section) -
+// every callout the theme touches gets the same quiet flat treatment by
+// design, so there's no meaningful risk in reusing the built-in type.
+const TRANSCRIPT_CALLOUT_MARKER = "[!note]- Transcript";
 const TRANSCRIPT_HEADING = "## Transcript";
-
-function findTranscriptCalloutMarker(noteContent: string): { index: number; marker: string } | null {
-	const current = noteContent.indexOf(TRANSCRIPT_CALLOUT_MARKER);
-	if (current !== -1) return { index: current, marker: TRANSCRIPT_CALLOUT_MARKER };
-	const legacy = noteContent.indexOf(LEGACY_TRANSCRIPT_CALLOUT_MARKER);
-	if (legacy !== -1) return { index: legacy, marker: LEGACY_TRANSCRIPT_CALLOUT_MARKER };
-	return null;
-}
 
 // Duplicate check compares raw transcript text, not generated Summary
 // prose - a re-pasted duplicate only character-matches the former.
 export function extractTranscriptSnippet(noteContent: string, maxChars = 200): string {
-	const callout = findTranscriptCalloutMarker(noteContent);
-	if (callout) {
+	const calloutIdx = noteContent.indexOf(TRANSCRIPT_CALLOUT_MARKER);
+	if (calloutIdx !== -1) {
 		// Strip the "> " callout prefix line by line - the freshly captured
 		// transcript this is compared against for duplicate detection has no
 		// such prefix, so leaving it in would break the comparison for every
 		// already-migrated note.
 		const body = noteContent
-			.slice(callout.index + callout.marker.length)
+			.slice(calloutIdx + TRANSCRIPT_CALLOUT_MARKER.length)
 			.split("\n")
 			.map((line) => line.replace(/^>\s?/, ""))
 			.join("\n");
@@ -116,11 +113,11 @@ export function extractTranscriptSnippet(noteContent: string, maxChars = 200): s
 // Enriched sections only - wiki synthesis doesn't need the raw transcript.
 export function extractEnrichedSections(noteContent: string): string {
 	const afterFrontmatter = noteContent.replace(/^---\n[\s\S]*?\n---\n/, "");
-	const callout = findTranscriptCalloutMarker(afterFrontmatter);
+	const calloutIdx = afterFrontmatter.indexOf(TRANSCRIPT_CALLOUT_MARKER);
 	const transcriptIdx = afterFrontmatter.indexOf(TRANSCRIPT_HEADING);
 	const relatedIdx = afterFrontmatter.indexOf("## Related");
 	let end = afterFrontmatter.length;
-	if (callout) end = Math.min(end, callout.index);
+	if (calloutIdx !== -1) end = Math.min(end, calloutIdx);
 	if (transcriptIdx !== -1) end = Math.min(end, transcriptIdx);
 	if (relatedIdx !== -1) end = Math.min(end, relatedIdx);
 	return afterFrontmatter.slice(0, end).trim();
@@ -187,12 +184,10 @@ export interface CapturedAttachment {
 // Reading view and Live Preview (heading-fold state isn't guaranteed to
 // persist; the callout's collapsed state is plain markdown, not editor
 // state). Shared by buildMeetingMarkdown and convertLegacyTranscriptToCallout
-// so the two writers can't drift out of sync with each other. Only ever
-// called with "Transcript" today, hence the custom "[!transcript]" type
-// rather than a generic one.
+// so the two writers can't drift out of sync with each other.
 export function toCollapsedCallout(title: string, body: string): string {
 	const lines = body.split("\n").map((line) => (line === "" ? ">" : `> ${line}`));
-	return [`> [!transcript]- ${title}`, ...lines].join("\n");
+	return [`> [!note]- ${title}`, ...lines].join("\n");
 }
 
 export function buildMeetingMarkdown(
