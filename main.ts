@@ -108,6 +108,11 @@ const LOG_FILE = `${LOG_FOLDER}/pipeline.log`;
 const API_KEY_PROVIDERS: Exclude<ApiProvider, "local">[] = ["anthropic", "openai", "gemini", "glm"];
 const DEFAULT_CLAUDE_CLI_BIN = "claude";
 const DEFAULT_WHISPER_CLI_BIN = "whisper-cli";
+// Agent runs (enrich/wiki-build/query) are real Claude Code invocations, not
+// instant - can legitimately take minutes on a full inbox. This cap only
+// exists so a hung one (dropped connection, stuck auth prompt) can't jam
+// cliRunInProgress forever; it should never fire in normal operation.
+const AGENT_CLI_TIMEOUT_MS = 15 * 60 * 1000;
 // afconvert (CoreAudio) can read AIFF/WAV/CAF/M4A/MP3 but not WebM/Opus, so
 // local transcription silently fails if the browser records WebM (Chromium's
 // default with no mimeType hint) - ask for an afconvert-readable container
@@ -960,7 +965,19 @@ export default class NousPlugin extends Plugin {
 			const child = execFile(
 				command,
 				args,
-				{ cwd: options.cwd, env: options.env, maxBuffer: 20 * 1024 * 1024 },
+				{
+					cwd: options.cwd,
+					env: options.env,
+					maxBuffer: 20 * 1024 * 1024,
+					// Without this, a hung child (dropped connection, a stuck
+					// auth prompt, anything that never exits) leaves this
+					// promise pending forever - which for the inbox/wiki runs
+					// means cliRunInProgress's `finally` never fires either,
+					// silently jamming every future automatic and manual
+					// "process inbox" for the rest of the session.
+					timeout: options.timeoutMs,
+					killSignal: "SIGTERM",
+				},
 				(error, stdout, stderr) => {
 					const code = error ? (typeof error.code === "number" ? error.code : 1) : 0;
 					resolve({ code, stdout: stdout?.toString() ?? "", stderr: stderr?.toString() ?? "" });
@@ -2054,7 +2071,7 @@ export default class NousPlugin extends Plugin {
 		const enrichResult = await this.cliExec(
 			this.settings.claudeCliPath,
 			buildEnrichArgs(this.settings.inboxFolder),
-			{ cwd: basePath, env }
+			{ cwd: basePath, env, timeoutMs: AGENT_CLI_TIMEOUT_MS }
 		);
 		if (enrichResult.code !== 0) {
 			await this.appendLog(
@@ -2070,7 +2087,7 @@ export default class NousPlugin extends Plugin {
 		const wikiResult = await this.cliExec(
 			this.settings.claudeCliPath,
 			buildWikiArgs(this.settings.meetingsFolder),
-			{ cwd: basePath, env }
+			{ cwd: basePath, env, timeoutMs: AGENT_CLI_TIMEOUT_MS }
 		);
 		if (wikiResult.code !== 0) {
 			await this.appendLog(
@@ -2113,7 +2130,7 @@ export default class NousPlugin extends Plugin {
 		const result = await this.cliExec(
 			this.settings.claudeCliPath,
 			buildWikiArgs(this.settings.meetingsFolder),
-			{ cwd: basePath, env: this.cliEnv() }
+			{ cwd: basePath, env: this.cliEnv(), timeoutMs: AGENT_CLI_TIMEOUT_MS }
 		);
 		if (result.code !== 0) {
 			await this.appendLog(`ERROR: wiki-builder CLI exited ${result.code} - ${cliErrorDetail(result)}`);
@@ -2147,7 +2164,7 @@ export default class NousPlugin extends Plugin {
 		const result = await this.cliExec(
 			this.settings.claudeCliPath,
 			buildQueryArgs(question),
-			{ cwd: basePath, env: this.cliEnv() }
+			{ cwd: basePath, env: this.cliEnv(), timeoutMs: AGENT_CLI_TIMEOUT_MS }
 		);
 		if (result.code !== 0) {
 			await this.appendLog(`ERROR: vault-query CLI exited ${result.code} - ${cliErrorDetail(result)}`);

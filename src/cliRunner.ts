@@ -10,7 +10,7 @@ export interface CliExecResult {
 export type CliExec = (
 	command: string,
 	args: string[],
-	options: { cwd: string; env: Record<string, string> }
+	options: { cwd: string; env: Record<string, string>; timeoutMs?: number }
 ) => Promise<CliExecResult>;
 
 // macOS GUI apps start with a minimal PATH, so `claude` often resolves in
