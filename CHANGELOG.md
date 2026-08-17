@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.6.0
+
+`#win` now works in API mode, not just CLI mode - auto-suggested
+tagging, structured frontmatter extraction (category, headcount,
+client, repo, metric), and a self-updating `Wins.md` all behave the
+same regardless of which execution mode you use.
+
 ## 2.5.9
 
 Addressed several findings from Obsidian's plugin health scorecard:
