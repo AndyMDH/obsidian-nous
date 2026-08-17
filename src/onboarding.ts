@@ -7,9 +7,6 @@ export const MEETING_RECORDER_MISSING_NOTICE =
 export const ONBOARDING_PREREQUISITES_TEXT =
 	"Text, images, and PDFs work after that choice. Voice notes also need speech-to-text: local whisper.cpp on macOS, or a Gemini/OpenAI key used only for transcription. For meetings on macOS, install the native Nous recorder. If speech-to-text is not ready yet, Nous still saves the recording and finishes it later.";
 
-export const VOICE_CAPTURE_SETTINGS_DESC =
-	"Voice notes need speech-to-text: local whisper.cpp, or a Gemini/OpenAI key used only for transcription.";
-
 export const NATIVE_RECORDER_INSTALL_DESC =
 	"Nous downloads its recorder, checks it, and uses it automatically.";
 

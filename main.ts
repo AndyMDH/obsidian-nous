@@ -86,7 +86,6 @@ import {
 	type NativeRecorderReadiness,
 	MEETING_RECORDER_MISSING_NOTICE,
 	NATIVE_RECORDER_INSTALL_DESC,
-	VOICE_CAPTURE_SETTINGS_DESC,
 	capturePrerequisitesContinueText,
 	capturePrerequisiteItems,
 	hasGeminiOrOpenAiTranscriptionKey,
@@ -2982,16 +2981,6 @@ class NousSettingTab extends PluginSettingTab {
 		items.push({ type: "group", heading: "Provider", cls: "nous-settings-group", items: providerItems });
 
 		const meetingItems: SettingGroupItem[] = [];
-		meetingItems.push({
-			name: "",
-			render: (setting) => {
-				setting
-					.setDesc(
-						"The phone button records meetings. Click to start, click again to stop. macOS only."
-					)
-					.setClass("setting-item-description");
-			},
-		});
 
 		if (Platform.isMacOS && this.showAdvanced) {
 			meetingItems.push({
@@ -3112,14 +3101,6 @@ class NousSettingTab extends PluginSettingTab {
 		items.push({ type: "group", heading: "Meeting capture", cls: "nous-settings-group", items: meetingItems });
 
 		const voiceItems: SettingGroupItem[] = [];
-		voiceItems.push({
-			name: "",
-			render: (setting) => {
-				setting
-					.setDesc(VOICE_CAPTURE_SETTINGS_DESC)
-					.setClass("setting-item-description");
-			},
-		});
 
 		if (Platform.isMacOS) {
 			voiceItems.push({
@@ -3149,9 +3130,7 @@ class NousSettingTab extends PluginSettingTab {
 			name: "Live voice transcription (beta)",
 			render: (setting) => {
 				setting
-					.setDesc(
-						"Shows your words as you talk. Needs the OpenAI key above. Desktop only. Falls back to normal recording - nothing is lost."
-					)
+					.setDesc("Live captions while you talk. Needs the OpenAI key above.")
 					.addToggle((toggle) =>
 						toggle.setValue(this.plugin.settings.liveTranscriptionEnabled).onChange(async (value) => {
 							this.plugin.settings.liveTranscriptionEnabled = value;
@@ -3712,7 +3691,13 @@ class OnboardingModal extends Modal {
 	private renderCapturePrerequisites() {
 		this.clear();
 		this.setScreenMode("list");
-		this.renderTopRow(2, 4, () => this.renderTest());
+		// Back can't target renderTest() - that screen just re-runs the
+		// connection check and, once it succeeds, immediately advances right
+		// back here on its own, which made the chevron look broken. The real
+		// previous interactive step is whichever screen set up the
+		// connection in the first place.
+		const isCli = this.plugin.settings.executionMode === "cli";
+		this.renderTopRow(2, 4, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
 		this.setTitle("What works now");
 		const statusEl = this.contentEl.createDiv({ cls: "nous-capture-checklist" });
 		statusEl.createEl("p", { cls: "nous-wizard-body", text: "Checking capture setup..." });

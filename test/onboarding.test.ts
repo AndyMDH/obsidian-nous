@@ -3,7 +3,6 @@ import { strict as assert } from "node:assert";
 import {
 	MEETING_RECORDER_MISSING_NOTICE,
 	ONBOARDING_PREREQUISITES_TEXT,
-	VOICE_CAPTURE_SETTINGS_DESC,
 	VOICE_TRANSCRIPTION_SETUP_NOTICE,
 	capturePrerequisitesContinueText,
 	capturePrerequisiteItems,
@@ -22,11 +21,7 @@ test("voice transcription fallback accepts only Gemini or OpenAI keys", () => {
 });
 
 test("new-user copy says voice notes need speech-to-text setup", () => {
-	for (const text of [
-		ONBOARDING_PREREQUISITES_TEXT,
-		VOICE_CAPTURE_SETTINGS_DESC,
-		VOICE_TRANSCRIPTION_SETUP_NOTICE,
-	]) {
+	for (const text of [ONBOARDING_PREREQUISITES_TEXT, VOICE_TRANSCRIPTION_SETUP_NOTICE]) {
 		assert.match(text, /speech-to-text|whisper\.cpp|Gemini\/OpenAI|Gemini or OpenAI/i);
 	}
 	// The notice itself is deliberately terse - it must point at the fix, not
