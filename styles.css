@@ -80,7 +80,7 @@
 	--nous-radius-pill: 99px;
 	--nous-font-ui: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
 	--nous-font-serif: Georgia, "Iowan Old Style", Palatino, serif;
-	--nous-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+	--nous-font-mono: SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 /* ------------------------------------------------------------------ */
@@ -799,7 +799,7 @@
 .markdown-source-view.nous-live-note .metadata-container,
 .markdown-reading-view .nous-live-note .metadata-container,
 .nous-live-note .metadata-container {
-	display: none !important;
+	display: none;
 }
 
 /* ------------------------------------------------------------------ */
