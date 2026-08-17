@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.5.0
+
+Full visual rebrand: warm paper design (moss accent, new Clip-n logo,
+editorial typography). See `docs/NOUS-REDESIGN.md` for the spec.
+
+- Nous no longer forces its own color palette. Every surface it draws -
+  the onboarding wizard, notices, the settings tab, styled-note
+  output - now pulls its colors from your active Obsidian theme and
+  accent color instead.
+- Settings tab: real grouped cards (Provider, Meeting capture, Voice
+  capture, Vault) instead of a flat list with headings, plus clearer
+  toggle contrast and shorter descriptions.
+- New optional companion theme, "Warm Paper" - the moss palette Nous
+  used to force on everyone, now a separate theme you opt into. One
+  click from the onboarding wizard's welcome screen installs and
+  switches to it (`AndyMDH/warm-paper`).
+- Fixed several bugs the theme-adaptive change introduced: invisible
+  white-on-white text on filled buttons and the recommended mode
+  card, a "What works now" back button that silently re-ran the
+  connection check and bounced right back instead of going back, and
+  a stuck internal lock that could silently block every future
+  automatic and manual "process inbox" for the rest of the session if
+  one CLI run ever hung.
+- README, logo, and illustrations updated to match.
+
 ## 2.4.3
 
 - Transcript sections now render as a collapsed callout instead of a
