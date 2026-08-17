@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.5.9
+
+Addressed several findings from Obsidian's plugin health scorecard:
+
+- Dropped `ui-monospace` from the mono font stack - a newer CSS
+  generic keyword Obsidian's bundled Chromium doesn't support.
+- Added `@codemirror/state`/`@codemirror/view` to `dependencies` -
+  they're bundled into `main.js`, not just present transitively.
+- Removed an unneeded `!important`.
+
 ## 2.5.8
 
 - Shortened the plugin description shown in Community plugins - it
