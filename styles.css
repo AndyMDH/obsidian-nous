@@ -1,84 +1,57 @@
 /* ------------------------------------------------------------------ */
-/* Nous "warm paper" design tokens (docs/NOUS-REDESIGN.md §1). Namespaced
-   custom properties, not overrides of Obsidian's own --background-*/
-   --text-* variables.
+/* Nous color tokens point at Obsidian's own theme variables, not a fixed
+   "warm paper" palette - every Nous-drawn element (wizard modal, notices,
+   settings tab, note styling/chip rows/tag pills/transcript callout)
+   follows whatever theme and accent color the user has installed, light
+   or dark, instead of a fixed brand identity. The moss/warm-paper hex
+   values that used to live here are retired from the plugin itself but
+   not lost - they're a candidate for a separate, real, installable
+   Obsidian theme later, which is a different deliverable from this
+   plugin controlling its own colors. Token NAMES are unchanged (renaming
+   every var(--nous-*) call site across the stylesheet would be a lot of
+   churn for no behavior change) - only what each one points at changed,
+   from a hardcoded hex to one of Obsidian's own variables.
 
-   Light values live on :root, not .theme-light: :root (the <html>
-   element) is an ancestor of literally everything in the document, so
-   inheritance can't fail no matter where Obsidian appends a given
-   element (modals in particular aren't guaranteed to be inside whatever
-   subtree carries .theme-light/.theme-dark). Scoping the base palette to
-   .theme-light instead of :root was the actual cause of the wizard
-   rendering with no background at all - every var(--nous-*) reference
-   silently resolved to nothing. .theme-dark only needs to override. */
+   Defined once, on :root, with no .theme-dark override and no
+   prefers-color-scheme fallback: Obsidian's own --background-primary/
+   --text-normal/etc. already resolve correctly per-theme on their own,
+   so the light/dark duplication that caused two earlier bugs here
+   (transparent modal, invisible hovers) isn't a problem that needs
+   solving a third time - it just goes away. */
 :root {
-	--nous-paper: #f5f2ed;
-	--nous-surface: #ffffff;
-	--nous-surface-2: #f3f0ea;
-	--nous-well: #ede9e1;
-	--nous-border: #e7e2da;
-	--nous-hairline: #ebe6de;
-	--nous-hairline-2: #e1dcd3;
-	--nous-text: #1c1b19;
-	--nous-body-serif: #3a3733;
-	--nous-muted: #8a857d;
-	--nous-faint: #a6a199;
-	--nous-accent: #4c5138;
-	--nous-accent-soft: #c7c9b4;
-	/* Content drawn on a solid moss fill (primary buttons, the logo
-	   badge's wire, filled provider/tag pills) - always paper-light in
-	   both themes, matching the logo badge spec (§2: wire is #F5F2ED). */
-	--nous-on-accent: #f5f2ed;
-	/* A translucent dark wash, not another near-white swatch - every
-	   named surface token in this palette is close in value to --nous-paper
-	   by design (quiet, low-contrast), which made hover states using
-	   --nous-surface-2 effectively invisible. A translucent overlay stays
-	   visible against any surface it's used on top of. */
-	--nous-hover: rgba(28, 27, 25, 0.07);
-}
-.theme-dark {
-	--nous-paper: #1e1d1b;
-	--nous-surface: #262522;
-	--nous-surface-2: #24231f;
-	--nous-well: #24231f;
-	--nous-border: #35322d;
-	--nous-hairline: #2c2a26;
-	--nous-hairline-2: #2c2a26;
-	--nous-text: #edeae4;
-	--nous-body-serif: #edeae4;
-	--nous-muted: #8a857d;
-	--nous-faint: #6b6660;
-	--nous-accent: #5e6647;
-	--nous-accent-soft: #a9af8c;
-	/* Light-on-dark wash for dark mode - see the :root definition above. */
-	--nous-hover: rgba(237, 234, 228, 0.08);
-}
-/* Belt-and-suspenders for the same class-inheritance risk that broke the
-   light tokens: if .theme-dark somehow doesn't match an ancestor of a
-   given element (e.g. Obsidian's "system" appearance mode resolving via
-   media query rather than a body class in some version), fall back to
-   the OS preference directly rather than silently rendering with the
-   light palette in a dark environment. */
-@media (prefers-color-scheme: dark) {
-	:root:not(.theme-light) {
-		--nous-paper: #1e1d1b;
-		--nous-surface: #262522;
-		--nous-surface-2: #24231f;
-		--nous-well: #24231f;
-		--nous-border: #35322d;
-		--nous-hairline: #2c2a26;
-		--nous-hairline-2: #2c2a26;
-		--nous-text: #edeae4;
-		--nous-body-serif: #edeae4;
-		--nous-muted: #8a857d;
-		--nous-faint: #6b6660;
-		--nous-accent: #5e6647;
-		--nous-accent-soft: #a9af8c;
-		--nous-hover: rgba(237, 234, 228, 0.08);
-	}
+	--nous-paper: var(--background-primary);
+	--nous-surface: var(--background-secondary);
+	--nous-surface-2: var(--background-secondary);
+	--nous-well: var(--background-secondary);
+	--nous-border: var(--background-modifier-border);
+	--nous-hairline: var(--background-modifier-border);
+	--nous-hairline-2: var(--background-modifier-border);
+	--nous-text: var(--text-normal);
+	--nous-body-serif: var(--text-normal);
+	--nous-muted: var(--text-muted);
+	--nous-faint: var(--text-faint);
+	--nous-accent: var(--interactive-accent);
+	/* Needs to stay legible against a solid --nous-accent fill (subtitle
+	   text on a moss-filled provider card, in the old palette) and work as
+	   a subtle link-underline color - reusing --interactive-accent at full
+	   strength for both the fill and this would be illegible regardless of
+	   which theme/accent color is active, so this derives a lighter blend
+	   from the accent rather than reusing it flat. */
+	--nous-accent-soft: color-mix(in srgb, var(--interactive-accent) 55%, var(--text-on-accent, #ffffff) 45%);
+	/* Not every theme is guaranteed to set --text-on-accent, but it's a
+	   long-standing standard Obsidian variable (e.g. active nav-item text) -
+	   the literal fallback covers the themes that never touch it. */
+	--nous-on-accent: var(--text-on-accent, #ffffff);
+	/* A translucent wash of the current text color rather than a separate
+	   light/dark swatch pair - automatically reads as a dark wash on a
+	   light theme or a light wash on a dark one, because it's derived from
+	   --text-normal, which Obsidian itself already resolves correctly per
+	   theme. */
+	--nous-hover: color-mix(in srgb, var(--text-normal) 8%, transparent);
 }
 
-/* Shape & spacing (§1) */
+/* Shape & spacing (§1) - Nous's own structural choices (radius/spacing/
+   type stack), unaffected by the theme-adaptive color pivot above. */
 :root {
 	--nous-radius-modal: 24px;
 	--nous-radius-card: 16px;
