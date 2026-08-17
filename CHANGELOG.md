@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.5.1
+
+- Fixed the welcome screen's mode cards ("I have a Claude
+  subscription", etc.) showing no hover highlight at all.
+
 ## 2.5.0
 
 Full visual rebrand: warm paper design (moss accent, new Clip-n logo,
