@@ -1483,6 +1483,51 @@ export default class NousPlugin extends Plugin {
 		return target;
 	}
 
+	// Themes aren't installed like plugins (no release/checksum step) -
+	// Obsidian's own theme browser fetches theme.css/manifest.json straight
+	// from a repo's default branch, so this mirrors that exact mechanism
+	// rather than inventing a different one. cssTheme in appearance.json is
+	// the standard, documented, persisted preference (a restart always
+	// picks it up); customCss.setTheme() below is the same *undocumented*
+	// internal API Obsidian's own Appearance tab calls to apply a theme
+	// live without one - best-effort, wrapped so a failure there still
+	// leaves the theme correctly installed and selected for next launch.
+	async installWarmPaperTheme(): Promise<void> {
+		const themeName = "Warm Paper";
+		const rawBase = "https://raw.githubusercontent.com/AndyMDH/warm-paper/main";
+		const [cssRes, manifestRes] = await Promise.all([
+			requestUrl({ url: `${rawBase}/theme.css`, method: "GET", throw: false }),
+			requestUrl({ url: `${rawBase}/manifest.json`, method: "GET", throw: false }),
+		]);
+		if (cssRes.status >= 400) throw new Error(`could not download theme.css (${cssRes.status})`);
+		if (manifestRes.status >= 400) throw new Error(`could not download manifest.json (${manifestRes.status})`);
+
+		const adapter = this.app.vault.adapter;
+		const themeDir = `${this.app.vault.configDir}/themes/${themeName}`;
+		if (!(await adapter.exists(themeDir))) await adapter.mkdir(themeDir);
+		await adapter.write(`${themeDir}/theme.css`, cssRes.text);
+		await adapter.write(`${themeDir}/manifest.json`, manifestRes.text);
+
+		const appearancePath = `${this.app.vault.configDir}/appearance.json`;
+		let appearance: { cssTheme?: string } = {};
+		try {
+			appearance = JSON.parse(await adapter.read(appearancePath)) as { cssTheme?: string };
+		} catch {
+			// Missing or malformed - start fresh.
+		}
+		appearance.cssTheme = themeName;
+		await adapter.write(appearancePath, JSON.stringify(appearance, null, 2));
+
+		try {
+			(this.app as unknown as { customCss?: { setTheme: (name: string) => void } }).customCss?.setTheme(
+				themeName
+			);
+		} catch {
+			// Installed and selected either way - just needs a reload/restart
+			// to actually render if this internal call doesn't work.
+		}
+	}
+
 	private async clearMacQuarantine(filePath: string): Promise<void> {
 		if (!Platform.isMacOS) return;
 		const { os } = await loadNodeModules();
@@ -3499,6 +3544,23 @@ class OnboardingModal extends Modal {
 				this.renderApiSetup();
 			},
 		});
+
+		new Setting(this.contentEl)
+			.setName("Prefer a different look?")
+			.setDesc("\"Warm Paper\" - a companion theme built alongside Nous. Quiet surfaces, one moss accent.")
+			.addButton((b) =>
+				b.setButtonText("Install & switch").onClick(async () => {
+					b.setButtonText("Installing…").setDisabled(true);
+					try {
+						await this.plugin.installWarmPaperTheme();
+						b.setButtonText("Installed ✓");
+					} catch (e) {
+						const msg = e instanceof Error ? e.message : String(e);
+						nousNotice(`Couldn't install Warm Paper - ${msg}`, 10000);
+						b.setButtonText("Install & switch").setDisabled(false);
+					}
+				})
+			);
 
 		this.renderSkip("Not now", async () => {
 			this.plugin.settings.onboarded = true;
