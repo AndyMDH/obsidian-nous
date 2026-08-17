@@ -63,7 +63,8 @@ obsidian-nous/
 | `query-vault` | `runVaultQuery()` — CLI-only natural-language search. |
 | `toggle-voice-capture` | Records from microphone; stops on second invocation (or opens `LiveVoiceCaptureModal` instead, if live transcription is on). |
 | `toggle-meeting-capture` | Starts/stops the native `nous-recorder` helper (macOS only). |
-| `setup-wizard` | Opens `OnboardingModal`. |
+| `setup-wizard` | Opens `OnboardingModal`, starting at the welcome screen. |
+| `show-tour` | Opens `OnboardingModal` straight at the tour, skipping setup. |
 
 ### Auto-processing
 

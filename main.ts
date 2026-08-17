@@ -276,6 +276,12 @@ export default class NousPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "show-tour",
+			name: "Show quick tour",
+			callback: () => new OnboardingModal(this.app, this, "tour").open(),
+		});
+
+		this.addCommand({
 			id: "open-settings",
 			name: "Open settings",
 			callback: () => this.openNousSettings(),
@@ -3315,13 +3321,17 @@ const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 
 class OnboardingModal extends Modal {
 	private lastCaptureStatus: CapturePrerequisiteStatus | null = null;
 
-	constructor(app: App, private plugin: NousPlugin) {
+	// "tour" reopens straight to the 60-second walkthrough, skipping setup -
+	// lets a user who is already connected revisit it later without redoing
+	// provider setup. See the "show-tour" command.
+	constructor(app: App, private plugin: NousPlugin, private startAt: "welcome" | "tour" = "welcome") {
 		super(app);
 		this.modalEl.addClass("nous-modal");
 	}
 
 	onOpen() {
-		this.renderWelcome();
+		if (this.startAt === "tour") this.renderTour(0);
+		else this.renderWelcome();
 	}
 
 	private clear() {
@@ -3411,6 +3421,11 @@ class OnboardingModal extends Modal {
 				b.setButtonText("Skip").onClick(async () => {
 					this.plugin.settings.onboarded = true;
 					await this.plugin.saveSettings();
+					// Every other exit from this wizard seeds the vault via
+					// finish() - a full skip must too, or the vault is left
+					// without 00-Inbox/10-Notes/20-Tags/30-Wikis until the
+					// user's first capture happens to trigger folder creation.
+					await this.plugin.ensureCoreFolders();
 					this.close();
 				})
 			);
@@ -3419,6 +3434,7 @@ class OnboardingModal extends Modal {
 	private renderApiSetup() {
 		this.clear();
 		this.setTitle("Connect a provider");
+		this.renderDots(0);
 
 		const provider = () => this.plugin.settings.apiProvider;
 
@@ -3670,7 +3686,7 @@ class OnboardingModal extends Modal {
 		new Setting(this.contentEl)
 			.addButton((b) =>
 				b.setButtonText("Finish").onClick(async () => {
-					await this.finish(false);
+					await this.finish();
 				})
 			)
 			.addButton((b) =>
@@ -3718,13 +3734,13 @@ class OnboardingModal extends Modal {
 		} else {
 			nav.addButton((b) =>
 				b.setButtonText("Finish").setCta().onClick(async () => {
-					await this.finish(false);
+					await this.finish();
 				})
 			);
 		}
 		nav.addButton((b) =>
 			b.setButtonText("Skip").onClick(async () => {
-				await this.finish(false);
+				await this.finish();
 			})
 		);
 	}
@@ -3804,14 +3820,18 @@ class OnboardingModal extends Modal {
 		return steps;
 	}
 
-	private async finish(withSample: boolean) {
+	// Drops a sample note on every exit from here, not just the tour's "Drop
+	// a sample note" button - someone who clicks Finish straight off the
+	// finish screen still gets to see the capture -> enrichment payoff
+	// instead of an empty vault. createSampleNote() and processInbox() are
+	// both idempotent, so this is a harmless no-op for anyone who already
+	// triggered it manually earlier in the tour.
+	private async finish() {
 		this.plugin.settings.onboarded = true;
 		await this.plugin.saveSettings();
 		await this.plugin.ensureCoreFolders();
 		this.close();
-		if (withSample) {
-			await this.plugin.createSampleNote();
-		}
+		await this.plugin.createSampleNote();
 		void this.plugin.processInbox();
 	}
 }
