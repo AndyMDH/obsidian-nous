@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.5.4
+
+New `#win` tag for tracking professional accomplishments (CLI mode
+only for now):
+
+- Auto-suggested/applied whenever a note describes a completed
+  accomplishment, not just when typed explicitly.
+- Extracts category (client work, training, internship, internal
+  tool, open source, writing, certification, event, other) and any
+  concrete numbers mentioned (headcount, client, repo, metric) into
+  frontmatter - left blank rather than guessed when not stated.
+- Self-updating `30-Wikis/Wins.md`, grouped by category with a count
+  per category, newest first.
+- New command "Log a win" drops a pre-tagged capture skeleton in the
+  inbox and opens it.
+
 ## 2.5.3
 
 - Welcome screen: "I want a free local model" and "I have an API key"
