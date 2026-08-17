@@ -510,7 +510,12 @@
 .nous-mode-card:hover,
 .nous-mode-card:focus-visible {
 	border-color: var(--nous-accent);
-	background: var(--nous-hover);
+	/* An opaque mix against the card's own idle surface, not the
+	   translucent --nous-hover wash - that wash composites against
+	   whatever sits behind the element, and the modal's own paper
+	   background is close enough in tone to the card's idle surface that
+	   the result read as no visible change at all on a card this large. */
+	background: color-mix(in srgb, var(--nous-text) 10%, var(--nous-surface));
 	outline: none;
 }
 .nous-mode-card-text {
