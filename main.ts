@@ -1824,12 +1824,33 @@ export default class NousPlugin extends Plugin {
 		this.setMeetingRecordingIndicator(nativeStatus.available && nativeStatus.recording);
 	}
 
+	// Empty stubs and detected duplicates both land here, permanently,
+	// unless swept - the "14-day purge" comments elsewhere describing this
+	// folder predate any purge actually existing. Sweeping on every arrival
+	// (rather than a separate timer) keeps this self-contained and only
+	// costs a stat per existing file, which is cheap for a folder that is
+	// itself capped by this same purge.
 	private async moveToDuplicates(file: TFile) {
 		const dupFolder = `${this.settings.inboxFolder}/duplicates`;
 		if (!(await this.app.vault.adapter.exists(dupFolder))) {
 			await this.app.vault.createFolder(dupFolder);
 		}
 		await this.app.fileManager.renameFile(file, `${dupFolder}/${file.name}`);
+		await this.purgeOldDuplicates(dupFolder);
+	}
+
+	private async purgeOldDuplicates(dupFolder: string): Promise<void> {
+		const folder = this.app.vault.getFolderByPath(dupFolder);
+		if (!folder) return;
+		const cutoff = Date.now() - 14 * 24 * 60 * 60 * 1000;
+		let purged = 0;
+		for (const child of folder.children) {
+			if (child instanceof TFile && child.stat.mtime < cutoff) {
+				await this.app.fileManager.trashFile(child);
+				purged++;
+			}
+		}
+		if (purged > 0) await this.appendLog(`PURGED: ${purged} duplicate${purged === 1 ? "" : "s"} older than 14 days`);
 	}
 
 	private async findExistingWikiLink(tags: string[]): Promise<string | null> {
@@ -2204,13 +2225,9 @@ export default class NousPlugin extends Plugin {
 				raw = await this.app.vault.read(file);
 				if (raw.trim().length === 0) {
 					// An empty stub left in place is re-checked and re-logged
-					// on every run forever - park it with the duplicates so
-					// the 14-day purge ages it out.
-					await this.ensureFolderExists(`${this.settings.inboxFolder}/duplicates`);
-					await this.app.fileManager.renameFile(
-						file,
-						`${this.settings.inboxFolder}/duplicates/${file.name}`
-					);
+					// on every run forever - park it with the duplicates,
+					// which purges anything older than 14 days on its own.
+					await this.moveToDuplicates(file);
 					await this.appendLog(`SKIPPED: ${file.name} - empty capture stub, moved to duplicates/`);
 					return false;
 				}

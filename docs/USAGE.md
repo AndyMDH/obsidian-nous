@@ -207,8 +207,9 @@ and seeing a linked note. (Full detail:
 4. **Assemble deterministically.** Plugin code — not the model — builds the
    note from that JSON: frontmatter, sections, wikilinks, your original
    text/image/recording preserved inside. The file moves to `10-Notes`;
-   detected duplicates are parked in `00-Inbox/duplicates` instead of
-   deleted.
+   detected duplicates and empty capture stubs are parked in
+   `00-Inbox/duplicates` instead of deleted, and purged automatically once
+   they are more than 14 days old.
 
 5. **Synthesize.** After each run, notes are clustered by tag. Any tag
    reaching 4+ substantial notes gets a wiki page in `30-Wikis` (a second
