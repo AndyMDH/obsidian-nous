@@ -252,6 +252,9 @@ export default class NousPlugin extends Plugin {
 	private meetingPollInterval: number | null = null;
 	private nativeRecorderLastProblem: string | null = null;
 	private meetingTranscribing = false;
+	// Live "REC 00:42" timers - warm-paper spec §3's status-bar states.
+	private voiceRecordingTimer: number | null = null;
+	private meetingRecordingTimer: number | null = null;
 	private activeNativeMeetingNotePath: string | null = null;
 	// Live transcripts already known by the time a voice recording is saved
 	// (see saveVoiceRecording()) - checked by processFile()/
@@ -315,6 +318,10 @@ export default class NousPlugin extends Plugin {
 
 		this.voiceStatusBarEl = this.addStatusBarItem();
 		this.voiceStatusBarEl.hide();
+		this.register(() => {
+			if (this.voiceRecordingTimer !== null) window.clearInterval(this.voiceRecordingTimer);
+			if (this.meetingRecordingTimer !== null) window.clearInterval(this.meetingRecordingTimer);
+		});
 
 		this.addCommand({
 			id: "setup-wizard",
@@ -1321,6 +1328,29 @@ export default class NousPlugin extends Plugin {
 		if (!this.settings.autoProcessOnCreate) void this.processInbox();
 	}
 
+	// Rebuilds a status-bar item as icon + label, matching warm-paper spec
+	// §3's status-bar states (11px mono, small-caps via CSS). Doesn't touch
+	// visibility - callers show()/hide() themselves, since "idle" for both
+	// voice and meeting capture stays hidden rather than a permanently-
+	// visible nous-clip glyph: two rarely-toggled indicators sitting in the
+	// status bar at all times read as clutter for every user, not quiet
+	// branding, so idle keeping today's hidden-when-inactive behavior is a
+	// deliberate deviation from the spec's literal "always show idle" call.
+	private renderStatusBarState(
+		el: HTMLElement,
+		icon: string,
+		label: string,
+		opts: { pulse?: boolean; spin?: boolean } = {}
+	): void {
+		el.empty();
+		el.addClass("nous-status-bar-item");
+		const iconEl = el.createSpan({ cls: "nous-status-bar-icon" });
+		setIcon(iconEl, icon);
+		iconEl.toggleClass("nous-status-pulse-dot", !!opts.pulse);
+		iconEl.toggleClass("nous-status-spin", !!opts.spin);
+		el.createSpan({ cls: "nous-status-bar-label", text: label });
+	}
+
 	// Recording previously had no persistent signal once the start Notice
 	// faded - swap the ribbon icon and show a status-bar item for as long as
 	// the mic is actually live. Also used by LiveVoiceCaptureModal, so it's
@@ -1334,10 +1364,25 @@ export default class NousPlugin extends Plugin {
 				recording ? "recording - click to stop" : "toggle voice capture"
 			);
 		}
+		if (this.voiceRecordingTimer !== null) {
+			window.clearInterval(this.voiceRecordingTimer);
+			this.voiceRecordingTimer = null;
+		}
 		if (this.voiceStatusBarEl) {
-			this.voiceStatusBarEl.toggleClass("nous-recording", recording);
 			if (recording) {
-				this.voiceStatusBarEl.setText("🔴 Nous recording…");
+				const startedAt = Date.now();
+				const tick = () => {
+					if (!this.voiceStatusBarEl) return;
+					const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+					this.renderStatusBarState(
+						this.voiceStatusBarEl,
+						"nous-recording",
+						logic.formatRecordingElapsed(elapsed),
+						{ pulse: true }
+					);
+				};
+				tick();
+				this.voiceRecordingTimer = window.setInterval(tick, 1000);
 				this.voiceStatusBarEl.show();
 			} else {
 				this.voiceStatusBarEl.hide();
@@ -1880,11 +1925,26 @@ export default class NousPlugin extends Plugin {
 				recording ? "meeting recording - click to stop" : "toggle meeting capture"
 			);
 		}
+		if (this.meetingRecordingTimer !== null) {
+			window.clearInterval(this.meetingRecordingTimer);
+			this.meetingRecordingTimer = null;
+		}
 		if (this.meetingStatusBarEl) {
-			this.meetingStatusBarEl.toggleClass("nous-recording", recording);
 			if (recording) {
 				this.meetingTranscribing = false;
-				this.meetingStatusBarEl.setText("🔴 Nous meeting recording…");
+				const startedAt = Date.now();
+				const tick = () => {
+					if (!this.meetingStatusBarEl) return;
+					const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+					this.renderStatusBarState(
+						this.meetingStatusBarEl,
+						"nous-recording",
+						logic.formatRecordingElapsed(elapsed),
+						{ pulse: true }
+					);
+				};
+				tick();
+				this.meetingRecordingTimer = window.setInterval(tick, 1000);
 				this.meetingStatusBarEl.show();
 			} else if (!this.meetingTranscribing) {
 				this.meetingStatusBarEl.hide();
@@ -1899,8 +1959,7 @@ export default class NousPlugin extends Plugin {
 		if (!this.meetingStatusBarEl) return;
 		this.meetingStatusBarEl.toggleClass("nous-transcribing", transcribing);
 		if (transcribing) {
-			this.meetingStatusBarEl.toggleClass("nous-recording", false);
-			this.meetingStatusBarEl.setText("⏳ Nous transcribing…");
+			this.renderStatusBarState(this.meetingStatusBarEl, "loader-2", "Transcribing…", { spin: true });
 			this.meetingStatusBarEl.show();
 		} else {
 			this.meetingStatusBarEl.hide();

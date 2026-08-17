@@ -17,6 +17,7 @@ import {
 	buildTagFileContent,
 	buildWikiMarkdown,
 	buildWinsMarkdown,
+	formatRecordingElapsed,
 	clusterByTag,
 	isCaptureFile,
 	meetingAttachmentFilename,
@@ -106,6 +107,19 @@ test("extractSummaryText + firstSentence do not silently fall through on the hea
 test("firstSentence handles text with embedded newlines", () => {
 	const text = "This spans\ntwo lines. And then more.";
 	assert.equal(firstSentence(text), "This spans two lines.");
+});
+
+test("formatRecordingElapsed pads to mm:ss and prefixes REC", () => {
+	assert.equal(formatRecordingElapsed(0), "REC 00:00");
+	assert.equal(formatRecordingElapsed(5), "REC 00:05");
+	assert.equal(formatRecordingElapsed(65), "REC 01:05");
+	assert.equal(formatRecordingElapsed(600), "REC 10:00");
+});
+
+test("formatRecordingElapsed clamps rather than rolling into hours", () => {
+	assert.equal(formatRecordingElapsed(99 * 60 + 59), "REC 99:59");
+	assert.equal(formatRecordingElapsed(99 * 60 + 59 + 3600), "REC 99:59");
+	assert.equal(formatRecordingElapsed(-5), "REC 00:00");
 });
 
 function baseResult(overrides: Partial<EnrichResult> = {}): EnrichResult {

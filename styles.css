@@ -170,6 +170,61 @@
 	color: var(--nous-accent);
 }
 
+/* Icon + live-timer status bar states (warm-paper spec §3: idle/recording/
+   transcribing, 11px mono, small-caps). Rebuilt via renderStatusBarState()
+   each tick rather than styled once - only the label text actually
+   changes per second, but re-render is cheap for two words. */
+.nous-status-bar-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-family: var(--nous-font-mono);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--nous-muted);
+}
+.nous-status-bar-icon {
+	display: flex;
+	color: var(--nous-accent);
+}
+.nous-status-bar-icon svg {
+	width: 13px;
+	height: 13px;
+}
+/* Only the recording indicator's own dot pulses, not the whole icon or
+   row - the row itself stays fully legible the entire time it's shown. */
+.nous-status-pulse-dot svg circle {
+	animation: nous-status-dot-pulse 1.4s ease-in-out infinite;
+}
+@keyframes nous-status-dot-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.25;
+	}
+}
+.nous-status-spin svg {
+	animation: nous-status-spin 1s linear infinite;
+}
+@keyframes nous-status-spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.nous-status-pulse-dot svg circle,
+	.nous-status-spin svg {
+		animation: none;
+	}
+}
+
 /* ------------------------------------------------------------------ */
 /* Onboarding wizard grammar (docs/NOUS-REDESIGN.md §3). Every screen:
    chevron+dots row above the title, one hero (icon tile or logo badge),

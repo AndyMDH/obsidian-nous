@@ -175,6 +175,16 @@ export function firstSentence(text: string): string {
 	return (match ? match[0] : collapsed).trim();
 }
 
+// "REC 00:42" - the status bar's live recording timer (warm-paper spec §3).
+// Caps at 99:59 rather than rolling into hours - a Nous capture is never a
+// multi-hour recording in practice, and "REC 142:07" would just look broken.
+export function formatRecordingElapsed(totalSeconds: number): string {
+	const clamped = Math.max(0, Math.min(totalSeconds, 99 * 60 + 59));
+	const minutes = Math.floor(clamped / 60);
+	const seconds = Math.floor(clamped % 60);
+	return `REC ${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
 export interface CapturedAttachment {
 	filename: string;
 	kind: "image" | "document" | "audio";
