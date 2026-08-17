@@ -67,6 +67,10 @@ desktop-only.
   data on your machine. API keys are optional.
 - 📱 **Desktop and mobile** — The full pipeline runs on desktop. Mobile
   supports API-key or local-model mode.
+- 🎨 **An editorial look, on by default** — notes render with a chip header,
+  small-caps sections, and a folded transcript instead of a raw properties
+  table. Opt into the full vault-wide theme in Settings → Nous → Appearance —
+  see [`docs/USAGE.md`](docs/USAGE.md#the-nous-look-optional).
 
 ## Your vault as AI context
 
