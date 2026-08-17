@@ -47,20 +47,20 @@
 .nous-mode-cards {
 	display: grid;
 	gap: 10px;
-	margin: 12px 0 16px;
+	margin: 16px 0 24px;
 }
 .nous-mode-card {
-	position: relative;
+	margin: 0;
 	border: 1px solid var(--background-modifier-border);
-	border-radius: 8px;
-	padding: 12px 14px;
+	border-radius: 14px;
+	padding: 16px 18px;
 	cursor: pointer;
 	background: var(--background-secondary);
 	transition: border-color 0.12s ease;
 }
 .nous-mode-card:hover,
 .nous-mode-card:focus-visible {
-	border-color: var(--interactive-accent);
+	border-color: #eb6c36;
 }
 .nous-mode-card-title {
 	font-weight: 600;
@@ -70,15 +70,8 @@
 	color: var(--text-muted);
 	font-size: var(--font-ui-small);
 }
-.nous-mode-card-badge {
-	position: absolute;
-	top: 10px;
-	right: 12px;
-	font-size: var(--font-ui-smaller);
-	color: var(--interactive-accent);
-	border: 1px solid var(--interactive-accent);
-	border-radius: 4px;
-	padding: 1px 6px;
+.nous-mode-cards + .setting-item {
+	margin-top: 6px;
 }
 
 /* Settings tab header strip */
@@ -109,59 +102,19 @@
 	font-size: var(--font-ui-small);
 }
 
-/* Onboarding tour - grey text, tangerine accents */
-.nous-tour-dots {
-	display: flex;
-	gap: 6px;
-	margin: 4px 0 16px;
+/* ------------------------------------------------------------------ */
+/* Onboarding wizard: narrow, tall, quiet - a portrait card rather than a
+   wide banner. Every wizard screen shares this shape. */
+.nous-modal {
+	width: 340px;
+	max-width: 90vw;
 }
-.nous-tour-dot {
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
-	background: var(--background-modifier-border);
+.nous-modal .modal-content {
+	padding: 22px 26px 26px;
 }
-.nous-tour-dot.is-active {
-	background: #eb6c36;
-}
-.nous-tour-body {
-	min-height: 140px;
+.nous-modal .modal-title {
+	margin-bottom: 12px;
 	text-align: center;
-}
-.nous-tour-icon {
-	color: #eb6c36;
-	margin: 8px auto 12px;
-}
-.nous-tour-icon svg {
-	width: 44px;
-	height: 44px;
-}
-.nous-tour-text {
-	color: var(--text-muted);
-	max-width: 360px;
-	margin: 0 auto 8px;
-}
-.nous-tour-links {
-	margin-bottom: 8px;
-}
-.nous-tour-links a {
-	font-size: var(--font-ui-small);
-}
-.nous-tour-body .setting-item {
-	border: none;
-	justify-content: center;
-}
-
-/* Wizard welcome */
-.nous-welcome-question {
-	color: var(--text-muted);
-	margin: 2px 0 14px;
-}
-.nous-mode-card {
-	margin: 0;
-}
-.nous-mode-cards + .setting-item {
-	margin-top: 6px;
 }
 
 /* Brand CTAs inside Nous modals: tangerine, not the theme accent */
@@ -172,63 +125,107 @@
 .nous-modal button.mod-cta:hover {
 	background-color: #d95f2d;
 }
-.nous-mode-card:hover,
-.nous-mode-card:focus-visible {
-	border-color: #eb6c36;
+
+/* Step dots - sit close under the title, and close above whatever follows
+   (icon or content), rather than floating in its own band of whitespace. */
+.nous-tour-dots {
+	display: flex;
+	justify-content: center;
+	gap: 6px;
+	margin: 0 0 10px;
 }
-.nous-mode-card-badge {
-	color: #eb6c36;
-	border-color: #eb6c36;
+.nous-tour-dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--background-modifier-border);
+}
+.nous-tour-dot.is-active {
+	background: #eb6c36;
 }
 
-/* Wizard breathing room */
-.nous-modal .modal-content {
-	padding-top: 6px;
-}
-.nous-modal .modal-title {
-	margin-bottom: 10px;
-}
-.nous-welcome-question {
-	margin: 6px 0 20px;
-	line-height: 1.5;
-}
-.nous-mode-cards {
-	gap: 12px;
-	margin: 16px 0 24px;
-}
-.nous-mode-card {
-	padding: 14px 16px;
-}
-.nous-modal .setting-item {
-	padding: 14px 0;
-}
-.nous-modal .nous-tour-dots {
-	margin: 8px 0 20px;
-}
+/* Tour steps: one centered icon, one centered line, one action */
 .nous-tour-body {
-	min-height: 160px;
-	padding: 8px 0;
+	min-height: 150px;
+	padding: 6px 0;
+	text-align: center;
 }
 .nous-tour-icon {
-	margin: 12px auto 16px;
+	color: #eb6c36;
+	margin: 10px auto 16px;
+}
+.nous-tour-icon svg {
+	width: 52px;
+	height: 52px;
 }
 .nous-tour-text {
-	margin: 0 auto 12px;
+	color: var(--text-muted);
+	margin: 0 auto 14px;
 	line-height: 1.5;
+}
+.nous-tour-links {
+	margin-bottom: 8px;
+}
+.nous-tour-links a {
+	font-size: var(--font-ui-small);
+}
+
+/* Wizard body copy - centered, matching the centered title above it. */
+.nous-welcome-question {
+	color: var(--text-muted);
+	margin: 6px 0 20px;
+	line-height: 1.5;
+	text-align: center;
+}
+
+/* Every setting row in the wizard gets a little more room to breathe, and
+   no divider lines - spacing alone separates rows. !important because the
+   base theme's row divider outranks a plain .nous-modal .setting-item
+   border rule on specificity/order. */
+.nous-modal .setting-item {
+	padding: 16px 0;
+	border: none !important;
+	box-shadow: none !important;
+}
+
+/* The capture-status checklist ("What works now") - short one-word status
+   per row, so it doesn't need the same generous padding as a button row. */
+.nous-capture-checklist .setting-item {
+	padding: 10px 0;
+}
+
+/* Pure navigation rows (Back/Continue, Finish/Settings/Tour, etc.) - no
+   name or description, just buttons. Every button in a row is equal width,
+   so a row always reads as aligned regardless of label length; a button
+   left alone on a wrapped line fills that line instead of floating at its
+   own content width. Order in the DOM is preserved; the CTA is still
+   picked out by color, not position. */
+.nous-wizard-nav {
+	border: none;
+	padding-top: 8px;
+}
+.nous-wizard-nav .setting-item-info {
+	display: none;
+}
+.nous-wizard-nav .setting-item-control {
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	width: 100%;
+}
+.nous-wizard-nav .setting-item-control button {
+	flex: 1 1 0;
+	min-width: 84px;
+	padding: 6px 10px;
+	font-size: var(--font-ui-small);
+	margin: 0;
 }
 
 /* Wizard brand moment */
 .nous-wizard-logo {
 	display: flex;
 	justify-content: center;
-	margin: 0 0 12px;
-}
-
-/* The one line of copy directly under the centered logo mark - centered to
-   match it. Every other screen's body text (no centered mark above it)
-   stays left-aligned via the shared .nous-welcome-question rule. */
-.nous-welcome-hero-text {
-	text-align: center;
+	margin: 4px 0 16px;
 }
 
 /* The live note's frontmatter is machinery (recording flags, paths) - hide

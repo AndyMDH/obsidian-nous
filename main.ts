@@ -3316,7 +3316,7 @@ function buildTranscriptDecorations(view: EditorView): DecorationSet {
 	return builder.finish();
 }
 
-const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" width="72" height="72" aria-hidden="true"><rect x="4" y="4" width="104" height="104" rx="28" fill="#f5f5f5" stroke="#d5d9e0" stroke-width="2"/><path d="M 38 80 L 38 50 Q 38 42 48 42 L 60 42 Q 74 42 74 56 L 74 80" fill="none" stroke="#2d3142" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="82" cy="30" r="7" fill="#eb6c36"/></svg>`;
+const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" width="88" height="88" aria-hidden="true"><rect x="4" y="4" width="104" height="104" rx="28" fill="#f5f5f5" stroke="#d5d9e0" stroke-width="2"/><path d="M 38 80 L 38 50 Q 38 42 48 42 L 60 42 Q 74 42 74 56 L 74 80" fill="none" stroke="#2d3142" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="82" cy="30" r="7" fill="#eb6c36"/></svg>`;
 
 class OnboardingModal extends Modal {
 	private lastCaptureStatus: CapturePrerequisiteStatus | null = null;
@@ -3356,22 +3356,16 @@ class OnboardingModal extends Modal {
 		this.setTitle("Welcome to Nous");
 		this.renderDots(0);
 		this.renderLogo();
-		this.contentEl.createEl("p", {
-			cls: "nous-welcome-question nous-welcome-hero-text",
-			text: "How should Nous write your notes?",
-		});
 
 		const cards = this.contentEl.createDiv({ cls: "nous-mode-cards" });
 		const addCard = (options: {
 			title: string;
 			desc: string;
-			badge?: string;
 			onChoose: () => void | Promise<void>;
 		}) => {
 			const card = cards.createDiv({ cls: "nous-mode-card" });
 			card.setAttribute("role", "button");
 			card.setAttribute("tabindex", "0");
-			if (options.badge) card.createDiv({ cls: "nous-mode-card-badge", text: options.badge });
 			card.createDiv({ cls: "nous-mode-card-title", text: options.title });
 			card.createDiv({ cls: "nous-mode-card-desc", text: options.desc });
 			const choose = () => void options.onChoose();
@@ -3386,8 +3380,7 @@ class OnboardingModal extends Modal {
 
 		addCard({
 			title: "I have a Claude subscription",
-			desc: "Uses Claude Code. No extra billing. Desktop only.",
-			badge: "Recommended",
+			desc: "No extra billing. Desktop only.",
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "cli";
 				await this.plugin.saveSettings();
@@ -3396,7 +3389,7 @@ class OnboardingModal extends Modal {
 		});
 		addCard({
 			title: "I want a free local model",
-			desc: "Ollama - free, private, ~2 min setup.",
+			desc: "Free, private, ~2 min setup.",
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "api";
 				this.plugin.settings.apiProvider = "local";
@@ -3406,7 +3399,7 @@ class OnboardingModal extends Modal {
 		});
 		addCard({
 			title: "I have an API key",
-			desc: "Anthropic, OpenAI, Gemini, or Z.ai. Works on mobile.",
+			desc: "Anthropic, OpenAI, Gemini, Z.ai. Works on mobile.",
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "api";
 				await this.plugin.saveSettings();
@@ -3503,6 +3496,7 @@ class OnboardingModal extends Modal {
 		}
 
 		new Setting(this.contentEl)
+			.setClass("nous-wizard-nav")
 			.addButton((b) => b.setButtonText("Back").onClick(() => this.renderWelcome()))
 			.addButton((b) => b.setButtonText("Continue").setCta().onClick(() => this.renderTest()));
 	}
@@ -3556,6 +3550,7 @@ class OnboardingModal extends Modal {
 		};
 
 		new Setting(this.contentEl)
+			.setClass("nous-wizard-nav")
 			.addButton((b) => b.setButtonText("Back").onClick(() => (isCli ? this.renderWelcome() : this.renderApiSetup())))
 			.addButton((b) => {
 				retryButton = b;
@@ -3570,7 +3565,7 @@ class OnboardingModal extends Modal {
 		this.clear();
 		this.setTitle("What works now");
 		this.renderDots(2);
-		const statusEl = this.contentEl.createDiv();
+		const statusEl = this.contentEl.createDiv({ cls: "nous-capture-checklist" });
 		statusEl.createEl("p", { text: "Checking capture setup..." });
 		let continueButton: ButtonComponent | null = null;
 		void this.plugin
@@ -3661,6 +3656,7 @@ class OnboardingModal extends Modal {
 			});
 
 		new Setting(this.contentEl)
+			.setClass("nous-wizard-nav")
 			.addButton((b) => b.setButtonText("Back").onClick(() => this.renderTest()))
 			.addButton((b) => {
 				continueButton = b;
@@ -3686,18 +3682,11 @@ class OnboardingModal extends Modal {
 			}
 		}
 
+		// The theme snippet is one click away in Nous settings (below) -
+		// keeping it off this screen too keeps "you're done" reading as
+		// exactly that, not a second decision to make before you're free to go.
 		new Setting(this.contentEl)
-			.setName("The Nous look (optional)")
-			.setDesc("Serif text, tangerine details, styled notes - a CSS snippet you can disable anytime.")
-			.addButton((b) =>
-				b.setButtonText("Install theme").onClick(async () => {
-					b.setDisabled(true);
-					await this.plugin.installEditorialSnippet();
-					b.setButtonText("Installed ✓");
-				})
-			);
-
-		new Setting(this.contentEl)
+			.setClass("nous-wizard-nav")
 			.addButton((b) =>
 				b.setButtonText("Finish").onClick(async () => {
 					await this.finish();
@@ -3737,12 +3726,16 @@ class OnboardingModal extends Modal {
 			const links = body.createDiv({ cls: "nous-tour-links" });
 			links.createEl("a", { text: current.link.text, href: current.link.href });
 		}
-		current.action?.(body);
 
-		const nav = new Setting(this.contentEl);
+		// One row: Back, this step's highlighted action (if any), Next/Finish,
+		// Skip - in that DOM order. Merged into a single nav Setting rather
+		// than a separate row per action, per feedback that stacked/separate
+		// button groups felt like too many.
+		const nav = new Setting(this.contentEl).setClass("nous-wizard-nav");
 		if (step > 0) {
 			nav.addButton((b) => b.setButtonText("Back").onClick(() => this.renderTour(step - 1)));
 		}
+		current.action?.(nav);
 		if (step < steps.length - 1) {
 			nav.addButton((b) => b.setButtonText("Next").setCta().onClick(() => this.renderTour(step + 1)));
 		} else {
@@ -3764,7 +3757,7 @@ class OnboardingModal extends Modal {
 		icon: string;
 		text: string;
 		link?: { text: string; href: string };
-		action?: (el: HTMLElement) => void;
+		action?: (nav: Setting) => void;
 	}[] {
 		const steps: ReturnType<OnboardingModal["tourSteps"]> = [];
 
@@ -3772,8 +3765,8 @@ class OnboardingModal extends Modal {
 			title: "One loop",
 			icon: "refresh-cw",
 			text: `Capture anything. It comes back tagged and linked in ${this.plugin.settings.meetingsFolder}.`,
-			action: (el) => {
-				new Setting(el).addButton((b) =>
+			action: (nav) => {
+				nav.addButton((b) =>
 					b.setButtonText("Drop a sample note").setCta().onClick(async () => {
 						b.setDisabled(true);
 						await this.plugin.createSampleNote();
@@ -3791,8 +3784,8 @@ class OnboardingModal extends Modal {
 				text: "Dictate from anywhere with Handy (optional)",
 				href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md",
 			},
-			action: (el) => {
-				new Setting(el).addButton((b) =>
+			action: (nav) => {
+				nav.addButton((b) =>
 					b.setButtonText("Record now").setCta().onClick(() => {
 						this.close();
 						void this.plugin.toggleVoiceCapture();
@@ -3821,8 +3814,8 @@ class OnboardingModal extends Modal {
 				text: "Read the docs",
 				href: "https://github.com/AndyMDH/obsidian-nous/tree/main/docs",
 			},
-			action: (el) => {
-				new Setting(el).addButton((b) =>
+			action: (nav) => {
+				nav.addButton((b) =>
 					b.setButtonText("Open Nous settings").onClick(() => {
 						this.close();
 						this.plugin.openNousSettings();
