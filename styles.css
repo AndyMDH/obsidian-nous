@@ -12,38 +12,62 @@
    churn for no behavior change) - only what each one points at changed,
    from a hardcoded hex to one of Obsidian's own variables.
 
-   Defined once, on :root, with no .theme-dark override and no
-   prefers-color-scheme fallback: Obsidian's own --background-primary/
-   --text-normal/etc. already resolve correctly per-theme on their own,
-   so the light/dark duplication that caused two earlier bugs here
-   (transparent modal, invisible hovers) isn't a problem that needs
-   solving a third time - it just goes away. */
+   Defined on :root with a literal light-mode fallback on every var(), plus
+   a prefers-color-scheme: dark override below with dark fallbacks - not
+   because Obsidian's own vars are wrong, but because a modal isn't
+   guaranteed to sit inside whatever element actually carries the
+   .theme-dark/.theme-light class in every Electron/window context. When
+   that inheritance breaks, a var() with no fallback doesn't "stay
+   correct" - it goes invalid, and the whole declaration using it is
+   dropped, which is exactly how the wizard modal was found rendering
+   fully legible in light mode but washed-out/low-contrast in dark mode:
+   confirmed via screenshot, not assumed. prefers-color-scheme reads the
+   OS/window's own color scheme directly rather than depending on that
+   class inheritance, so it can't fail the same way. */
 :root {
-	--nous-paper: var(--background-primary);
-	--nous-surface: var(--background-secondary);
-	--nous-surface-2: var(--background-secondary);
-	--nous-well: var(--background-secondary);
-	--nous-border: var(--background-modifier-border);
-	--nous-hairline: var(--background-modifier-border);
-	--nous-hairline-2: var(--background-modifier-border);
-	--nous-text: var(--text-normal);
-	--nous-body-serif: var(--text-normal);
-	--nous-muted: var(--text-muted);
-	--nous-faint: var(--text-faint);
-	--nous-accent: var(--interactive-accent);
+	--nous-paper: var(--background-primary, #f5f2ed);
+	--nous-surface: var(--background-secondary, #f3f0ea);
+	--nous-surface-2: var(--background-secondary, #f3f0ea);
+	--nous-well: var(--background-secondary, #f3f0ea);
+	--nous-border: var(--background-modifier-border, #e7e2da);
+	--nous-hairline: var(--background-modifier-border, #e7e2da);
+	--nous-hairline-2: var(--background-modifier-border, #e7e2da);
+	--nous-text: var(--text-normal, #1c1b19);
+	--nous-body-serif: var(--text-normal, #1c1b19);
+	--nous-muted: var(--text-muted, #8a857d);
+	--nous-faint: var(--text-faint, #a6a199);
+	--nous-accent: var(--interactive-accent, #4c5138);
 	/* Needs to stay legible against a solid --nous-accent fill (subtitle
 	   text on a moss-filled provider card, in the old palette) and work as
 	   a subtle link-underline color - reusing --interactive-accent at full
 	   strength for both the fill and this would be illegible regardless of
 	   which theme/accent color is active, so this derives a lighter blend
 	   from the accent rather than reusing it flat. */
-	--nous-accent-soft: color-mix(in srgb, var(--interactive-accent) 55%, var(--text-on-accent, #ffffff) 45%);
+	--nous-accent-soft: color-mix(in srgb, var(--interactive-accent, #4c5138) 55%, var(--text-on-accent, #ffffff) 45%);
 	/* A translucent wash of the current text color rather than a separate
 	   light/dark swatch pair - automatically reads as a dark wash on a
 	   light theme or a light wash on a dark one, because it's derived from
 	   --text-normal, which Obsidian itself already resolves correctly per
 	   theme. */
-	--nous-hover: color-mix(in srgb, var(--text-normal) 8%, transparent);
+	--nous-hover: color-mix(in srgb, var(--text-normal, #1c1b19) 8%, transparent);
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--nous-paper: var(--background-primary, #1e1d1b);
+		--nous-surface: var(--background-secondary, #262522);
+		--nous-surface-2: var(--background-secondary, #262522);
+		--nous-well: var(--background-secondary, #262522);
+		--nous-border: var(--background-modifier-border, #35322d);
+		--nous-hairline: var(--background-modifier-border, #35322d);
+		--nous-hairline-2: var(--background-modifier-border, #35322d);
+		--nous-text: var(--text-normal, #edeae4);
+		--nous-body-serif: var(--text-normal, #edeae4);
+		--nous-muted: var(--text-muted, #a19c93);
+		--nous-faint: var(--text-faint, #6b6660);
+		--nous-accent: var(--interactive-accent, #5e6647);
+		--nous-accent-soft: color-mix(in srgb, var(--interactive-accent, #5e6647) 55%, var(--text-on-accent, #f5f2ed) 45%);
+		--nous-hover: color-mix(in srgb, var(--text-normal, #edeae4) 8%, transparent);
+	}
 }
 
 /* Shape & spacing (§1) - Nous's own structural choices (radius/spacing/
