@@ -569,10 +569,10 @@ export default class NousPlugin extends Plugin {
 	// that live-updates with progress, then a terse outcome line (detail goes
 	// to the log, per the project's notice style).
 	async downloadWhisperModelsWithNotice(): Promise<boolean> {
-		const notice = nousNotice("Starting speech-model download…", 0);
+		const notice = nousNotice("Fetching your speech model…", 0);
 		try {
 			await this.downloadWhisperModels((text) => notice.setMessage(nousNoticeFragment(text)));
-			notice.setMessage(nousNoticeFragment("speech model installed - voice notes now transcribe locally."));
+			notice.setMessage(nousNoticeFragment("Speech model installed - your voice notes now transcribe right here on your Mac."));
 			window.setTimeout(() => notice.hide(), 8000);
 			return true;
 		} catch (e) {
@@ -930,7 +930,7 @@ export default class NousPlugin extends Plugin {
 					`"${this.settings.claudeCliPath} --version" exited ${result.code}: ${cliErrorDetail(result)}`
 				);
 			}
-			return `Claude Code found (${result.stdout.trim().slice(0, 60)}).`;
+			return `Found Claude Code (${result.stdout.trim().slice(0, 60)}).`;
 		}
 		const provider = this.getLlmProvider();
 		const result = await provider.callTool<{ ok: boolean }>(
@@ -950,7 +950,7 @@ export default class NousPlugin extends Plugin {
 		if (!result || result.ok !== true) {
 			throw new Error("The model responded, but not with the expected tool call - it may not support tool use.");
 		}
-		return `Connected - ${this.settings.models[this.settings.apiProvider]} responded correctly.`;
+		return `Connected! ${this.settings.models[this.settings.apiProvider]} said hello back.`;
 	}
 
 	private cliExec: CliExec = async (command, args, options) => {
@@ -1013,7 +1013,7 @@ export default class NousPlugin extends Plugin {
 		enabled.add(EDITORIAL_SNIPPET_FILENAME.replace(/\.css$/, ""));
 		appearance.enabledCssSnippets = [...enabled].sort();
 		await adapter.write(appearancePath, JSON.stringify(appearance, null, 2));
-		nousNotice("Editorial theme installed. Set the accent color to #4c5138 for the full effect.", 8000);
+		nousNotice("Theme installed! Set your accent color to #4c5138 to see it in full bloom.", 8000);
 	}
 
 	private getVaultBasePath(): string | null {
@@ -1165,7 +1165,7 @@ export default class NousPlugin extends Plugin {
 		}
 
 		if (candidates.length === 0) {
-			nousNotice("No legacy transcripts found - nothing to convert.");
+			nousNotice("All caught up - no old transcripts left to convert.");
 			return;
 		}
 
@@ -1216,7 +1216,7 @@ export default class NousPlugin extends Plugin {
 			path,
 			"Quick thought after today's kickoff with the new client: they want the reporting dashboard live before the end of next quarter, but their data quality is a mess - half the customer records are missing regions. Maria offered to run a cleanup sprint first. I should sketch the dashboard wireframe this week and check whether we can reuse the ETL setup from the last project.\n"
 		);
-		nousNotice("Sample note dropped in the inbox - watch it get enriched.");
+		nousNotice("Dropped a sample note in your inbox - watch it come to life.");
 	}
 
 	// Hands-free voice capture: one command toggles recording, no UI. The
@@ -1247,7 +1247,7 @@ export default class NousPlugin extends Plugin {
 		try {
 			this.voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		} catch {
-			nousNotice("Microphone access denied - allow it for Obsidian in system settings.", 8000);
+			nousNotice("Can't hear you - allow microphone access for Obsidian in System Settings.", 8000);
 			return;
 		}
 		const mimeType = pickVoiceMimeType();
@@ -1266,7 +1266,7 @@ export default class NousPlugin extends Plugin {
 		recorder.start();
 		this.voiceRecorder = recorder;
 		this.setVoiceRecordingIndicator(true);
-		nousNotice("🔴 recording - toggle again to stop.", 4000);
+		nousNotice("🔴 Recording - tap again when you're done.", 4000);
 	}
 
 	// Only true when every fallback condition is satisfied: opt-in toggle,
@@ -1326,7 +1326,7 @@ export default class NousPlugin extends Plugin {
 	// helper directly.
 	async toggleMeetingCapture() {
 		if (!Platform.isMacOS) {
-			nousNotice("Meeting capture needs macOS.");
+			nousNotice("Meeting capture only works on macOS, sorry.");
 			return;
 		}
 
@@ -1345,7 +1345,7 @@ export default class NousPlugin extends Plugin {
 			const result = await this.runNativeRecorder("stop");
 			if (result.code !== 0) {
 				await this.appendLog(`ERROR: native recorder failed to stop: ${cliErrorDetail(result)}`);
-				nousNotice("Recorder couldn't stop - see .nous/pipeline.log", 10000);
+				nousNotice("Recorder wouldn't stop - details in .nous/pipeline.log", 10000);
 				return;
 			}
 			const stopped = parseNativeRecorderStatus(result.stdout);
@@ -1369,7 +1369,7 @@ export default class NousPlugin extends Plugin {
 			const detail = cliErrorDetail(result);
 			this.nativeRecorderLastProblem = detail || "The helper could not start.";
 			await this.appendLog(`ERROR: native recorder failed to start: ${detail}`);
-			nousNotice("Recorder couldn't start - see .nous/pipeline.log", 10000);
+			nousNotice("Recorder wouldn't start - details in .nous/pipeline.log", 10000);
 			return;
 		}
 		await new Promise((resolve) => window.setTimeout(resolve, 1500));
@@ -1387,13 +1387,13 @@ export default class NousPlugin extends Plugin {
 		}
 		this.nativeRecorderLastProblem = null;
 		this.setMeetingRecordingIndicator(true);
-		nousNotice("🔴 recording this meeting - toggle again to stop.", 4000);
+		nousNotice("🔴 Recording this meeting - tap again when you're done.", 4000);
 		try {
 			this.activeNativeMeetingNotePath = await this.createLiveNativeMeetingNote(next.output);
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
 			await this.appendLog(`ERROR: could not create live meeting note: ${msg}`);
-			nousNotice("Meeting recording started, but the live note could not be opened.", 10000);
+			nousNotice("Recording started, but I couldn't open your live note.", 10000);
 		}
 	}
 
@@ -1559,7 +1559,7 @@ export default class NousPlugin extends Plugin {
 						"Nous saved the meeting audio, but it did not produce a transcript."
 					);
 				} else {
-					nousNotice("No speech detected - no note was created.", 8000);
+					nousNotice("Didn't catch any speech, so no note was made.", 8000);
 				}
 				await this.archiveNativeRecording(recordingDir);
 				return;
@@ -1590,7 +1590,7 @@ export default class NousPlugin extends Plugin {
 					await this.appendLog(`ERROR: could not recover live meeting note after transcription failure: ${problemMsg}`);
 				});
 			}
-			nousNotice("Transcription failed - your notes and audio are kept. See .nous/pipeline.log", 10000);
+			nousNotice("Transcription hit a snag - don't worry, your notes and audio are safe. See .nous/pipeline.log", 10000);
 			await this.appendLog(`ERROR: native recording transcription failed: ${msg}`);
 		} finally {
 			this.setMeetingTranscribingIndicator(false);
@@ -1688,7 +1688,7 @@ export default class NousPlugin extends Plugin {
 		}
 		await this.appendLog(`PENDING: ${path.basename(recordingDir)} needs speech-to-text setup -> ${notePath}`);
 		nousNotice(
-			"Meeting recording saved. Set up speech-to-text later, then run 'Nous: Process inbox now' to finish it.",
+			"Recording saved! Set up speech-to-text later, then run 'Nous: Process inbox now' to finish it off.",
 			12000
 		);
 	}
@@ -1704,7 +1704,7 @@ export default class NousPlugin extends Plugin {
 		const manualNotes = knownManualNotes ?? extractNativeRecordingManualNotes(content);
 		await this.app.vault.modify(liveFile, buildNativeRecordingProblemNote(live.recordedAt, problem, manualNotes));
 		await this.appendLog(`RECOVERED: live native meeting note kept without transcript -> ${liveFile.path}`);
-		nousNotice("No transcript was created. Your live notes were kept in the inbox.", 10000);
+		nousNotice("No transcript this time, but your live notes are safe in the inbox.", 10000);
 		if (hasMeaningfulNativeRecordingManualNotes(manualNotes)) void this.processInbox();
 	}
 
@@ -1883,26 +1883,26 @@ export default class NousPlugin extends Plugin {
 				if (await this.processFile(file)) enriched++;
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				nousNotice(`Failed on "${file.name}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`Stumbled on "${file.name}" - see .nous/pipeline.log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - ${msg}`);
 			}
 		}
 
 		if (enriched > 0) {
-			nousNotice(`${enriched} note${enriched === 1 ? "" : "s"} enriched.`);
+			nousNotice(`✨ ${enriched} note${enriched === 1 ? "" : "s"} enriched.`);
 			await this.buildWikisViaApi();
 		}
 	}
 
 	private async processInboxViaCli() {
 		if (!Platform.isDesktopApp) {
-			nousNotice("CLI execution mode only works on desktop.", 10000);
+			nousNotice("CLI mode only works on desktop, sorry.", 10000);
 			return;
 		}
 		if (this.cliRunInProgress) return;
 		const basePath = this.getVaultBasePath();
 		if (!basePath) {
-			nousNotice("Could not resolve this vault's filesystem path.", 10000);
+			nousNotice("Couldn't find your vault's file path.", 10000);
 			return;
 		}
 
@@ -1950,7 +1950,7 @@ export default class NousPlugin extends Plugin {
 				await this.appendLog(`TRANSCRIBED: ${file.name} -> ${notePath}`);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				nousNotice(`Could not transcribe "${file.name}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`Couldn't transcribe "${file.name}" - see .nous/pipeline.log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - transcription failed: ${msg}`);
 			}
 		}
@@ -1971,7 +1971,7 @@ export default class NousPlugin extends Plugin {
 			if (!(await this.hasAudioTranscriptionBackend())) {
 				if (!warnedMissingBackend) {
 					nousNotice(
-						"A meeting recording is waiting for speech-to-text - set it up in settings → Nous → voice capture.",
+						"A meeting recording is waiting on speech-to-text - set it up in settings → Nous → voice capture.",
 						12000
 					);
 					warnedMissingBackend = true;
@@ -1991,7 +1991,7 @@ export default class NousPlugin extends Plugin {
 				await this.archiveNativeRecording(pending.recordingDir);
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				nousNotice(`Could not transcribe "${file.name}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`Couldn't transcribe "${file.name}" - see .nous/pipeline.log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - pending native recording transcription failed: ${msg}`);
 			}
 		}
@@ -2014,7 +2014,7 @@ export default class NousPlugin extends Plugin {
 				`ERROR: meeting-enricher CLI exited ${enrichResult.code} - ${cliErrorDetail(enrichResult)}`
 			);
 			nousNotice(
-				"Enrichment failed - see .nous/pipeline.log",
+				"Enrichment hit a snag - see .nous/pipeline.log",
 				10000
 			);
 			return;
@@ -2029,7 +2029,7 @@ export default class NousPlugin extends Plugin {
 			await this.appendLog(
 				`ERROR: wiki-builder CLI exited ${wikiResult.code} - ${cliErrorDetail(wikiResult)}`
 			);
-			nousNotice("Wiki step failed - see .nous/pipeline.log", 10000);
+			nousNotice("Wiki building hit a snag - see .nous/pipeline.log", 10000);
 			return;
 		}
 
@@ -2039,7 +2039,7 @@ export default class NousPlugin extends Plugin {
 			if (summary.newWikis > 0) parts.push(`${summary.newWikis} new wiki${summary.newWikis === 1 ? "" : "s"}`);
 			if (summary.updatedWikis > 0)
 				parts.push(`${summary.updatedWikis} wiki${summary.updatedWikis === 1 ? "" : "s"} updated`);
-			nousNotice(`${parts.join(", ")}.`);
+			nousNotice(`✨ ${parts.join(", ")}.`);
 		}
 		if (summary.errors > 0) {
 			nousNotice(`${summary.errors} error${summary.errors === 1 ? "" : "s"} - see .nous/pipeline.log`, 8000);
@@ -2053,12 +2053,12 @@ export default class NousPlugin extends Plugin {
 
 	private async runWikiBuilderCli() {
 		if (!Platform.isDesktopApp) {
-			nousNotice("CLI execution mode only works on desktop.", 10000);
+			nousNotice("CLI mode only works on desktop, sorry.", 10000);
 			return;
 		}
 		const basePath = this.getVaultBasePath();
 		if (!basePath) {
-			nousNotice("Could not resolve this vault's filesystem path.", 10000);
+			nousNotice("Couldn't find your vault's file path.", 10000);
 			return;
 		}
 		await this.ensureSkillsInstalled();
@@ -2070,7 +2070,7 @@ export default class NousPlugin extends Plugin {
 		);
 		if (result.code !== 0) {
 			await this.appendLog(`ERROR: wiki-builder CLI exited ${result.code} - ${cliErrorDetail(result)}`);
-			nousNotice("Wiki step failed - see .nous/pipeline.log", 10000);
+			nousNotice("Wiki building hit a snag - see .nous/pipeline.log", 10000);
 			return;
 		}
 		const summary = summarizeLogLines(await this.readLogSince(before));
@@ -2078,25 +2078,25 @@ export default class NousPlugin extends Plugin {
 		if (summary.newWikis > 0) parts.push(`${summary.newWikis} new wiki${summary.newWikis === 1 ? "" : "s"}`);
 		if (summary.updatedWikis > 0)
 			parts.push(`${summary.updatedWikis} wiki${summary.updatedWikis === 1 ? "" : "s"} updated`);
-		nousNotice(parts.length > 0 ? `${parts.join(", ")}.` : "no wikis to build or update.");
+		nousNotice(parts.length > 0 ? `✨ ${parts.join(", ")}.` : "Nothing new for the wikis this time.");
 	}
 
 	async runVaultQuery(question: string) {
 		if (this.settings.executionMode !== "cli") {
-			nousNotice("Vault query needs CLI mode - switch it in settings → Nous.", 10000);
+			nousNotice("Vault search needs CLI mode - switch it in settings → Nous.", 10000);
 			return;
 		}
 		if (!Platform.isDesktopApp) {
-			nousNotice("CLI execution mode only works on desktop.", 10000);
+			nousNotice("CLI mode only works on desktop, sorry.", 10000);
 			return;
 		}
 		const basePath = this.getVaultBasePath();
 		if (!basePath) {
-			nousNotice("Could not resolve this vault's filesystem path.", 10000);
+			nousNotice("Couldn't find your vault's file path.", 10000);
 			return;
 		}
 		await this.ensureSkillsInstalled();
-		nousNotice("Searching vault...");
+		nousNotice("Searching your vault…");
 		const result = await this.cliExec(
 			this.settings.claudeCliPath,
 			buildQueryArgs(question),
@@ -2104,7 +2104,7 @@ export default class NousPlugin extends Plugin {
 		);
 		if (result.code !== 0) {
 			await this.appendLog(`ERROR: vault-query CLI exited ${result.code} - ${cliErrorDetail(result)}`);
-			nousNotice("Query failed - see .nous/pipeline.log", 10000);
+			nousNotice("Search hit a snag - see .nous/pipeline.log", 10000);
 			return;
 		}
 
@@ -2151,7 +2151,7 @@ export default class NousPlugin extends Plugin {
 	async processFile(file: TFile): Promise<boolean> {
 		if (this.inFlight.has(file.path)) return false;
 		if (this.settings.apiProvider !== "local" && !this.settings.apiKeys[this.settings.apiProvider]) {
-			nousNotice(`No ${this.settings.apiProvider} API key set in plugin settings.`, 10000);
+			nousNotice(`Missing a ${this.settings.apiProvider} API key - add one in plugin settings.`, 10000);
 			return false;
 		}
 		this.inFlight.add(file.path);
@@ -2173,7 +2173,7 @@ export default class NousPlugin extends Plugin {
 				if (isHeic) {
 					if (!Platform.isDesktopApp) {
 						nousNotice(
-							`HEIC capture needs desktop (uses macOS's sips tool) - "${file.name}" left in inbox.`,
+							`HEIC photos need desktop (uses macOS's built-in converter) - left "${file.name}" in your inbox for now.`,
 							10000
 						);
 						return false;
@@ -2183,7 +2183,7 @@ export default class NousPlugin extends Plugin {
 					} catch (e) {
 						const msg = e instanceof Error ? e.message : String(e);
 						nousNotice(
-							`HEIC conversion failed for "${file.name}" (needs macOS's sips tool) - see .nous/pipeline.log`,
+							`Couldn't convert "${file.name}" (needs macOS's sips tool) - see .nous/pipeline.log`,
 							10000
 						);
 						await this.appendLog(`ERROR: ${file.name} - HEIC conversion failed: ${msg}`);
@@ -2238,7 +2238,7 @@ export default class NousPlugin extends Plugin {
 				if (pendingNativeRecording) {
 					if (!(await this.hasAudioTranscriptionBackend())) {
 						nousNotice(
-							`"${file.name}" is waiting for speech-to-text - set it up in Settings → Nous → Voice capture.`,
+							`"${file.name}" is waiting on speech-to-text - set it up in Settings → Nous → Voice capture.`,
 							12000
 						);
 						return false;
@@ -2253,7 +2253,7 @@ export default class NousPlugin extends Plugin {
 					await this.app.vault.modify(file, raw);
 					await this.appendLog(`TRANSCRIBED: ${file.name} pending recording -> ${file.path}`);
 					await this.archiveNativeRecording(pendingNativeRecording.recordingDir);
-					nousNotice(`Transcribed pending meeting recording "${file.name}".`);
+					nousNotice(`✨ Transcribed your pending meeting recording "${file.name}".`);
 				}
 			}
 
@@ -2348,7 +2348,7 @@ export default class NousPlugin extends Plugin {
 			return true;
 		} catch (e) {
 			if (e instanceof LlmApiError) {
-				nousNotice(`Nous API error (${e.status}) on "${file.name}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`API error (${e.status}) on "${file.name}" - see .nous/pipeline.log`, 10000);
 				await this.appendLog(`ERROR: ${file.name} - ${this.settings.apiProvider} API ${e.status}: ${e.body.slice(0, 300)}`);
 				return false;
 			}
@@ -2415,7 +2415,7 @@ export default class NousPlugin extends Plugin {
 				}
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
-				nousNotice(`Wiki build failed for "${cluster.tag}" - see .nous/pipeline.log`, 10000);
+				nousNotice(`Wiki hit a snag for "${cluster.tag}" - see .nous/pipeline.log`, 10000);
 				await this.appendLog(`ERROR: wiki ${cluster.tag} - ${msg}`);
 			}
 		}
@@ -2945,7 +2945,7 @@ class NousSettingTab extends PluginSettingTab {
 										: e instanceof Error
 											? e.message
 											: String(e);
-								nousNotice(`Connection test failed - ${msg}`, 10000);
+								nousNotice(`Couldn't connect - ${msg}`, 10000);
 							} finally {
 								button.setButtonText("Test").setDisabled(false);
 							}
@@ -2963,7 +2963,7 @@ class NousSettingTab extends PluginSettingTab {
 						toggle.setValue(this.plugin.settings.autoProcessOnCreate).onChange(async (value) => {
 							this.plugin.settings.autoProcessOnCreate = value;
 							await this.plugin.saveSettings();
-							nousNotice("Reload the plugin (or restart Obsidian) for this change to take effect.");
+							nousNotice("Reload the plugin (or restart Obsidian) to make this stick.");
 						})
 				);
 			},
@@ -3027,11 +3027,11 @@ class NousSettingTab extends PluginSettingTab {
 								button.setButtonText("Installing...").setDisabled(true);
 								try {
 									const installedPath = await this.plugin.installNativeRecorderFromRelease();
-									nousNotice(`Native recorder installed at ${installedPath}`);
+									nousNotice(`Recorder installed at ${installedPath} - ready to go.`);
 									this.update();
 								} catch (e) {
 									const msg = e instanceof Error ? e.message : String(e);
-									nousNotice(`Native recorder install failed - ${msg}`, 12000);
+									nousNotice(`Recorder install didn't work - ${msg}`, 12000);
 								} finally {
 									button.setButtonText("Install/update").setDisabled(false);
 								}
@@ -3804,11 +3804,11 @@ class OnboardingModal extends Modal {
 								button.setButtonText("Installing...").setDisabled(true);
 								try {
 									await this.plugin.installNativeRecorderFromRelease();
-									nousNotice("Native recorder installed.");
+									nousNotice("Recorder installed and ready to go.");
 									this.renderCapturePrerequisites();
 								} catch (e) {
 									const msg = e instanceof Error ? e.message : String(e);
-									nousNotice(`Native recorder install failed - ${msg}`, 12000);
+									nousNotice(`Recorder install didn't work - ${msg}`, 12000);
 									button.setButtonText("Install").setDisabled(false);
 								}
 							})
@@ -4010,7 +4010,7 @@ class LiveVoiceCaptureModal extends Modal {
 		try {
 			this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 		} catch {
-			nousNotice("Microphone access denied - allow it for Obsidian in system settings.", 8000);
+			nousNotice("Can't hear you - allow microphone access for Obsidian in System Settings.", 8000);
 			this.close();
 			return;
 		}
@@ -4154,7 +4154,7 @@ class LiveVoiceCaptureModal extends Modal {
 		this.recorder?.stop();
 		this.stream?.getTracks().forEach((t) => t.stop());
 		this.plugin.setVoiceRecordingIndicator(false);
-		nousNotice("Recording discarded.");
+		nousNotice("Recording tossed - no note made.");
 		this.close();
 	}
 

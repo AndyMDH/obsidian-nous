@@ -50,7 +50,7 @@ export function formatBytes(bytes: number): string {
 }
 
 export function downloadProgressText(filename: string, received: number, total: number): string {
-	if (total <= 0) return `Nous: downloading ${filename}… ${formatBytes(received)}`;
+	if (total <= 0) return `Downloading ${filename}… ${formatBytes(received)}`;
 	const percent = Math.min(100, Math.floor((received / total) * 100));
-	return `Nous: downloading ${filename}… ${percent}% of ${formatBytes(total)}`;
+	return `Downloading ${filename}… ${percent}% of ${formatBytes(total)}`;
 }

@@ -24,7 +24,7 @@ test("parseLfsPointer rejects malformed pointers", () => {
 test("downloadProgressText reports percent of a known total and bytes otherwise", () => {
 	assert.equal(
 		downloadProgressText("ggml-large-v3-turbo.bin", 812_000_000, 1_624_000_000),
-		"Nous: downloading ggml-large-v3-turbo.bin… 50% of 1.6 GB"
+		"Downloading ggml-large-v3-turbo.bin… 50% of 1.6 GB"
 	);
 	assert.match(downloadProgressText("m.bin", 5_000_000, 0), /5 MB/);
 });

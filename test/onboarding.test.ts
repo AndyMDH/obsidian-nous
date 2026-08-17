@@ -27,7 +27,7 @@ test("new-user copy says voice notes need speech-to-text setup", () => {
 		VOICE_CAPTURE_SETTINGS_DESC,
 		VOICE_TRANSCRIPTION_SETUP_NOTICE,
 	]) {
-		assert.match(text, /speech-to-text|whisper\.cpp|Gemini\/OpenAI|Gemini or OpenAI/);
+		assert.match(text, /speech-to-text|whisper\.cpp|Gemini\/OpenAI|Gemini or OpenAI/i);
 	}
 	// The notice itself is deliberately terse - it must point at the fix, not
 	// explain the whole backend story.
