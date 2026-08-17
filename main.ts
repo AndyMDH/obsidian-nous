@@ -2643,20 +2643,28 @@ class NousSettingTab extends PluginSettingTab {
 
 		items.push({
 			name: "",
+			// Header (§4): 26px logo badge + "Nous" 17px 600, version right in
+			// 12px mono faint. The doc/bug/GitHub links move to a quiet footer
+			// at the bottom of the tab, alongside a new "Rerun setup" link.
 			render: (setting) => {
 				this.containerEl.addClass("nous-settings");
 				setting.settingEl.addClass("nous-settings-header");
 				setting.settingEl.empty();
 				const head = setting.settingEl.createDiv({ cls: "nous-settings-header-inner" });
+				const badge = head.createDiv({ cls: "nous-settings-header-badge" });
+				const doc = new DOMParser().parseFromString(NOUS_LOGO_SVG, "image/svg+xml");
+				badge.appendChild(document.importNode(doc.documentElement, true));
 				head.createSpan({ cls: "nous-settings-header-name", text: "Nous" });
 				head.createSpan({ cls: "nous-settings-header-version", text: `v${this.plugin.manifest.version}` });
-				const links = head.createDiv({ cls: "nous-settings-header-links" });
-				links.createEl("a", { text: "Docs", href: "https://github.com/AndyMDH/obsidian-nous/tree/main/docs" });
-				links.createEl("a", { text: "Report a bug", href: "https://github.com/AndyMDH/obsidian-nous/issues" });
-				links.createEl("a", { text: "GitHub", href: "https://github.com/AndyMDH/obsidian-nous" });
 			},
 		});
 
+		items.push({
+			name: "Provider",
+			render: (setting) => {
+				setting.setHeading();
+			},
+		});
 		items.push({
 			name: "Execution mode",
 			render: (setting) => {
@@ -2967,6 +2975,7 @@ class NousSettingTab extends PluginSettingTab {
 					};
 
 					setting
+						.setClass("nous-status-row")
 						.setDesc("Checking native recorder status...")
 						.addButton((button) => button.setButtonText("Refresh").onClick(() => void refreshStatus(button)));
 					void refreshStatus();
@@ -3199,7 +3208,7 @@ class NousSettingTab extends PluginSettingTab {
 			});
 
 			items.push({
-				name: "Folders",
+				name: "Vault",
 				render: (setting) => {
 					setting.setHeading();
 				},
@@ -3208,12 +3217,15 @@ class NousSettingTab extends PluginSettingTab {
 			const folderSetting = (key: keyof NousSettings, name: string): SettingDefinitionItem => ({
 				name,
 				render: (setting) => {
-					setting.addText((text) =>
+					setting.addText((text) => {
+						// Folder values sit right-aligned in mono (§4) - they
+						// read as paths, not prose.
+						text.inputEl.addClass("nous-mono-input");
 						text.setValue(this.plugin.settings[key] as string).onChange(async (value) => {
 							(this.plugin.settings[key] as string) = value.trim();
 							await this.plugin.saveSettings();
-						})
-					);
+						});
+					});
 				},
 			});
 			items.push(folderSetting("inboxFolder", "Inbox folder"));
@@ -3222,6 +3234,25 @@ class NousSettingTab extends PluginSettingTab {
 			items.push(folderSetting("tagsFolder", "Tags folder"));
 			items.push(folderSetting("queriesFolder", "Queries folder"));
 		}
+
+		// Footer (§4): quiet underlined links, mono-adjacent to the header's
+		// version stamp rather than crowding it at the top of the tab.
+		items.push({
+			name: "",
+			render: (setting) => {
+				setting.settingEl.addClass("nous-settings-footer");
+				setting.settingEl.empty();
+				const footer = setting.settingEl.createDiv({ cls: "nous-settings-footer-inner" });
+				const rerun = footer.createEl("a", { text: "Rerun setup", href: "#" });
+				rerun.addEventListener("click", (event) => {
+					event.preventDefault();
+					new OnboardingModal(this.app, this.plugin).open();
+				});
+				footer.createEl("a", { text: "Docs", href: "https://github.com/AndyMDH/obsidian-nous/tree/main/docs" });
+				footer.createEl("a", { text: "Report a bug", href: "https://github.com/AndyMDH/obsidian-nous/issues" });
+				footer.createEl("a", { text: "GitHub", href: "https://github.com/AndyMDH/obsidian-nous" });
+			},
+		});
 
 		return items;
 	}

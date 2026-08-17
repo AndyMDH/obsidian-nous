@@ -479,32 +479,143 @@
 	color: var(--nous-accent-soft);
 }
 
-/* Settings tab header strip */
+/* ------------------------------------------------------------------ */
+/* Settings tab (docs/NOUS-REDESIGN.md §4): 26px badge + name + version
+   header, small-caps section labels, hairline rows, chip dropdowns, pill
+   toggles, mono status/folder text, a quiet footer link row. */
+.nous-settings {
+	font-family: var(--nous-font-ui);
+}
 .nous-settings-header {
 	border: none;
-	padding: 0 0 8px;
+	padding: 0 0 12px;
 }
 .nous-settings-header-inner {
 	display: flex;
-	align-items: baseline;
-	gap: 8px;
+	align-items: center;
+	gap: 10px;
 	width: 100%;
-	border-bottom: 1px solid var(--background-modifier-border);
-	padding-bottom: 8px;
+	border-bottom: 1px solid var(--nous-hairline);
+	padding-bottom: 12px;
+}
+.nous-settings-header-badge {
+	display: flex;
+}
+.nous-settings-header-badge svg {
+	width: 26px;
+	height: 26px;
 }
 .nous-settings-header-name {
-	font-weight: 700;
-	font-size: var(--font-ui-large);
+	font-weight: 600;
+	font-size: 17px;
+	color: var(--nous-text);
 }
 .nous-settings-header-version {
-	color: var(--text-muted);
-	font-size: var(--font-ui-small);
-}
-.nous-settings-header-links {
 	margin-left: auto;
+	color: var(--nous-faint);
+	font-family: var(--nous-font-mono);
+	font-size: 12px;
+}
+
+/* Small-caps section labels (Provider/Meeting capture/Appearance/Voice
+   capture/Vault - all rendered via Setting.setHeading()). */
+.nous-settings .setting-item.setting-item-heading {
+	border: none;
+	padding: 22px 0 4px;
+}
+.nous-settings .setting-item.setting-item-heading .setting-item-name {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--nous-faint);
+}
+
+/* Hairline rows: name 14px 600 + one-line 12px muted description left,
+   control right - close to Setting's own default layout already, just
+   retoned. */
+.nous-settings .setting-item {
+	border-top: 1px solid var(--nous-hairline);
+	padding: 14px 0;
+}
+.nous-settings .setting-item.setting-item-heading {
+	border-top: none;
+}
+.nous-settings .setting-item-name {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--nous-text);
+}
+.nous-settings .setting-item-description {
+	font-size: 12px;
+	color: var(--nous-muted);
+}
+
+/* Dropdowns as bordered white chips. */
+.nous-settings select {
+	background: var(--nous-surface);
+	border: 1px solid var(--nous-border);
+	border-radius: var(--nous-radius-input);
+	color: var(--nous-text);
+	font-size: 13px;
+	padding: 5px 26px 5px 10px;
+}
+
+/* Test/Refresh/Install/Download as small outlined pills - CTAs (Download
+   model, Install) stay filled moss via the shared button.mod-cta rule
+   below; everything else is quiet and bordered. */
+.nous-settings button:not(.mod-cta) {
+	background: var(--nous-surface);
+	border: 1px solid var(--nous-border);
+	border-radius: var(--nous-radius-pill);
+	color: var(--nous-text);
+	font-size: 12px;
+	padding: 5px 14px;
+}
+.nous-settings button.mod-cta {
+	border-radius: var(--nous-radius-pill);
+}
+
+/* Folder paths and recorder status lines read as data, not prose - mono,
+   muted, right-aligned for folder values (.nous-mono-input's base font
+   styling is defined once, in the wizard-form block above). */
+.nous-settings .nous-mono-input {
+	text-align: right;
+}
+.nous-status-row .setting-item-description {
+	font-family: var(--nous-font-mono);
+	font-size: 12px;
+	color: var(--nous-muted);
+}
+
+/* No red anywhere (spec §1) - a warning row reads in normal ink, not
+   Obsidian's default error-red mod-warning. */
+.nous-settings .setting-item.mod-warning,
+.nous-settings .setting-item.mod-warning .setting-item-name {
+	color: var(--nous-text);
+}
+.nous-settings .setting-item.mod-warning .setting-item-description {
+	color: var(--nous-muted);
+}
+
+/* Footer: quiet underlined links. */
+.nous-settings-footer {
+	border-top: 1px solid var(--nous-hairline);
+	padding: 16px 0 0;
+}
+.nous-settings-footer-inner {
 	display: flex;
-	gap: 12px;
-	font-size: var(--font-ui-small);
+	flex-wrap: wrap;
+	gap: 16px;
+}
+.nous-settings-footer-inner a {
+	font-size: 12px;
+	color: var(--nous-muted);
+	text-decoration: underline;
+	text-decoration-color: var(--nous-accent-soft);
+}
+.nous-settings-footer-inner a:hover {
+	color: var(--nous-accent);
 }
 
 /* The live note's frontmatter is machinery (recording flags, paths) - hide
@@ -520,16 +631,25 @@
 	margin-bottom: 4px;
 }
 
-/* Settings tab: brand accents match the modals */
+/* Settings tab: moss accents, not the theme accent. */
 .nous-settings button.mod-cta {
-	background-color: #eb6c36;
-	color: #ffffff;
+	background-color: var(--nous-accent);
+	color: var(--nous-on-accent);
 }
 .nous-settings button.mod-cta:hover {
-	background-color: #d95f2d;
+	background-color: var(--nous-accent);
+	filter: brightness(1.08);
 }
+/* Toggle pills: moss when on. Only background/border are overridden, not
+   width/height - Obsidian's own toggle sizes its sliding knob off its
+   default dimensions, and forcing a custom size here risks breaking that
+   knob's position without a way to check the rendered result. */
 .nous-settings .checkbox-container.is-enabled {
-	background-color: #eb6c36;
+	background-color: var(--nous-accent);
+}
+.nous-settings .checkbox-container:not(.is-enabled) {
+	background-color: var(--nous-surface-2);
+	border: 1px solid var(--nous-border);
 }
 
 /* Properties stay hidden in live notes across both view modes */
