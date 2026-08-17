@@ -207,15 +207,19 @@ export function buildMeetingMarkdown(
 	if (result.type === "meeting") {
 		fmLines.push(`attendees: [${result.attendees.join(", ")}]`);
 	}
-	fmLines.push(
-		`source: ${result.source}`,
-		`project: ${result.project}`,
-		`tags: [${result.tags.join(", ")}]`,
-		`status: enriched`,
-		`enriched_at: ${enrichedAt}`,
-		"---",
-		""
-	);
+	fmLines.push(`source: ${result.source}`, `project: ${result.project}`, `tags: [${result.tags.join(", ")}]`);
+	// Only present when "win" is in tags - mirrors meeting-enricher's Step
+	// 3.5 in src/skillTemplates.ts (CLI mode), same field order.
+	if (result.win) {
+		fmLines.push(
+			`win_category: ${result.win.category}`,
+			`win_headcount: ${result.win.headcount}`,
+			`win_client: ${result.win.client}`,
+			`win_repo: ${result.win.repo}`,
+			`win_metric: ${result.win.metric}`
+		);
+	}
+	fmLines.push(`status: enriched`, `enriched_at: ${enrichedAt}`, "---", "");
 
 	const bodyParts: string[] = [`## Summary\n\n${result.summary}`];
 
@@ -353,6 +357,52 @@ export function buildWikiMarkdown(
 	const sourceLines = sources.map((s) => `- [[${s}]]`).join("\n");
 
 	return `${fm}# ${topic}\n\n## Current state\n\n${result.current_state}\n\n## Open questions\n\n${openQuestions}\n\n## Timeline\n\n${timelineLines}\n\n## Sources\n\n${sourceLines}\n`;
+}
+
+export interface WinEntry {
+	title: string;
+	date: string;
+	category: string;
+	headcount: string;
+	client: string;
+	repo: string;
+	metric: string;
+}
+
+// Deterministic, unlike buildWikiMarkdown - no synthesis needed, just
+// grouping/sorting/formatting what's already in each note's frontmatter.
+// Mirrors wiki-builder's Step 6 (src/skillTemplates.ts, CLI mode): always
+// fully regenerated rather than incrementally updated, since nothing on
+// the page is hand-written.
+export function buildWinsMarkdown(entries: WinEntry[], updated: string): string {
+	const byCategory = new Map<string, WinEntry[]>();
+	for (const entry of entries) {
+		if (!byCategory.has(entry.category)) byCategory.set(entry.category, []);
+		byCategory.get(entry.category)!.push(entry);
+	}
+
+	const categories = Array.from(byCategory.entries()).sort((a, b) => b[1].length - a[1].length);
+
+	const summaryLine = categories
+		.map(([category, items]) => `${humanizeWinCategory(category)} (${items.length})`)
+		.join(" · ");
+
+	const sections = categories.map(([category, items]) => {
+		const sorted = items.slice().sort((a, b) => b.date.localeCompare(a.date));
+		const lines = sorted.map((item) => {
+			const details = [item.client, item.repo, item.metric, item.headcount].filter(Boolean).join(", ");
+			const suffix = details ? ` - ${details}` : "";
+			return `- ${item.date} - [[${item.title}]]${suffix}`;
+		});
+		return `## ${humanizeWinCategory(category)}\n\n${lines.join("\n")}`;
+	});
+
+	const fm = ["---", "type: wins", `updated: ${updated}`, `count: ${entries.length}`, "---", ""].join("\n");
+	return `${fm}# Wins\n\n${summaryLine}\n\n${sections.join("\n\n")}\n`;
+}
+
+function humanizeWinCategory(category: string): string {
+	return category.charAt(0).toUpperCase() + category.slice(1);
 }
 
 export interface NoteMeta {

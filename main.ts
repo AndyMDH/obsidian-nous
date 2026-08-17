@@ -2504,6 +2504,40 @@ export default class NousPlugin extends Plugin {
 				await this.appendLog(`ERROR: wiki ${cluster.tag} - ${msg}`);
 			}
 		}
+
+		await this.updateWinsPageViaApi(noteFiles);
+	}
+
+	// Deterministic, unlike the topic wikis above - no LLM call needed, see
+	// logic.buildWinsMarkdown. Only runs when at least one win-tagged note
+	// exists, same gate as wiki-builder's Step 6 in CLI mode.
+	private async updateWinsPageViaApi(noteFiles: TFile[]) {
+		const entries: logic.WinEntry[] = [];
+		for (const file of noteFiles) {
+			const fm = this.app.metadataCache.getFileCache(file)?.frontmatter;
+			if (!fm || !Array.isArray(fm.tags) || !(fm.tags as string[]).includes("win")) continue;
+			entries.push({
+				title: (fm.title as string) ?? file.basename,
+				date: (fm.date as string) ?? "",
+				category: (fm.win_category as string) ?? "other",
+				headcount: (fm.win_headcount as string) ?? "",
+				client: (fm.win_client as string) ?? "",
+				repo: (fm.win_repo as string) ?? "",
+				metric: (fm.win_metric as string) ?? "",
+			});
+		}
+		if (entries.length === 0) return;
+
+		const winsPath = `${this.settings.wikisFolder}/Wins.md`;
+		const today = new Date().toISOString().slice(0, 10);
+		const markdown = logic.buildWinsMarkdown(entries, today);
+		const existing = this.app.vault.getFileByPath(winsPath);
+		if (existing) {
+			await this.app.vault.modify(existing, markdown);
+		} else {
+			await this.app.vault.create(winsPath, markdown);
+		}
+		await this.appendLog(`WINS UPDATED: ${entries.length} total`);
 	}
 
 	private async readSourcesForWiki(

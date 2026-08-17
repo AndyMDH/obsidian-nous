@@ -112,6 +112,28 @@ export interface NoteIndexEntry {
 	snippet: string;
 }
 
+export type WinCategory =
+	| "client work"
+	| "training"
+	| "internship"
+	| "internal tool"
+	| "open source"
+	| "writing"
+	| "certification"
+	| "event"
+	| "other";
+
+// Present only when "win" is among tags - see enrichSystemPrompt's Wins
+// section. Fields are blank strings rather than omitted when the note
+// doesn't state that detail (never guessed).
+export interface WinDetails {
+	category: WinCategory;
+	headcount: string;
+	client: string;
+	repo: string;
+	metric: string;
+}
+
 export interface EnrichResult {
 	type: "meeting" | "note";
 	is_fragment: boolean;
@@ -129,6 +151,7 @@ export interface EnrichResult {
 	decisions: string[];
 	action_items: string[];
 	related_notes: string[];
+	win: WinDetails | null;
 }
 
 export interface WikiSynthesisResult {

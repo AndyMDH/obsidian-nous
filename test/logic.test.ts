@@ -16,12 +16,13 @@ import {
 	convertLegacyTranscriptToCallout,
 	buildTagFileContent,
 	buildWikiMarkdown,
+	buildWinsMarkdown,
 	clusterByTag,
 	isCaptureFile,
 	meetingAttachmentFilename,
 	arrayBufferToBase64,
 } from "../src/logic.ts";
-import type { EnrichResult, WikiSynthesisResult } from "../src/types.ts";
+import type { EnrichResult, WikiSynthesisResult, WinDetails } from "../src/types.ts";
 
 test("sanitizeFilename strips filesystem-unsafe characters", () => {
 	assert.equal(sanitizeFilename('Client: "Acme" / Kickoff'), "Client- -Acme- - Kickoff");
@@ -125,6 +126,7 @@ function baseResult(overrides: Partial<EnrichResult> = {}): EnrichResult {
 		decisions: ["Decision one"],
 		action_items: ["Do the thing"],
 		related_notes: ["Some Other Meeting"],
+		win: null,
 		...overrides,
 	};
 }
@@ -147,6 +149,79 @@ test("buildMeetingMarkdown produces the expected frontmatter field order", () =>
 		"status",
 		"enriched_at",
 	]);
+});
+
+function baseWin(overrides: Partial<WinDetails> = {}): WinDetails {
+	return {
+		category: "client work",
+		headcount: "",
+		client: "",
+		repo: "",
+		metric: "",
+		...overrides,
+	};
+}
+
+test("buildMeetingMarkdown inserts win_* fields right after tags, only when win is set", () => {
+	const withoutWin = buildMeetingMarkdown(baseResult(), "raw", "2026-07-02T12:00:00.000Z", null);
+	assert.ok(!withoutWin.includes("win_category"));
+
+	const withWin = buildMeetingMarkdown(
+		baseResult({ tags: ["external", "win"], win: baseWin({ client: "Acme", metric: "$50k saved" }) }),
+		"raw",
+		"2026-07-02T12:00:00.000Z",
+		null
+	);
+	const fmBlock = withWin.split("---\n")[1];
+	const fields = fmBlock
+		.trim()
+		.split("\n")
+		.map((l) => l.split(":")[0]);
+	assert.deepEqual(fields, [
+		"type",
+		"date",
+		"title",
+		"attendees",
+		"source",
+		"project",
+		"tags",
+		"win_category",
+		"win_headcount",
+		"win_client",
+		"win_repo",
+		"win_metric",
+		"status",
+		"enriched_at",
+	]);
+	assert.match(withWin, /win_client: Acme/);
+	assert.match(withWin, /win_metric: \$50k saved/);
+	assert.match(withWin, /win_headcount: \n/);
+});
+
+test("buildWinsMarkdown groups by category with counts, newest first within each", () => {
+	const md = buildWinsMarkdown(
+		[
+			{ title: "Old client win", date: "2026-01-01", category: "client work", headcount: "", client: "Acme", repo: "", metric: "" },
+			{ title: "New client win", date: "2026-06-01", category: "client work", headcount: "", client: "Globex", repo: "", metric: "" },
+			{ title: "OSS release", date: "2026-03-01", category: "open source", headcount: "", client: "", repo: "nous", metric: "" },
+		],
+		"2026-07-01"
+	);
+	assert.match(md, /type: wins/);
+	assert.match(md, /count: 3/);
+	assert.match(md, /Client work \(2\) · Open source \(1\)/);
+	const clientSection = md.split("## Client work")[1].split("## Open source")[0];
+	assert.ok(clientSection.indexOf("New client win") < clientSection.indexOf("Old client win"));
+	assert.match(md, /## Open source\n\n- 2026-03-01 - \[\[OSS release\]\] - nous/);
+});
+
+test("buildWinsMarkdown omits blank details rather than writing placeholders", () => {
+	const md = buildWinsMarkdown(
+		[{ title: "Quiet win", date: "2026-01-01", category: "other", headcount: "", client: "", repo: "", metric: "" }],
+		"2026-07-01"
+	);
+	assert.match(md, /- 2026-01-01 - \[\[Quiet win\]\]\n/);
+	assert.ok(!md.includes("N/A"));
 });
 
 test("buildMeetingMarkdown omits attendees for type: note", () => {

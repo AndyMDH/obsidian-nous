@@ -25,6 +25,11 @@ The permitted tag registry is exactly this list, nothing else is valid: ${tagReg
 2. Only propose a new tag (via the new_tag field) if ALL of: no existing tag covers the concept even loosely (check synonyms/parents too), the concept is central to this note, and you can name at least two other plausible future notes that would also use it. If genuinely torn between reusing an existing tag and minting a new one, always reuse the existing one.
 3. Tags are lowercase-kebab-case.
 4. If is_fragment is true, always include "fragment" as one of the tags (create it via new_tag if it does not already exist in the registry, with justification "system tag for short captures").
+5. "win" is a recognized system tag - valid in tags without appearing in the registry list above, and never proposed via new_tag (unlike "fragment", it needs no tag file). See Wins below.
+
+## Wins
+Include "win" in tags whenever the note describes a completed professional accomplishment - shipped a project, hit a concrete metric, earned a certification, gave a talk or ran training, released something open source, wrote something published, landed a client win, and so on. Include it even if the user never wrote "#win" or "win" themselves - apply it whenever the note clearly qualifies, the same way any other tag gets assigned. When genuinely ambiguous, do not apply it.
+When "win" is in tags, fill the win field: category is one of "client work", "training", "internship", "internal tool", "open source", "writing", "certification", "event", "other". headcount/client/repo/metric are blank strings unless the note actually states that detail - never guess or infer a value. When "win" is not in tags, win must be null.
 
 ## Body
 - summary: 2-4 sentences. For type "note", just summarize the idea - do not force a meeting framing.
@@ -154,6 +159,31 @@ export const ENRICH_TOOL = {
 			decisions: { type: "array", items: { type: "string" } },
 			action_items: { type: "array", items: { type: "string" } },
 			related_notes: { type: "array", items: { type: "string" } },
+			win: {
+				type: ["object", "null"],
+				description: "Non-null only when \"win\" is in tags - see the Wins section.",
+				properties: {
+					category: {
+						type: "string",
+						enum: [
+							"client work",
+							"training",
+							"internship",
+							"internal tool",
+							"open source",
+							"writing",
+							"certification",
+							"event",
+							"other",
+						],
+					},
+					headcount: { type: "string", description: "Blank if not stated - never guessed." },
+					client: { type: "string", description: "Blank if not stated - never guessed." },
+					repo: { type: "string", description: "Blank if not stated - never guessed." },
+					metric: { type: "string", description: "Blank if not stated - never guessed." },
+				},
+				required: ["category", "headcount", "client", "repo", "metric"],
+			},
 		},
 		required: [
 			"type",
@@ -172,6 +202,7 @@ export const ENRICH_TOOL = {
 			"decisions",
 			"action_items",
 			"related_notes",
+			"win",
 		],
 	},
 };
