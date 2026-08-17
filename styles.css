@@ -100,14 +100,15 @@
    short of wrapping every call site in a fragment builder, which is
    already what these helpers do. */
 .notice:has(.nous-notice-icon) {
-	background: var(--nous-surface);
-	/* Obsidian's own notice styling gives toasts a translucent/blurred
-	   "glass" look by default in recent versions - background-color alone
-	   doesn't cancel that, opacity and backdrop-filter are separate
-	   properties layered on top of it. Force both off so the solid
-	   --nous-surface fill actually reads as solid. */
-	opacity: 1;
-	backdrop-filter: none;
+	background: var(--nous-surface) !important;
+	/* Obsidian fades queued/stacked notices via an inline style.opacity set
+	   from JS - a non-!important rule here loses to that inline style
+	   regardless of selector specificity, which is exactly why a single
+	   notice looked fine but four stacked ones (from repeated clicks) show
+	   settings-panel content bleeding straight through. !important is the
+	   only way an external stylesheet rule can beat an inline style. */
+	opacity: 1 !important;
+	backdrop-filter: none !important;
 	border: 1px solid var(--nous-border);
 	border-radius: var(--nous-radius-input);
 	color: var(--nous-text);
