@@ -2498,7 +2498,7 @@ const EDITORIAL_SNIPPET_FILENAME = "nous-editorial.css";
 // Kept in sync with examples/nous-editorial-theme.css in the repository.
 const EDITORIAL_SNIPPET = `/* Nous editorial theme - optional vault snippet. Remove or disable in
    Appearance -> CSS snippets. For the full effect, set Appearance ->
-   Accent color to #eb6c36. */
+   Accent color to #4C5138. */
 body {
 	--font-text: "Iowan Old Style", Palatino, Georgia, serif;
 	--line-height-normal: 1.6;
@@ -2510,14 +2510,14 @@ body {
 }
 .tag,
 .cm-hashtag {
-	color: #eb6c36 !important;
-	background-color: rgba(235, 108, 54, 0.08);
-	border: 1px solid rgba(235, 108, 54, 0.35);
+	color: #4c5138 !important;
+	background-color: rgba(76, 81, 56, 0.08);
+	border: 1px solid rgba(76, 81, 56, 0.35);
 }
 .metadata-property[data-property-key="tags"] .multi-select-pill {
-	color: #eb6c36;
-	background-color: rgba(235, 108, 54, 0.08);
-	border: 1px solid rgba(235, 108, 54, 0.35);
+	color: #4c5138;
+	background-color: rgba(76, 81, 56, 0.08);
+	border: 1px solid rgba(76, 81, 56, 0.35);
 }
 .metadata-property-key .metadata-property-key-input {
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -2532,18 +2532,18 @@ body {
 }
 .markdown-preview-view blockquote,
 .markdown-source-view .HyperMD-quote {
-	border-left: 2px solid rgba(235, 108, 54, 0.5);
+	border-left: 2px solid rgba(76, 81, 56, 0.5);
 }
 input[type="checkbox"]:checked {
-	background-color: #eb6c36;
-	border-color: #eb6c36;
+	background-color: #4c5138;
+	border-color: #4c5138;
 }
 .workspace-tab-header.is-active .workspace-tab-header-inner-title,
 .nav-file-title.is-active {
-	color: #eb6c36;
+	color: #4c5138;
 }
 .callout[data-callout="nous"] {
-	--callout-color: 235, 108, 54;
+	--callout-color: 76, 81, 56;
 	--callout-icon: lucide-sparkles;
 }
 `;
@@ -3091,7 +3091,7 @@ class NousSettingTab extends PluginSettingTab {
 			name: "Editorial theme (optional)",
 			render: (setting) => {
 				setting
-					.setDesc("Vault-wide look: serif text, tangerine tags and details, a branded callout. Installs as a CSS snippet you can disable anytime.")
+					.setDesc("Vault-wide look: serif text, moss tags and details, a branded callout. Installs as a CSS snippet you can disable anytime.")
 					.addButton((b) =>
 						b.setButtonText("Install").onClick(async () => {
 							b.setDisabled(true);

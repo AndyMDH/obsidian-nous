@@ -660,27 +660,260 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Styled Nous notes (settings toggle, default on). Scoped strictly to
-   notes Nous generates: meeting notes carry enriched_at, wikis carry
-   topic - hand-written notes are never touched. */
+/* Styled Nous notes (docs/NOUS-REDESIGN.md §5, settings toggle, default
+   on). Scoped strictly to notes Nous generates: meeting/note pages carry
+   enriched_at, wikis carry topic, tag pages carry created but neither of
+   those two - hand-written notes are never touched.
+   Three note-type selector roots, reused throughout this section: */
+/* Meeting/Note: */
+/* body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) */
+/* Wiki: */
+/* body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) */
+/* Tag page: */
+/* body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"])) */
 
-/* Meeting notes: summary as a lede, decisions as accent cards, bigger
-   action checkboxes, transcript dimmed as archive (hover restores). */
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Summary"]) + div p {
-	font-size: 1.05em;
+/* Header chip row (replaces the raw properties table): Obsidian already
+   renders frontmatter as .metadata-properties/.metadata-property rows -
+   this restyles that panel into a horizontal chip/pill row instead of
+   reconstructing it as new content, so the values stay exactly what Nous
+   wrote to frontmatter. The "Properties" collapse heading is hidden and
+   each property's icon/key label goes with it - only values remain,
+   reordered and skinned by data-property-key. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-properties-heading,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-properties-heading,
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	.metadata-properties-heading {
+	display: none;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-properties,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-properties,
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	.metadata-properties {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 6px 10px;
+	margin: 0 0 20px;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property-icon,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property-key,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property-icon,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property-key,
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	.metadata-property-icon,
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	.metadata-property-key {
+	display: none;
+}
+/* Plumbing properties that duplicate the H1 or aren't user-facing. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="title"],
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="status"],
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="enriched_at"],
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="topic"],
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="updated"],
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="sources"] {
+	display: none;
+}
+/* Type badge: well-bg muted small-caps chip (Meeting/Note), moss-filled
+   chip (Wiki), outlined chip (Tag page). */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="type"],
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="type"],
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	.metadata-property[data-property-key="type"] {
+	order: 1;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	padding: 3px 10px;
+	border-radius: var(--nous-radius-pill);
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="type"] {
+	background: var(--nous-well);
+	color: var(--nous-muted);
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="type"] {
+	background: var(--nous-accent);
+	color: var(--nous-on-accent);
+}
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	.metadata-property[data-property-key="type"] {
+	background: transparent;
+	color: var(--nous-muted);
+	border: 1px solid var(--nous-border);
+}
+/* Date/source/project/created: quiet tabular-num text, "· " separated. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="date"],
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="source"],
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="project"],
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="created"],
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	.metadata-property[data-property-key="created"] {
+	color: var(--nous-faint);
+	font-size: 12px;
+	font-variant-numeric: tabular-nums;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="date"] {
+	order: 2;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="source"] {
+	order: 3;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="project"] {
+	order: 4;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="source"]::before,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="project"]::before {
+	content: "· ";
+}
+/* Attendees: white bordered pills, prefixed "with". Tags: moss-filled
+   white-text pills. Both are Obsidian's own auto-detected list-property
+   pills (.multi-select-pill), just retoned. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="attendees"] {
+	order: 5;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="attendees"]::before {
+	content: "with ";
+	color: var(--nous-faint);
+	font-size: 12px;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="attendees"] .multi-select-pill,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="tags"] .multi-select-pill,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="tags"] .multi-select-pill {
+	border-radius: var(--nous-radius-pill);
+	font-size: 12px;
+	font-weight: 600;
+	padding: 2px 10px;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="attendees"] .multi-select-pill {
+	background: var(--nous-surface);
+	border: 1px solid var(--nous-border);
+	color: var(--nous-text);
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="tags"] {
+	order: 6;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .metadata-property[data-property-key="tags"] .multi-select-pill,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) .metadata-property[data-property-key="tags"] .multi-select-pill {
+	background: var(--nous-accent);
+	border: none;
+	color: var(--nous-on-accent);
+}
+
+/* Title: 24-26px 700, tight tracking. Tag page title is mono instead. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) h1,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) h1 {
+	font-size: 26px;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+}
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	h1 {
+	font-family: var(--nous-font-mono);
+	font-size: 22px;
+	font-weight: 700;
+}
+
+/* Sections: Summary/Key points/Decisions/Action items/Open questions/
+   Timeline/Sources as small-caps labels; body in Georgia. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) h2,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) h2 {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--nous-faint);
+	margin-top: 2em;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) p,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) li,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) p,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) li,
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	p {
+	font-family: var(--nous-font-serif);
+	font-size: 15px;
 	line-height: 1.65;
+	color: var(--nous-body-serif);
 }
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Decisions"]) + div li {
+/* Bullets as a moss "·" (task-list items keep their checkbox instead). */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) ul:not(.contains-task-list) > li,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) ul:not(.contains-task-list) > li {
 	list-style: none;
-	border-left: 2px solid #eb6c36;
-	background: rgba(235, 108, 54, 0.05);
-	padding: 6px 10px;
-	margin: 6px 0;
-	border-radius: 0 4px 4px 0;
+	position: relative;
+	padding-left: 1.1em;
 }
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) ul:not(.contains-task-list) > li::before,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) ul:not(.contains-task-list) > li::before {
+	content: "·";
+	position: absolute;
+	left: 0.2em;
+	color: var(--nous-accent);
+	font-weight: 700;
+}
+/* Open questions use a moss "?" instead of the default dot. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Open questions"]) + div ul > li::before {
+	content: "?";
+}
+
+/* Action items: 14px squares radius 4 - empty bordered, done = moss fill
+   + white check + strikethrough faint text. */
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Action items"]) + div .task-list-item-checkbox {
-	width: 17px;
-	height: 17px;
+	appearance: none;
+	position: relative;
+	width: 14px;
+	height: 14px;
+	border-radius: 4px;
+	border: 1.5px solid var(--nous-border);
+	background: var(--nous-surface);
+	cursor: pointer;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Action items"]) + div li.task-list-item.is-checked .task-list-item-checkbox {
+	background: var(--nous-accent);
+	border-color: var(--nous-accent);
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Action items"]) + div li.task-list-item.is-checked .task-list-item-checkbox::after {
+	content: "";
+	position: absolute;
+	left: 3px;
+	top: 1px;
+	width: 4px;
+	height: 7px;
+	border: solid var(--nous-on-accent);
+	border-width: 0 1.5px 1.5px 0;
+	transform: rotate(45deg);
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Action items"]) + div li.task-list-item.is-checked {
+	color: var(--nous-faint);
+	text-decoration: line-through;
+}
+
+/* Transcript callout bar: the only [!note] callout the pipeline emits -
+   toCollapsedCallout() in src/logic.ts always titles it "Transcript".
+   Obsidian's own fold arrow/collapse behavior is untouched, just retoned. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] {
+	background: var(--nous-surface-2);
+	border: none;
+	border-radius: 12px;
+	padding: 10px 14px;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] .callout-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--nous-muted);
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] .callout-icon,
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] .callout-fold {
+	color: var(--nous-faint);
 }
 /* Transcript = archive, in BOTH views: reading blocks are tagged by the
    post-processor, editor lines by a CodeMirror decoration. */
@@ -695,23 +928,43 @@ body.nous-styled-notes .cm-line.nous-transcript-line:hover {
 	opacity: 1;
 }
 
-/* Wiki pages: accent title, eyebrow section headings, source chips */
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) h1 {
-	color: #eb6c36;
-	border-bottom: 1px solid rgba(235, 108, 54, 0.3);
-	padding-bottom: 6px;
+/* Related: hairline-topped row, small-caps label + moss links underlined
+   with accent-soft. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Related"]) {
+	border-top: 1px solid var(--nous-hairline-2);
+	margin-top: 24px;
+	padding-top: 16px;
 }
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) h2 {
-	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-	font-size: 13px;
-	letter-spacing: 0.12em;
-	text-transform: uppercase;
-	color: var(--text-muted);
-	margin-top: 2em;
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) div:has(> h2[data-heading="Related"]) + div a.internal-link {
+	color: var(--nous-accent);
+	text-decoration: underline;
+	text-decoration-color: var(--nous-accent-soft);
 }
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Timeline"]) + div li::marker {
-	color: #eb6c36;
+
+/* Wiki timeline: hairline rows - MM-DD faint tabular, linked title, and a
+   one-line muted gloss, all as plain text in one list item (the pipeline
+   writes "date - [[title]] - gloss" as a single line - see
+   buildWikiMarkdown in src/logic.ts), so this styles the row as a whole
+   rather than splitting date/title/gloss into separate elements. */
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Timeline"]) + div ul {
+	padding-left: 0;
 }
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Timeline"]) + div li {
+	list-style: none;
+	padding: 8px 0 8px 0;
+	border-top: 1px solid var(--nous-hairline-2);
+	font-variant-numeric: tabular-nums;
+	color: var(--nous-muted);
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Timeline"]) + div li:first-child {
+	border-top: none;
+}
+body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Timeline"]) + div li a.internal-link {
+	color: var(--nous-accent);
+	font-weight: 600;
+}
+
+/* Sources: moss-bordered chips instead of a bullet list. */
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Sources"]) + div ul {
 	display: flex;
 	flex-wrap: wrap;
@@ -720,9 +973,30 @@ body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-proper
 }
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="topic"]) div:has(> h2[data-heading="Sources"]) + div li {
 	list-style: none;
-	border: 1px solid var(--background-modifier-border);
-	background: var(--background-secondary);
+	border: 1px solid var(--nous-border);
+	background: var(--nous-surface);
 	border-radius: 12px;
 	padding: 2px 10px;
 	font-size: 0.85em;
+	color: var(--nous-muted);
+}
+
+/* Tag page: mono title (above), serif one-line definition, small-caps
+   "Notes with this tag" label + italic faint backlinks gloss. */
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	h2 {
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--nous-faint);
+	margin-top: 2em;
+}
+body.nous-styled-notes
+	.markdown-preview-view:has(.metadata-property[data-property-key="created"]):not(:has(.metadata-property[data-property-key="topic"])):not(:has(.metadata-property[data-property-key="enriched_at"]))
+	div:has(> h2)
+	+ div em {
+	color: var(--nous-faint);
+	font-style: italic;
 }
