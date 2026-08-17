@@ -18,7 +18,13 @@ import {
 	type SettingDefinitionItem,
 	type SettingGroup,
 } from "obsidian";
-import type { ApiProvider, NousSettings, EnrichResult, NoteIndexEntry, WikiSynthesisResult } from "./src/types";
+import type {
+	ApiProvider,
+	NousSettings,
+	EnrichResult,
+	NoteIndexEntry,
+	WikiSynthesisResult,
+} from "./src/types";
 import { DEFAULT_SETTINGS, MODEL_OPTIONS } from "./src/types";
 import { AnthropicProvider } from "./src/anthropic";
 import type { HttpPost } from "./src/anthropic";
@@ -83,7 +89,6 @@ import {
 	capturePrerequisiteItems,
 	hasGeminiOrOpenAiTranscriptionKey,
 	nativeRecorderReadinessText,
-	onboardingFinishIntro,
 	onboardingFinishNextActions,
 	onboardingFinishTitle,
 	shouldOfferNativeRecorderInstall,
@@ -257,16 +262,6 @@ export default class NousPlugin extends Plugin {
 			callback: () => new QueryModal(this.app, (question) => void this.runVaultQuery(question)).open(),
 		});
 
-		this.addCommand({
-			id: "quick-capture",
-			name: "Quick capture",
-			callback: () => new QuickCaptureModal(this.app, this).open(),
-		});
-
-		this.addRibbonIcon("feather", "Nous quick capture", () => {
-			new QuickCaptureModal(this.app, this).open();
-		});
-
 		this.voiceRibbonEl = this.addRibbonIcon("mic", "Nous: toggle voice capture", () => {
 			void this.toggleVoiceCapture();
 		});
@@ -315,6 +310,12 @@ export default class NousPlugin extends Plugin {
 				if (this.meetingPollInterval !== null) window.clearInterval(this.meetingPollInterval);
 			});
 		}
+
+		this.addCommand({
+			id: "convert-transcripts-to-collapsed-sections",
+			name: "Convert transcripts to collapsed sections",
+			callback: () => void this.convertLegacyTranscripts(),
+		});
 
 		if (this.settings.autoProcessOnCreate) {
 			this.registerEvent(
@@ -1105,6 +1106,38 @@ export default class NousPlugin extends Plugin {
 		return entries;
 	}
 
+	// One-time migration for notes written before the collapsed-transcript
+	// change. Bulk-rewrites real vault files, so nothing is written until the
+	// user confirms via ConfirmTranscriptMigrationModal.
+	async convertLegacyTranscripts() {
+		const meetingsFolder = this.app.vault.getFolderByPath(this.settings.meetingsFolder);
+		const noteFiles = meetingsFolder
+			? meetingsFolder.children.filter((f): f is TFile => f instanceof TFile && f.extension === "md")
+			: [];
+
+		const candidates: { file: TFile; content: string }[] = [];
+		for (const file of noteFiles) {
+			const content = await this.app.vault.read(file);
+			const converted = logic.convertLegacyTranscriptToCallout(content);
+			if (converted !== null) candidates.push({ file, content: converted });
+		}
+
+		if (candidates.length === 0) {
+			new Notice("Nous: no legacy transcripts found - nothing to convert.");
+			return;
+		}
+
+		new ConfirmTranscriptMigrationModal(this.app, candidates.length, async () => {
+			for (const { file, content } of candidates) {
+				await this.app.vault.modify(file, content);
+			}
+			await this.appendLog(`MIGRATED: ${candidates.length} notes converted to collapsed transcript format`);
+			new Notice(
+				`Nous: ${candidates.length} note${candidates.length === 1 ? "" : "s"} converted to collapsed transcript format.`
+			);
+		}).open();
+	}
+
 	private async createTagFileIfMissing(tagName: string) {
 		const path = `${this.settings.tagsFolder}/${tagName}.md`;
 		if (await this.app.vault.adapter.exists(path)) return;
@@ -1117,6 +1150,20 @@ export default class NousPlugin extends Plugin {
 		for (const folder of [s.inboxFolder, s.meetingsFolder, s.tagsFolder, s.wikisFolder]) {
 			await this.ensureFolderExists(folder);
 		}
+		await this.createWikisPlaceholder();
+	}
+
+	// 30-Wikis stays empty until a tag clears wikiThreshold, which reads as
+	// broken to a new user. This note explains the wait; it carries no
+	// frontmatter, so wiki-lookup code (which matches on frontmatter.topic)
+	// never picks it up.
+	async createWikisPlaceholder() {
+		const path = `${this.settings.wikisFolder}/About this folder.md`;
+		if (await this.app.vault.adapter.exists(path)) return;
+		await this.app.vault.create(
+			path,
+			`This folder is empty on purpose.\n\nA wiki appears here once a topic in "${this.settings.tagsFolder}" has at least ${this.settings.wikiThreshold} notes. Until then, keep capturing - nothing is broken.\n`
+		);
 	}
 
 	// A believable first capture for the wizard's "watch it happen" moment.
@@ -1751,20 +1798,6 @@ export default class NousPlugin extends Plugin {
 	private async updateMeetingRecordingIndicator(): Promise<void> {
 		const nativeStatus = await this.nativeRecorderStatus();
 		this.setMeetingRecordingIndicator(nativeStatus.available && nativeStatus.recording);
-	}
-
-	async quickCapture(text: string, attached: File | null) {
-		await this.ensureFolderExists(this.settings.inboxFolder);
-		const stamp = window.moment().format("YYYY-MM-DD HH.mm.ss");
-		if (attached) {
-			const bytes = await attached.arrayBuffer();
-			await this.app.vault.createBinary(`${this.settings.inboxFolder}/${stamp} ${attached.name}`, bytes);
-		}
-		if (text.trim()) {
-			await this.app.vault.create(`${this.settings.inboxFolder}/${stamp}.md`, text.trim() + "\n");
-		}
-		new Notice("Nous: captured to inbox.");
-		if (!this.settings.autoProcessOnCreate) void this.processInbox();
 	}
 
 	private async moveToDuplicates(file: TFile) {
@@ -2508,6 +2541,36 @@ input[type="checkbox"]:checked {
 	--callout-icon: lucide-sparkles;
 }
 `;
+
+// Bulk-rewrites real vault files - shown before every migration run, no
+// auto-run and no skipping this even in tests/dev.
+class ConfirmTranscriptMigrationModal extends Modal {
+	constructor(app: App, private count: number, private onConfirm: () => void | Promise<void>) {
+		super(app);
+	}
+
+	onOpen() {
+		this.setTitle("Convert transcripts to collapsed sections");
+		this.contentEl.createEl("p", {
+			text: `This will convert the Transcript section in ${this.count} note${this.count === 1 ? "" : "s"} to a collapsed format. This can't be undone by Nous - use your own backup/git/sync history if you need to revert. Continue?`,
+		});
+		new Setting(this.contentEl)
+			.addButton((b) => b.setButtonText("Cancel").onClick(() => this.close()))
+			.addButton((b) =>
+				b
+					.setButtonText("Convert")
+					.setCta()
+					.onClick(() => {
+						this.close();
+						void this.onConfirm();
+					})
+			);
+	}
+
+	onClose() {
+		this.contentEl.empty();
+	}
+}
 
 class NousSettingTab extends PluginSettingTab {
 	plugin: NousPlugin;
@@ -3691,19 +3754,6 @@ class OnboardingModal extends Modal {
 		});
 
 		steps.push({
-			title: "Quick capture",
-			icon: "feather",
-			text: "Type, paste, or attach. No folders to pick.",
-			action: (el) => {
-				new Setting(el).addButton((b) =>
-					b.setButtonText("Try it").setCta().onClick(() => {
-						new QuickCaptureModal(this.app, this.plugin).open();
-					})
-				);
-			},
-		});
-
-		steps.push({
 			title: "Voice notes",
 			icon: "mic",
 			text: "For your own voice - ideas, memos, thoughts. Click, talk, click again. Transcribed on this machine.",
@@ -3763,56 +3813,6 @@ class OnboardingModal extends Modal {
 			await this.plugin.createSampleNote();
 		}
 		void this.plugin.processInbox();
-	}
-}
-
-// Type/paste or attach a file - lands in the inbox, no folders involved.
-class QuickCaptureModal extends Modal {
-	private text = "";
-	private attachedFile: File | null = null;
-
-	constructor(app: App, private plugin: NousPlugin) {
-		super(app);
-		this.modalEl.addClass("nous-modal");
-	}
-
-	onOpen() {
-		this.setTitle("Quick capture");
-		const input = this.contentEl.createEl("textarea", {
-			attr: { rows: "5", placeholder: "Type or paste anything… (Enter to save, Shift+Enter for a new line)" },
-		});
-		input.setCssStyles({ width: "100%" });
-		input.addEventListener("input", () => {
-			this.text = input.value;
-		});
-		input.addEventListener("keydown", (e) => {
-			if (e.key === "Enter" && !e.shiftKey) {
-				e.preventDefault();
-				void submit();
-			}
-		});
-
-		const fileLabel = this.contentEl.createEl("p", { text: "" });
-		const picker = this.contentEl.createEl("input", {
-			attr: { type: "file", accept: ".png,.jpg,.jpeg,.webp,.heic,.heif,.pdf,.m4a,.webm,.mp3,.wav,.ogg,.flac" },
-		});
-		picker.setCssStyles({ display: "none" });
-		picker.addEventListener("change", () => {
-			this.attachedFile = picker.files?.[0] ?? null;
-			fileLabel.setText(this.attachedFile ? `Attached: ${this.attachedFile.name}` : "");
-		});
-
-		const submit = async () => {
-			if (!this.text.trim() && !this.attachedFile) return;
-			this.close();
-			await this.plugin.quickCapture(this.text, this.attachedFile);
-		};
-
-		new Setting(this.contentEl)
-			.addButton((b) => b.setButtonText("Attach file").onClick(() => picker.click()))
-			.addButton((b) => b.setButtonText("Capture").setCta().onClick(() => void submit()));
-
-		input.focus();
 	}
 }
 

@@ -49,8 +49,8 @@ obsidian-nous/
 `NousPlugin` is the main class. It owns:
 
 - **Lifecycle**: `onload()`, `loadSettings()`, `saveSettings()`.
-- **Commands**: process inbox, build wikis, query vault, quick capture, toggle voice capture, open setup wizard.
-- **UI wiring**: settings tab (`NousSettingTab`), onboarding modal (`OnboardingModal`), quick-capture modal (`QuickCaptureModal`).
+- **Commands**: process inbox, build wikis, query vault, toggle voice capture, open setup wizard.
+- **UI wiring**: settings tab (`NousSettingTab`), onboarding modal (`OnboardingModal`).
 - **Execution routing**: decides whether to use API mode or CLI mode for each operation.
 - **File I/O**: reads/writes notes, moves attachments, converts HEIC, transcribes audio, appends to `.nous/pipeline.log`.
 
@@ -61,7 +61,6 @@ obsidian-nous/
 | `process-inbox` | `processInbox()` — route to CLI or API enrichment. |
 | `build-wikis` | `buildWikis()` — route to CLI or API wiki synthesis. |
 | `query-vault` | `runVaultQuery()` — CLI-only natural-language search. |
-| `quick-capture` | Opens `QuickCaptureModal`. |
 | `toggle-voice-capture` | Records from microphone; stops on second invocation (or opens `LiveVoiceCaptureModal` instead, if live transcription is on). |
 | `toggle-meeting-capture` | Starts/stops the native `nous-recorder` helper (macOS only). |
 | `setup-wizard` | Opens `OnboardingModal`. |
@@ -201,15 +200,9 @@ native helper starts, the plugin creates and opens a live inbox note using
 `buildLiveNativeRecordingNote()`: one `## Meeting notes` section with a
 stripped-on-completion typing hint, hidden Properties (via
 `cssclasses: nous-live-note` and the plugin stylesheet), and the cursor
-placed in the writing space. While recording, the helper also streams each
-track through Apple's on-device speech engine (`LiveTranscriber.swift`,
-forced `requiresOnDeviceRecognition`, request rotated every ~20s for
-committed lines) into `live.jsonl` in the recording folder; the plugin
-tails that file every 2 seconds (`renderLiveTranscript()` +
-`startLiveTranscriptSync()`) and mirrors it into the note's `## Transcript`
-section. The sync only writes while the live-recording frontmatter is
-present, so it can never touch a finished note. Missing speech permission
-or on-device model means no live view; recording is unaffected.
+placed in the writing space. No transcript is shown while recording — only
+the typed notes area is live. The transcript appears once, after Stop, when
+whisper finishes.
 
 When the helper stops, the plugin transcribes each track independently (a
 failed or silent track is logged as a `WARN:` and skipped, not fatal), then

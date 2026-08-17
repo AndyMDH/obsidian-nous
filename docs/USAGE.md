@@ -56,11 +56,11 @@ are hidden behind an **Advanced settings** toggle at the bottom of the panel.
 
 ## Every way to capture
 
-- **➕ Type or paste** — quick capture, or a note (`Cmd/Ctrl+N`) in `00-Inbox`
+- **➕ Type or paste** — a note (`Cmd/Ctrl+N`) in `00-Inbox`
 - **🎙️ Voice** — click the mic icon (or a hotkey), talk, click again
 - **📷 Photos & screenshots** — `.png`, `.jpg`, `.webp`, `.heic` (to
   auto-capture Mac screenshots, see [`../examples/`](../examples/))
-- **📄 PDFs** — attach one via quick capture, or drop it in `00-Inbox`
+- **📄 PDFs** — drop one in `00-Inbox`
 
 Within seconds, Nous tags it, summarizes it, links it to related notes,
 and files it in **`10-Notes`** — your original text, image, or recording

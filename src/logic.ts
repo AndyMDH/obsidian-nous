@@ -70,23 +70,45 @@ export function snippet(body: string, maxChars = 200): string {
 	return truncate(body.replace(/^---\n[\s\S]*?\n---\n/, ""), maxChars);
 }
 
+// Callout marker for the collapsed Transcript section - present in every
+// note written since the collapsed-transcript change; legacy notes still
+// have the plain "## Transcript" heading until migrated (or forever, if a
+// user skips the migration command).
+const TRANSCRIPT_CALLOUT_MARKER = "[!note]- Transcript";
+const TRANSCRIPT_HEADING = "## Transcript";
+
 // Duplicate check compares raw transcript text, not generated Summary
 // prose - a re-pasted duplicate only character-matches the former.
 export function extractTranscriptSnippet(noteContent: string, maxChars = 200): string {
-	const idx = noteContent.indexOf("## Transcript");
+	const calloutIdx = noteContent.indexOf(TRANSCRIPT_CALLOUT_MARKER);
+	if (calloutIdx !== -1) {
+		// Strip the "> " callout prefix line by line - the freshly captured
+		// transcript this is compared against for duplicate detection has no
+		// such prefix, so leaving it in would break the comparison for every
+		// already-migrated note.
+		const body = noteContent
+			.slice(calloutIdx + TRANSCRIPT_CALLOUT_MARKER.length)
+			.split("\n")
+			.map((line) => line.replace(/^>\s?/, ""))
+			.join("\n");
+		return truncate(body, maxChars);
+	}
+	const idx = noteContent.indexOf(TRANSCRIPT_HEADING);
 	const text =
 		idx === -1
 			? noteContent.replace(/^---\n[\s\S]*?\n---\n/, "")
-			: noteContent.slice(idx + "## Transcript".length);
+			: noteContent.slice(idx + TRANSCRIPT_HEADING.length);
 	return truncate(text, maxChars);
 }
 
 // Enriched sections only - wiki synthesis doesn't need the raw transcript.
 export function extractEnrichedSections(noteContent: string): string {
 	const afterFrontmatter = noteContent.replace(/^---\n[\s\S]*?\n---\n/, "");
-	const transcriptIdx = afterFrontmatter.indexOf("## Transcript");
+	const calloutIdx = afterFrontmatter.indexOf(TRANSCRIPT_CALLOUT_MARKER);
+	const transcriptIdx = afterFrontmatter.indexOf(TRANSCRIPT_HEADING);
 	const relatedIdx = afterFrontmatter.indexOf("## Related");
 	let end = afterFrontmatter.length;
+	if (calloutIdx !== -1) end = Math.min(end, calloutIdx);
 	if (transcriptIdx !== -1) end = Math.min(end, transcriptIdx);
 	if (relatedIdx !== -1) end = Math.min(end, relatedIdx);
 	return afterFrontmatter.slice(0, end).trim();
@@ -149,6 +171,16 @@ export interface CapturedAttachment {
 	kind: "image" | "document" | "audio";
 }
 
+// Quotes body under a collapsed callout marker so it starts folded in both
+// Reading view and Live Preview (heading-fold state isn't guaranteed to
+// persist; the callout's collapsed state is plain markdown, not editor
+// state). Shared by buildMeetingMarkdown and convertLegacyTranscriptToCallout
+// so the two writers can't drift out of sync with each other.
+export function toCollapsedCallout(title: string, body: string): string {
+	const lines = body.split("\n").map((line) => (line === "" ? ">" : `> ${line}`));
+	return [`> [!note]- ${title}`, ...lines].join("\n");
+}
+
 export function buildMeetingMarkdown(
 	result: EnrichResult,
 	rawTranscript: string,
@@ -202,12 +234,12 @@ export function buildMeetingMarkdown(
 		bodyParts.push(`## Captured document\n\n![[${capturedAttachment.filename}]]`);
 	} else if (capturedAttachment?.kind === "audio") {
 		// Audio notes keep both the transcript and the playable recording.
-		bodyParts.push(`## Transcript\n\n${rawTranscript.trim()}`);
+		bodyParts.push(toCollapsedCallout("Transcript", rawTranscript.trim()));
 		bodyParts.push(`## Captured audio\n\n![[${capturedAttachment.filename}]]`);
 	} else if (capturedAttachment) {
 		bodyParts.push(`## Captured image\n\n![[${capturedAttachment.filename}]]`);
 	} else {
-		bodyParts.push(`## Transcript\n\n${rawTranscript.trim()}`);
+		bodyParts.push(toCollapsedCallout("Transcript", rawTranscript.trim()));
 	}
 
 	const relatedLines: string[] = [];
@@ -227,6 +259,28 @@ function findFirstHeading(markdown: string, headings: string[]): number {
 		})
 		.filter((idx) => idx >= 0);
 	return indexes.length > 0 ? Math.min(...indexes) : -1;
+}
+
+// One-time migration: rewrites a legacy "## Transcript" heading into the
+// collapsed callout format. Returns null when there is nothing to do -
+// already migrated (no legacy heading left to match), or an image/PDF-only
+// note that never had a Transcript section at all.
+export function convertLegacyTranscriptToCallout(noteContent: string): string | null {
+	const headingMatch = /^## Transcript\s*$/m.exec(noteContent);
+	if (!headingMatch) return null;
+
+	const before = noteContent.slice(0, headingMatch.index).trimEnd();
+	const afterHeading = noteContent.slice(headingMatch.index + headingMatch[0].length);
+	// Same boundary-finding approach as findFirstHeading above (a regex-
+	// matched "##" line), generalized to "the next heading of any name"
+	// since the section that follows Transcript varies (Captured audio,
+	// or straight to Related).
+	const nextHeadingMatch = /^##\s+\S.*$/m.exec(afterHeading);
+	const body = (nextHeadingMatch ? afterHeading.slice(0, nextHeadingMatch.index) : afterHeading).trim();
+	const after = nextHeadingMatch ? afterHeading.slice(nextHeadingMatch.index).trim() : "";
+
+	const callout = toCollapsedCallout("Transcript", body);
+	return [before, callout, after].filter(Boolean).join("\n\n") + "\n";
 }
 
 function demoteSecondLevelHeadings(markdown: string): string {

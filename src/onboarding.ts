@@ -91,17 +91,6 @@ export function onboardingFinishTitle(status: CapturePrerequisiteStatus): string
 	return "Text capture is ready";
 }
 
-export function onboardingFinishIntro(
-	status: CapturePrerequisiteStatus,
-	inboxFolder: string,
-	meetingsFolder: string
-): string {
-	if (onboardingFinishTitle(status) === "Nous is ready") {
-		return `Drop anything into "${inboxFolder}" - text, images, PDFs, voice notes, or meeting recordings - it comes out tagged and linked in "${meetingsFolder}".`;
-	}
-	return `Text, images, and PDFs are ready now - drop them into "${inboxFolder}", they come out tagged in "${meetingsFolder}".`;
-}
-
 export function onboardingFinishNextActions(status: CapturePrerequisiteStatus): CapturePrerequisiteItem[] {
 	const actions: CapturePrerequisiteItem[] = [];
 	if (!status.voiceReady) {

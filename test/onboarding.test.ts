@@ -9,7 +9,6 @@ import {
 	capturePrerequisiteItems,
 	hasGeminiOrOpenAiTranscriptionKey,
 	nativeRecorderReadinessText,
-	onboardingFinishIntro,
 	onboardingFinishNextActions,
 	onboardingFinishTitle,
 	shouldOfferNativeRecorderInstall,
@@ -91,8 +90,6 @@ test("capture prerequisite checklist treats non-macOS meeting capture as unavail
 test("finish screen stays truthful when optional capture setup is missing", () => {
 	const missingBoth = { voiceReady: false, meeting: "needs-recorder" } as const;
 	assert.equal(onboardingFinishTitle(missingBoth), "Text capture is ready");
-	assert.match(onboardingFinishIntro(missingBoth, "00-Inbox", "10-Notes"), /Text, images, and PDFs are ready/);
-	assert.doesNotMatch(onboardingFinishIntro(missingBoth, "00-Inbox", "10-Notes"), /voice notes, or meeting recordings/);
 	assert.deepEqual(
 		onboardingFinishNextActions(missingBoth).map((item) => [item.name, item.warning]),
 		[
@@ -103,7 +100,6 @@ test("finish screen stays truthful when optional capture setup is missing", () =
 
 	const ready = { voiceReady: true, meeting: "ready-native" } as const;
 	assert.equal(onboardingFinishTitle(ready), "Nous is ready");
-	assert.match(onboardingFinishIntro(ready, "00-Inbox", "10-Notes"), /voice notes, or meeting recordings/);
 	// A fully-ready setup has nothing left to warn about.
 	assert.deepEqual(onboardingFinishNextActions(ready), []);
 });

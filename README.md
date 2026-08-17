@@ -99,14 +99,13 @@ the wizard checks the optional voice and meeting setup.
   <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav.svg">
 </p>
 
-**2. Capture something.** There are four ways in, all in the left sidebar.
+**2. Capture something.** There are three ways in, all in the left sidebar.
 The 🎙️ and 📞 buttons toggle: click to start, talk, then click again to stop.
 Each action is also a real Obsidian command - open **Settings → Hotkeys**,
 search for "Nous", and bind the ones that you use often.
 
 | | | |
 |---|---|---|
-| ➕ | Type, paste, or attach a file | command palette → "Nous: Quick capture" |
 | 🎙️ | Voice note | click the mic |
 | 📞 | Meeting (macOS) | click the phone - on a call or in person. A live note opens for your questions |
 | 📥 | Anything else | drop it straight into `00-Inbox` |

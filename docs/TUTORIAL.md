@@ -53,11 +53,10 @@ If you skip that sample note or want to redo setup later: command palette
 No extra setup needed for this one — good first test that everything's
 wired up correctly:
 
-1. Command palette → **"Nous: Quick capture."**
+1. Right-click **`00-Inbox`** in the file explorer → **New note**.
 2. Type a sentence or two — anything. E.g. "Testing Nous - this should turn
    into a real note in a few seconds."
-3. Click **Capture** (or just press Enter).
-4. Wait a few seconds, then look in **`10-Notes`**. A new file has appeared:
+3. Wait a few seconds, then look in **`10-Notes`**. A new file has appeared:
    a real title (not "Testing Nous"), a short summary, 1-4 tags, and your
    original text preserved underneath.
 
@@ -117,13 +116,11 @@ falling back to a Gemini/OpenAI key otherwise.
 ## Step 5: photos, PDFs, and pasted meeting transcripts
 
 - **Photo or screenshot**: drop a `.png`/`.jpg`/`.webp`/`.heic` file straight
-  into `00-Inbox`, or attach one via quick capture (the paperclip-style
-  "Attach file" button in the same modal as Step 2).
-- **PDF**: same — attach via quick capture, or drop it into `00-Inbox`
-  directly.
+  into `00-Inbox`.
+- **PDF**: same — drop it into `00-Inbox` directly.
 - **A transcript you already have** (copied from Teams/Zoom/Granola/etc.):
-  paste it into quick capture like any other text. Nous treats it the same
-  as a recorded meeting.
+  paste it into a new note in `00-Inbox`, same as Step 2. Nous treats it the
+  same as a recorded meeting.
 
 ## Step 6: recording an actual meeting (macOS)
 

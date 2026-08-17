@@ -46,7 +46,6 @@ The layers are strict: a file in `00-Inbox` is never a final note, a note in `10
 
 A capture lands in `00-Inbox` by one of several paths:
 
-- **Quick capture**: the user opens the quick-capture modal and types or attaches a file.
 - **Voice capture**: the plugin records from the microphone and drops a WebM/M4A file in the inbox. Optionally (opt-in, desktop-only, beta), OpenAI's Realtime API streams an incremental transcript while recording is still in progress; when that succeeds, the known transcript is used directly and the batch transcription step below is skipped for that file. See `realtimeTranscribe.ts` in `docs/TECHNICAL.md`.
 - **Meeting capture**: on macOS, the phone button uses the native
   `nous-recorder` helper to capture system audio and microphone audio. It
@@ -80,10 +79,10 @@ The body contains:
 - `## Key points`
 - `## Decisions` (if any)
 - `## Action items` as checkboxes (if any)
-- `## Transcript` (original text, verbatim) OR `## Captured image/document/audio` with an embed
+- a collapsed `> [!note]- Transcript` callout (original text, verbatim) OR `## Captured image/document/audio` with an embed
 - `## Related` (tag notes, related meeting notes, existing wikis)
 
-For images and PDFs, the binary file is moved (not copied) into `10-Notes` next to the new Markdown file. The original inbox file is removed. For text notes, the original inbox file is deleted after its content is preserved under `## Transcript`.
+For images and PDFs, the binary file is moved (not copied) into `10-Notes` next to the new Markdown file. The original inbox file is removed. For text notes, the original inbox file is deleted after its content is preserved under the collapsed Transcript callout.
 
 **Concurrency guard**: the plugin tracks in-flight file paths so the same file is not enriched twice simultaneously.
 
@@ -171,7 +170,7 @@ Both modes produce the same folder structure and the same Markdown shape. The ex
 ```
 User input
     │
-    ├─► Quick capture / voice / drop / dictation tool
+    ├─► Voice / drop / dictation tool
     │
     ▼
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -206,7 +205,7 @@ User input
 3. **Single tool-call enrichment.** Each enrichment is one model round-trip with a forced tool response. There is no agentic loop for the core pipeline.
 4. **Idempotency.** `status: enriched` and log-based summaries make repeated runs safe.
 5. **Hub-and-spoke linking.** Tag notes and wiki pages are hubs; meeting notes are spokes. Wikilinks are the edges.
-6. **Preserve source material.** The original transcript, image, PDF, or audio is always kept, either verbatim under `## Transcript` or as an embedded file in `10-Notes`.
+6. **Preserve source material.** The original transcript, image, PDF, or audio is always kept, either verbatim under the collapsed Transcript callout or as an embedded file in `10-Notes`.
 7. **Execution-mode agnosticism.** The same folder schema and file shape result from both CLI and API modes.
 
 ## Privacy and security model

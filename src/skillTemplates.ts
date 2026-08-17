@@ -197,9 +197,8 @@ Summary framing — just summarize the idea.
 
 - ...
 
-## Transcript
-
-<original raw text, unmodified, collapsed under this heading>
+> [!note]- Transcript
+> <original raw text, unmodified, one '>' per line, collapsed under this callout>
 \`\`\`
 
 Omit the Decisions section entirely if there were none, and Action items
@@ -209,8 +208,9 @@ inbox file did not contain \`## Meeting notes\`, \`## Notes\`, \`## Questions to
 invent decisions or action items that aren't actually in the transcript.
 
 **Never delete, summarize away, or paraphrase the original transcript text.**
-It moves intact, verbatim, under \`## Transcript\`. Enrichment adds structure
-above it; it does not touch the source material.
+It moves intact, verbatim, under the collapsed \`> [!note]- Transcript\`
+callout. Enrichment adds structure above it; it does not touch the source
+material.
 
 If the inbox file contains \`## Meeting notes\` (or, in older notes, \`## Notes\`,
 \`## Questions to ask\` / \`## Live notes\`) before \`## Transcript\`, that
@@ -221,14 +221,14 @@ Then copy only the actual transcript body under \`## Transcript\` (usually the
 content after the source file's \`## Transcript\` heading, plus any brief
 "Meeting recording from..." line before the typed-note sections).
 
-**For an image or PDF file, there is no transcript.** Replace the \`## Transcript\`
-section with \`## Captured image\` (image) or \`## Captured document\` (PDF)
+**For an image or PDF file, there is no transcript.** Replace the Transcript
+callout with \`## Captured image\` (image) or \`## Captured document\` (PDF)
 containing only \`![[<final filename>]]\` (see Step 6 for the final filename) -
 nothing else in that section, no description duplicated from the Summary above it.
 
 ## Step 5 — Relations
 
-Append a \`## Related\` section at the bottom, after \`## Transcript\`:
+Append a \`## Related\` section at the bottom, after the Transcript callout:
 
 \`\`\`markdown
 ## Related
@@ -274,7 +274,7 @@ the same topic name. If linking to an existing wiki, use its actual filename
 - Process files strictly one at a time; complete steps 0–6 for one file before
   starting the next.
 - Never modify anything under \`${f.wikis}/\` from this skill.
-- Never modify the content of an existing note's \`## Transcript\` section for
+- Never modify the content of an existing note's Transcript callout for
   any note (including ones this skill itself is currently processing — the
   transcript is copied once, verbatim, and never touched again).
 - If a file is empty or contains only a capture-timestamp stub with no real
@@ -483,7 +483,7 @@ wiki that didn't exist yet when it ran.
 
 ## Rules of engagement
 
-- Never modify a meeting note's \`## Transcript\`, \`## Summary\`, \`## Key points\`,
+- Never modify a meeting note's Transcript callout, \`## Summary\`, \`## Key points\`,
   \`## Decisions\`, or \`## Action items\` sections — the only meeting-note edit
   this skill is allowed to make is adding a missing wikilink to \`## Related\`.
 - Never drop existing content from a wiki (\`## Sources\`, \`## Timeline\` entries)
