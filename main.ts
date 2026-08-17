@@ -301,6 +301,12 @@ export default class NousPlugin extends Plugin {
 			callback: () => new QueryModal(this.app, (question) => void this.runVaultQuery(question)).open(),
 		});
 
+		this.addCommand({
+			id: "log-a-win",
+			name: "Log a win",
+			callback: () => void this.logWin(),
+		});
+
 		this.voiceRibbonEl = this.addRibbonIcon("mic", "toggle voice capture", () => {
 			void this.toggleVoiceCapture();
 		});
@@ -1215,6 +1221,25 @@ export default class NousPlugin extends Plugin {
 			"Quick thought after today's kickoff with the new client: they want the reporting dashboard live before the end of next quarter, but their data quality is a mess - half the customer records are missing regions. Maria offered to run a cleanup sprint first. I should sketch the dashboard wireframe this week and check whether we can reuse the ETL setup from the last project.\n"
 		);
 		nousNotice("Dropped a sample note in your inbox - watch it come to life.");
+	}
+
+	// Drops a #win-tagged capture skeleton in the inbox and opens it for
+	// editing - meeting-enricher (Step 3.5) picks it up on the next pass and
+	// does the actual structured-field extraction, same as any other capture.
+	async logWin() {
+		await this.ensureCoreFolders();
+		const date = new Date().toISOString().slice(0, 10);
+		let path = `${this.settings.inboxFolder}/${date} Win.md`;
+		let suffix = 2;
+		while (await this.app.vault.adapter.exists(path)) {
+			path = `${this.settings.inboxFolder}/${date} Win ${suffix}.md`;
+			suffix++;
+		}
+		const file = await this.app.vault.create(
+			path,
+			"#win\n\nWhat did you ship or achieve?\n\nCategory: client work, training, internship, internal tool, open source, writing, certification, event, or other\n"
+		);
+		await this.app.workspace.getLeaf(true).openFile(file);
 	}
 
 	// Hands-free voice capture: one command toggles recording, no UI. The

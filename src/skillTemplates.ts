@@ -128,6 +128,9 @@ enriched_at: <ISO 8601 timestamp, e.g. 2026-07-01T18:30:00+02:00>
 ---
 \`\`\`
 
+If \`tags\` ends up including \`win\`, five more fields go right after \`tags\` -
+see Step 3.5.
+
 Date derivation priority: (1) a \`YYYY-MM-DD\` prefix already in the filename,
 (2) an explicit date mentioned in the transcript content, (3) the file's
 creation time (\`stat\` on the file) as fallback.
@@ -169,6 +172,37 @@ registry useless, so the default answer is "use what exists."
 5. Tie-break rule: if genuinely torn between reusing an existing tag and
    minting a new one, always reuse the existing one.
 6. Tags are lowercase-kebab-case, matching the tag note filenames exactly.
+7. \`win\` is a recognized system tag, exempt from the registry-only rule
+   above (no \`${f.tags}/win.md\` file is needed for it to be valid) — see
+   Step 3.5.
+
+## Step 3.5 — Wins
+
+Apply the \`win\` tag whenever the note describes a completed professional
+accomplishment — shipped a project, hit a concrete metric, earned a
+certification, gave a talk or ran training, released something open source,
+wrote something published, landed a client win, and so on. Apply it even if
+the user never typed \`#win\` themselves — suggest/apply it whenever the note
+clearly qualifies, the same way any other tag gets assigned. When genuinely
+ambiguous, don't apply it — false positives dilute the tag more than a missed
+one costs.
+
+If \`win\` is among the tags, add these extra frontmatter fields immediately
+after \`tags\` (keep this order):
+
+\`\`\`yaml
+win_category: <one of: client work, training, internship, internal tool, open source, writing, certification, event, other>
+win_headcount:
+win_client:
+win_repo:
+win_metric:
+\`\`\`
+
+Fill each field only from what the note actually states. **Leave a field
+blank rather than guessing or inferring** — an empty field is correct and
+expected when the note doesn't mention that detail; a wrong guess is not. For
+notes without \`win\` in their tags, omit all five of these fields entirely
+rather than writing them blank.
 
 ## Step 4 — Body enrichment
 
@@ -480,6 +514,47 @@ are textually different (\`[[dbt Wiki]]\` vs \`[[dbt]]\`), don't mistake the
 existing tag link for satisfying this step. This is what completes the
 hub-and-spoke shape — meeting-enricher may not have been able to link to a
 wiki that didn't exist yet when it ran.
+
+## Step 6 — Wins page
+
+Separate from the per-topic wikis above: maintain a single page,
+\`${f.wikis}/Wins.md\`, whenever at least one note anywhere in \`${f.meetings}/\`
+carries the \`win\` tag (see meeting-enricher Step 3.5). This page is not a
+per-topic hub and doesn't follow the \`<Topic> Wiki.md\` naming convention or
+the ≥4-notes threshold — it exists as soon as a single win does.
+
+1. Collect every meeting note with \`win\` in its tags. Read each one's
+   \`win_category\`, \`win_headcount\`, \`win_client\`, \`win_repo\`, \`win_metric\`
+   frontmatter fields, its \`date\`, and its title.
+2. Group entries by \`win_category\`. Within each category, sort newest-first
+   by \`date\`.
+3. Write (or fully rewrite) \`${f.wikis}/Wins.md\`:
+
+\`\`\`markdown
+---
+type: wins
+updated: <today's date, YYYY-MM-DD>
+count: <total wins across all categories>
+---
+# Wins
+
+<one line per category present, sorted by count descending, e.g. "Client work (5) · Open source (2) · Certification (1)">
+
+## <Category name, title case>
+
+- YYYY-MM-DD - [[meeting note]] - one-line what was accomplished (fold in
+  whichever of headcount/client/repo/metric are actually filled in; skip any
+  that are blank, don't write "N/A" or invent a placeholder)
+
+<repeat ## per category that has at least one win, omit empty categories>
+\`\`\`
+
+4. This page is always fully regenerated from the current set of \`win\`-tagged
+   notes rather than incrementally appended to (unlike the per-topic wikis in
+   Steps 3-4) — there's no risk of losing hand-written content since nothing
+   here is hand-written.
+5. Append to \`.nous/pipeline.log\`:
+   \`<ISO timestamp> WINS UPDATED: <count> total\`
 
 ## Rules of engagement
 
