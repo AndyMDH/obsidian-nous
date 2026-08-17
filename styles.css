@@ -1019,21 +1019,28 @@ body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-proper
    pattern expects, not a hex value - fixes it at the source instead of
    fighting each derived part; explicit !important on our own
    declarations as a second line of defense. */
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] {
-	--callout-color: 138, 132, 122;
+body.nous-styled-notes.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout.callout[data-callout="note"] {
+	--callout-color: 138, 132, 122 !important;
 	background: var(--nous-surface-2) !important;
-	border: none;
-	border-radius: 12px;
-	padding: 10px 14px;
+	background-color: var(--nous-surface-2) !important;
+	border: none !important;
+	border-left: none !important;
+	border-radius: 12px !important;
+	padding: 10px 14px !important;
 }
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] .callout-title {
-	font-size: 13px;
-	font-weight: 600;
+body.nous-styled-notes.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout.callout[data-callout="note"] .callout-title {
+	font-size: 13px !important;
+	font-weight: 600 !important;
 	color: var(--nous-muted) !important;
 }
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] .callout-icon,
-body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] .callout-fold {
+body.nous-styled-notes.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout.callout[data-callout="note"] .callout-icon,
+body.nous-styled-notes.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout.callout[data-callout="note"] .callout-fold {
 	color: var(--nous-faint) !important;
+}
+body.nous-styled-notes.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout.callout[data-callout="note"] .callout-icon svg,
+body.nous-styled-notes.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout.callout[data-callout="note"] .callout-fold svg {
+	color: var(--nous-faint) !important;
+	stroke: var(--nous-faint) !important;
 }
 /* Transcript = archive, in BOTH views: reading blocks are tagged by the
    post-processor, editor lines by a CodeMirror decoration. */
