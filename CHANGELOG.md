@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.5.5
+
+- Finish screen now explains the tag list starts empty and grows as
+  you capture.
+- Tour points at Settings → Hotkeys for capture commands, with a note
+  that Obsidian has to be focused for a hotkey to fire.
+- Trimmed "or run free & local" to "or run local" on the connect
+  screen.
+
 ## 2.5.4
 
 New `#win` tag for tracking professional accomplishments (CLI mode
