@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.5.8
+
+- Shortened the plugin description shown in Community plugins - it
+  wrapped onto several lines. Now one line, leads with using your
+  vault as context for an AI assistant.
+
+## 2.5.7
+
+- Fixed select dropdown text (Provider, etc.) clipped at the top.
+
+## 2.5.6
+
+- Trimmed the tour's hotkey tip - it had grown to three sentences on
+  a one-line screen.
+
 ## 2.5.5
 
 - Finish screen now explains the tag list starts empty and grows as
