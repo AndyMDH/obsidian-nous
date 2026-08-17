@@ -1,38 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="880" height="300" viewBox="0 0 880 300" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="880" height="300" viewBox="0 0 880 300" role="img" aria-labelledby="nous-settings-title nous-settings-desc" font-family="'Hanken Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title id="nous-settings-title">Obsidian's settings window, Nous open</title>
+  <desc id="nous-settings-desc">Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane.</desc>
+
+  <rect width="100%" height="100%" fill="#F5F2ED"/>
+
   <!-- window frame -->
-  <rect x="10" y="10" width="860" height="280" rx="12" fill="#f6f8fa" stroke="#d0d7de" stroke-width="1.5"/>
-  <circle cx="34" cy="32" r="6" fill="#d0d7de"/>
-  <circle cx="54" cy="32" r="6" fill="#d0d7de"/>
-  <circle cx="74" cy="32" r="6" fill="#d0d7de"/>
-  <text x="440" y="37" text-anchor="middle" font-size="13" font-weight="600" fill="#57606a">Obsidian Settings  (gear icon, or Cmd/Ctrl+,)</text>
+  <rect x="10" y="10" width="860" height="280" rx="16" fill="#FFFFFF" stroke="#E7E2DA" stroke-width="1"/>
+  <text x="440" y="37" text-anchor="middle" font-size="12" font-weight="600" fill="#8A857D" letter-spacing="0.06em">OBSIDIAN SETTINGS</text>
+  <line x1="10" y1="52" x2="870" y2="52" stroke="#EBE6DE" stroke-width="1"/>
 
   <!-- sidebar -->
-  <rect x="10" y="52" width="220" height="238" fill="#eaeef2"/>
-  <text x="30" y="84" font-size="12" font-weight="700" fill="#57606a">OPTIONS</text>
-  <text x="30" y="110" font-size="13.5" fill="#57606a">Editor</text>
-  <text x="30" y="136" font-size="13.5" fill="#57606a">Appearance</text>
-  <text x="30" y="162" font-size="13.5" fill="#57606a">Community plugins</text>
-  <text x="30" y="196" font-size="12" font-weight="700" fill="#57606a">COMMUNITY PLUGINS</text>
-  <rect x="20" y="208" width="200" height="30" rx="6" fill="#4C5138"/>
-  <text x="30" y="228" font-size="13.5" font-weight="600" fill="#ffffff">Nous</text>
+  <rect x="10" y="52" width="220" height="238" fill="#F3F0EA"/>
+  <text x="30" y="82" font-size="11" font-weight="600" fill="#A6A199" letter-spacing="0.14em">OPTIONS</text>
+  <text x="30" y="108" font-size="13" fill="#3A3733">Editor</text>
+  <text x="30" y="134" font-size="13" fill="#3A3733">Appearance</text>
+  <text x="30" y="160" font-size="13" fill="#3A3733">Community plugins</text>
+  <text x="30" y="194" font-size="11" font-weight="600" fill="#A6A199" letter-spacing="0.14em">COMMUNITY PLUGINS</text>
+  <rect x="20" y="206" width="200" height="30" rx="9" fill="#4C5138"/>
+  <g transform="translate(30, 213)">
+    <rect width="16" height="16" rx="5" fill="#F5F2ED" opacity="0.16"/>
+    <path d="M5.1 12.3 V6.6 C5.1 4.7 6.4 3.4 8 3.4 C9.7 3.4 11.1 4.7 11.1 6.6 V10 A1.4 1.4 0 0 1 8.3 10 V7.5" stroke="#F5F2ED" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  </g>
+  <text x="52" y="225" font-size="13" font-weight="600" fill="#F5F2ED">Nous</text>
 
   <!-- main pane -->
-  <text x="260" y="90" font-size="16" font-weight="700" fill="#1f2328">Nous</text>
+  <g transform="translate(260, 66)">
+    <rect width="26" height="26" rx="8" fill="#4C5138"/>
+    <path d="M8.3 20 V10.7 C8.3 8.9 9.7 7.5 11.5 7.5 C13.4 7.5 15 8.9 15 10.7 V16.2 A2.2 2.2 0 0 1 10.6 16.2 V12.1" stroke="#F5F2ED" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  </g>
+  <text x="296" y="84" font-size="17" font-weight="600" fill="#1C1B19">Nous</text>
+  <text x="820" y="84" text-anchor="end" font-size="12" fill="#A6A199" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">v2.4.3</text>
+  <line x1="260" y1="98" x2="850" y2="98" stroke="#EBE6DE" stroke-width="1"/>
 
-  <text x="260" y="126" font-size="13.5" font-weight="600" fill="#1f2328">Execution mode</text>
-  <rect x="620" y="108" width="230" height="28" rx="6" fill="#ffffff" stroke="#d0d7de"/>
-  <text x="632" y="127" font-size="12.5" fill="#1f2328">Claude Code CLI</text>
-  <text x="838" y="127" text-anchor="end" font-size="11" fill="#57606a">▾</text>
+  <text x="260" y="132" font-size="13" font-weight="600" fill="#1C1B19">Execution mode</text>
+  <rect x="620" y="114" width="230" height="30" rx="12" fill="#FFFFFF" stroke="#E7E2DA"/>
+  <text x="634" y="134" font-size="13" fill="#1C1B19">Claude Code CLI</text>
+  <text x="836" y="134" text-anchor="end" font-size="10" fill="#8A857D">▾</text>
+  <line x1="260" y1="154" x2="850" y2="154" stroke="#EBE6DE" stroke-width="1"/>
 
-  <text x="260" y="170" font-size="13.5" font-weight="600" fill="#1f2328">Provider</text>
-  <rect x="620" y="152" width="230" height="28" rx="6" fill="#ffffff" stroke="#d0d7de"/>
-  <text x="632" y="171" font-size="12.5" fill="#1f2328">Anthropic</text>
-  <text x="838" y="171" text-anchor="end" font-size="11" fill="#57606a">▾</text>
+  <text x="260" y="188" font-size="13" font-weight="600" fill="#1C1B19">Provider</text>
+  <rect x="620" y="170" width="230" height="30" rx="12" fill="#FFFFFF" stroke="#E7E2DA"/>
+  <text x="634" y="190" font-size="13" fill="#1C1B19">Anthropic</text>
+  <text x="836" y="190" text-anchor="end" font-size="10" fill="#8A857D">▾</text>
+  <line x1="260" y1="210" x2="850" y2="210" stroke="#EBE6DE" stroke-width="1"/>
 
-  <text x="260" y="214" font-size="13.5" font-weight="600" fill="#1f2328">Model</text>
-  <rect x="620" y="196" width="230" height="28" rx="6" fill="#ffffff" stroke="#d0d7de"/>
-  <text x="632" y="215" font-size="12.5" fill="#1f2328">Claude Sonnet 5 — best balance</text>
-  <text x="838" y="215" text-anchor="end" font-size="11" fill="#57606a">▾</text>
+  <text x="260" y="244" font-size="13" font-weight="600" fill="#1C1B19">Model</text>
+  <rect x="620" y="226" width="230" height="30" rx="12" fill="#FFFFFF" stroke="#E7E2DA"/>
+  <text x="634" y="246" font-size="13" fill="#1C1B19">Claude Sonnet 5 — best balance</text>
+  <text x="836" y="246" text-anchor="end" font-size="10" fill="#8A857D">▾</text>
 
-  <text x="260" y="262" font-size="12.5" fill="#57606a">Everything else has a sensible default — this is the whole setup.</text>
+  <text x="260" y="280" font-size="12" font-style="italic" fill="#8A857D">Everything else has a sensible default — this is the whole setup.</text>
 </svg>
