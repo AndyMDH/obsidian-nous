@@ -1,7 +1,7 @@
 {
   "id": "nous",
   "name": "Nous",
-  "version": "2.5.5",
+  "version": "2.5.6",
   "minAppVersion": "1.6.6",
   "description": "Turns meeting recordings, voice memos, photos, and PDFs into a tagged, linked knowledge graph - auto-summarized, cross-linked, and organized into wiki pages. Works with Claude, GPT, Gemini, GLM, a local model, or your Claude subscription.",
   "author": "Andy Ho",
