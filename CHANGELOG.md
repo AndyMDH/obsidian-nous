@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.6.1
+
+- Registered warm-paper's custom clip-n icons so they're available
+  anywhere an icon-by-name is needed.
+- Fixed the meeting capture ribbon/tour icon to match the theme spec
+  (was "phone-call", now Lucide "audio-lines").
+
 ## 2.6.0
 
 `#win` now works in API mode, not just CLI mode - auto-suggested
