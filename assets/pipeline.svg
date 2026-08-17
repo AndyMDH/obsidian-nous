@@ -1,73 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="248" viewBox="0 0 900 248" role="img" aria-labelledby="nous-pipeline-title nous-pipeline-desc" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="248" viewBox="0 0 900 248" role="img" aria-labelledby="nous-pipeline-title nous-pipeline-desc" font-family="'Hanken Grotesk', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
   <title id="nous-pipeline-title">The Nous pipeline</title>
   <desc id="nous-pipeline-desc">Anything you capture lands in the inbox, Nous enriches it into a tagged linked note, and topics with four or more notes get a self-updating wiki page.</desc>
   <defs>
-    <pattern id="np-dots" width="22" height="22" patternUnits="userSpaceOnUse">
-      <circle cx="1" cy="1" r="0.9" fill="rgba(45,49,66,0.10)"/>
-    </pattern>
     <marker id="np-arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
+      <polygon points="0 0, 8 3, 0 6" fill="#A6A199"/>
     </marker>
     <marker id="np-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+      <polygon points="0 0, 8 3, 0 6" fill="#4C5138"/>
     </marker>
   </defs>
 
-  <rect width="100%" height="100%" fill="#f5f5f5"/>
-  <rect width="100%" height="100%" fill="url(#np-dots)" opacity="0.6"/>
+  <rect width="100%" height="100%" fill="#F5F2ED"/>
 
   <!-- connectors (drawn before boxes) -->
-  <line x1="168" y1="100" x2="200" y2="100" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#np-arrow)"/>
-  <line x1="340" y1="100" x2="372" y2="100" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
-  <line x1="512" y1="100" x2="544" y2="100" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
-  <line x1="684" y1="100" x2="716" y2="100" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#np-arrow)"/>
+  <line x1="168" y1="100" x2="200" y2="100" stroke="#A6A199" stroke-width="1.2" marker-end="url(#np-arrow)"/>
+  <line x1="340" y1="100" x2="372" y2="100" stroke="#4C5138" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
+  <line x1="512" y1="100" x2="544" y2="100" stroke="#4C5138" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
+  <line x1="684" y1="100" x2="716" y2="100" stroke="#A6A199" stroke-width="1.2" marker-end="url(#np-arrow)"/>
 
   <!-- 1. You capture — input -->
-  <rect x="28" y="64" width="140" height="72" rx="6" fill="#eceef1" stroke="#7a8399" stroke-width="1"/>
-  <rect x="36" y="70" width="28" height="12" rx="2" fill="transparent" stroke="rgba(122,131,153,0.5)" stroke-width="0.8"/>
-  <text x="50" y="79" text-anchor="middle" font-size="7" fill="#7a8399" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.08em">IN</text>
-  <text x="98" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#2d3142">You capture</text>
-  <text x="98" y="122" text-anchor="middle" font-size="9" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">talk · paste · drop</text>
+  <rect x="28" y="64" width="140" height="72" rx="14" fill="#FFFFFF" stroke="#E7E2DA" stroke-width="1"/>
+  <text x="50" y="80" text-anchor="middle" font-size="9" fill="#A6A199" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.1em">IN</text>
+  <text x="98" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1B19">You capture</text>
+  <text x="98" y="122" text-anchor="middle" font-size="9" fill="#8A857D" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">talk · paste · drop</text>
 
   <!-- 2. Inbox — store -->
-  <rect x="200" y="64" width="140" height="72" rx="6" fill="#f0f1f3" stroke="#4f5d75" stroke-width="1"/>
-  <rect x="208" y="70" width="28" height="12" rx="2" fill="transparent" stroke="rgba(79,93,117,0.4)" stroke-width="0.8"/>
-  <text x="222" y="79" text-anchor="middle" font-size="7" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.08em">DIR</text>
-  <text x="270" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#2d3142">Inbox</text>
-  <text x="270" y="122" text-anchor="middle" font-size="9" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">00-Inbox/</text>
+  <rect x="200" y="64" width="140" height="72" rx="14" fill="#F3F0EA" stroke="#E1DCD3" stroke-width="1"/>
+  <text x="222" y="80" text-anchor="middle" font-size="9" fill="#8A857D" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.1em">DIR</text>
+  <text x="270" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1B19">Inbox</text>
+  <text x="270" y="122" text-anchor="middle" font-size="9" fill="#8A857D" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">00-Inbox/</text>
 
   <!-- 3. Nous — focal -->
-  <rect x="372" y="64" width="140" height="72" rx="6" fill="#fbe9df" stroke="#eb6c36" stroke-width="1"/>
-  <rect x="380" y="70" width="28" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.5)" stroke-width="0.8"/>
-  <text x="394" y="79" text-anchor="middle" font-size="7" fill="#eb6c36" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.08em">AI</text>
-  <text x="442" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#2d3142">Nous enriches</text>
-  <text x="442" y="122" text-anchor="middle" font-size="9" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">title · tags · links</text>
+  <rect x="372" y="64" width="140" height="72" rx="14" fill="#EDE9E1" stroke="#4C5138" stroke-width="1.5"/>
+  <text x="394" y="80" text-anchor="middle" font-size="9" fill="#4C5138" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.1em">AI</text>
+  <text x="442" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1B19">Nous enriches</text>
+  <text x="442" y="122" text-anchor="middle" font-size="9" fill="#4C5138" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">title · tags · links</text>
 
-  <!-- 4. Linked notes — backend -->
-  <rect x="544" y="64" width="140" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
-  <rect x="552" y="70" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.4)" stroke-width="0.8"/>
-  <text x="566" y="79" text-anchor="middle" font-size="7" fill="#2d3142" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.08em">MD</text>
-  <text x="614" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#2d3142">Linked notes</text>
-  <text x="614" y="122" text-anchor="middle" font-size="9" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">10-Notes/</text>
+  <!-- 4. Linked notes — output -->
+  <rect x="544" y="64" width="140" height="72" rx="14" fill="#FFFFFF" stroke="#E7E2DA" stroke-width="1"/>
+  <text x="566" y="80" text-anchor="middle" font-size="9" fill="#A6A199" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.1em">MD</text>
+  <text x="614" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1B19">Linked notes</text>
+  <text x="614" y="122" text-anchor="middle" font-size="9" fill="#8A857D" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">10-Notes/</text>
 
-  <!-- 5. Wikis — backend -->
-  <rect x="716" y="64" width="140" height="72" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
-  <rect x="724" y="70" width="28" height="12" rx="2" fill="transparent" stroke="rgba(45,49,66,0.4)" stroke-width="0.8"/>
-  <text x="738" y="79" text-anchor="middle" font-size="7" fill="#2d3142" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.08em">WIKI</text>
-  <text x="786" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#2d3142">Wikis</text>
-  <text x="786" y="122" text-anchor="middle" font-size="9" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">topic ≥ 4 notes</text>
+  <!-- 5. Wikis — output -->
+  <rect x="716" y="64" width="140" height="72" rx="14" fill="#FFFFFF" stroke="#E7E2DA" stroke-width="1"/>
+  <text x="738" y="80" text-anchor="middle" font-size="9" fill="#A6A199" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.1em">WIKI</text>
+  <text x="786" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#1C1B19">Wikis</text>
+  <text x="786" y="122" text-anchor="middle" font-size="9" fill="#8A857D" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">topic ≥ 4 notes</text>
 
   <!-- legend -->
-  <line x1="28" y1="176" x2="872" y2="176" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
-  <text x="28" y="196" font-size="8" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.14em">LEGEND</text>
-  <rect x="28" y="208" width="16" height="12" rx="2" fill="#fbe9df" stroke="#eb6c36" stroke-width="1"/>
-  <text x="52" y="218" font-size="9" fill="#2d3142">Focal / the engine</text>
-  <rect x="188" y="208" width="16" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
-  <text x="212" y="218" font-size="9" fill="#2d3142">Output layer</text>
-  <rect x="332" y="208" width="16" height="12" rx="2" fill="#f0f1f3" stroke="#4f5d75" stroke-width="1"/>
-  <text x="356" y="218" font-size="9" fill="#2d3142">Store</text>
-  <line x1="452" y1="214" x2="484" y2="214" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
-  <text x="492" y="218" font-size="9" fill="#2d3142">Primary flow</text>
-  <line x1="596" y1="214" x2="628" y2="214" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#np-arrow)"/>
-  <text x="636" y="218" font-size="9" fill="#2d3142">Flow</text>
+  <line x1="28" y1="176" x2="872" y2="176" stroke="#EBE6DE" stroke-width="1"/>
+  <text x="28" y="196" font-size="10" font-weight="600" fill="#A6A199" letter-spacing="0.14em">LEGEND</text>
+  <rect x="28" y="208" width="16" height="12" rx="4" fill="#EDE9E1" stroke="#4C5138" stroke-width="1.5"/>
+  <text x="52" y="218" font-size="9" fill="#3A3733">Focal / the engine</text>
+  <rect x="188" y="208" width="16" height="12" rx="4" fill="#FFFFFF" stroke="#E7E2DA" stroke-width="1"/>
+  <text x="212" y="218" font-size="9" fill="#3A3733">Output layer</text>
+  <rect x="332" y="208" width="16" height="12" rx="4" fill="#F3F0EA" stroke="#E1DCD3" stroke-width="1"/>
+  <text x="356" y="218" font-size="9" fill="#3A3733">Store</text>
+  <line x1="452" y1="214" x2="484" y2="214" stroke="#4C5138" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
+  <text x="492" y="218" font-size="9" fill="#3A3733">Primary flow</text>
+  <line x1="596" y1="214" x2="628" y2="214" stroke="#A6A199" stroke-width="1.2" marker-end="url(#np-arrow)"/>
+  <text x="636" y="218" font-size="9" fill="#3A3733">Flow</text>
 </svg>
