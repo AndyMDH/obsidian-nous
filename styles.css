@@ -81,6 +81,41 @@
 	--nous-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* ------------------------------------------------------------------ */
+/* Notice toasts. Every Nous-initiated Notice (see nousNotice()/
+   nousNoticeFragment()/settingsNotice() in main.ts) carries a small
+   .nous-notice-icon span ahead of its text - :has() on that is what scopes
+   this to Nous's own notices specifically, so another plugin's (or
+   Obsidian's own) notices are never touched. Obsidian gives plugins no
+   other way to tag only their own Notice instances with a custom class
+   short of wrapping every call site in a fragment builder, which is
+   already what these helpers do. */
+.notice:has(.nous-notice-icon) {
+	background: var(--nous-surface);
+	border: 1px solid var(--nous-border);
+	border-radius: var(--nous-radius-input);
+	color: var(--nous-text);
+	font-family: var(--nous-font-ui);
+	box-shadow: 0 8px 24px rgba(30, 28, 24, 0.16);
+}
+.theme-dark .notice:has(.nous-notice-icon) {
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.notice:has(.nous-notice-icon) a {
+	color: var(--nous-accent);
+}
+.nous-notice-icon {
+	display: inline-flex;
+	align-items: center;
+	vertical-align: -2px;
+	margin-right: 6px;
+	color: var(--nous-accent);
+}
+.nous-notice-icon svg {
+	width: 14px;
+	height: 14px;
+}
+
 .nous-recording {
 	color: var(--text-error);
 	animation: nous-recording-pulse 1.4s ease-in-out infinite;
