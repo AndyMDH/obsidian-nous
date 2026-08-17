@@ -209,11 +209,14 @@
 	width: 22px;
 	height: 22px;
 	margin-left: -2px;
+	border-radius: var(--nous-radius-well);
 	color: var(--nous-muted);
 	cursor: pointer;
+	transition: background-color 0.12s ease;
 }
 .nous-wizard-back:hover,
 .nous-wizard-back:focus-visible {
+	background: var(--nous-surface-2);
 	color: var(--nous-text);
 	outline: none;
 }
@@ -349,16 +352,22 @@
 	font-weight: 600;
 }
 
-/* The one quiet centered skip link below the primary button. */
+/* The one quiet centered skip link below the primary button. Sized to its
+   own text (not the full row) so the hover highlight below reads as a
+   small pill hugging the label, not a full-width bar. */
 .nous-wizard-skip {
-	text-align: center;
-	margin-top: 12px;
+	width: fit-content;
+	margin: 12px auto 0;
+	padding: 4px 10px;
+	border-radius: var(--nous-radius-well);
 	font-size: 13px;
 	color: var(--nous-faint);
 	cursor: pointer;
+	transition: background-color 0.12s ease;
 }
 .nous-wizard-skip:hover,
 .nous-wizard-skip:focus-visible {
+	background: var(--nous-surface-2);
 	color: var(--nous-muted);
 	outline: none;
 }
@@ -496,11 +505,14 @@
 	border-radius: var(--nous-radius-card);
 	background: var(--nous-surface);
 	cursor: pointer;
-	transition: border-color 0.12s ease;
+	transition:
+		border-color 0.12s ease,
+		background-color 0.12s ease;
 }
 .nous-mode-card:hover,
 .nous-mode-card:focus-visible {
 	border-color: var(--nous-accent);
+	background: var(--nous-surface-2);
 	outline: none;
 }
 .nous-mode-card-text {
@@ -529,6 +541,14 @@
 .nous-mode-card.is-filled {
 	background: var(--nous-accent);
 	border-color: var(--nous-accent);
+}
+/* Already moss-filled - a grey hover wash would just muddy it, so hover
+   here brightens instead of overlaying --nous-surface-2 like the plain
+   cards above. */
+.nous-mode-card.is-filled:hover,
+.nous-mode-card.is-filled:focus-visible {
+	background: var(--nous-accent);
+	filter: brightness(1.06);
 }
 .nous-mode-card.is-filled .nous-mode-card-title {
 	color: var(--nous-on-accent);
