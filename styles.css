@@ -404,6 +404,9 @@
 	gap: 6px;
 	padding: 12px 0;
 	border: none;
+	/* Obsidian draws some setting-row dividers as a box-shadow rather than
+	   a border - border: none alone doesn't touch that. */
+	box-shadow: none;
 }
 .nous-modal.is-form .setting-item-info {
 	margin-right: 0;
@@ -423,7 +426,12 @@
 .nous-modal input[type="text"],
 .nous-modal input[type="password"],
 .nous-modal select {
-	background: var(--nous-surface);
+	/* background-color, not the background shorthand - select already has
+	   its own dropdown-arrow background-image from Obsidian; the shorthand
+	   resets background-repeat/-position to their defaults too, which
+	   tiled that arrow icon across the whole box instead of leaving it
+	   positioned once on the right. */
+	background-color: var(--nous-surface);
 	border: 1px solid var(--nous-border);
 	border-radius: var(--nous-radius-input);
 	color: var(--nous-text);
@@ -672,9 +680,10 @@
 	color: var(--nous-muted);
 }
 
-/* Dropdowns as bordered white chips. */
+/* Dropdowns as bordered white chips. background-color, not the shorthand
+   - see the identical reasoning on .nous-modal select above. */
 .nous-settings select {
-	background: var(--nous-surface);
+	background-color: var(--nous-surface);
 	border: 1px solid var(--nous-border);
 	border-radius: var(--nous-radius-input);
 	color: var(--nous-text);
@@ -702,6 +711,9 @@
    styling is defined once, in the wizard-form block above). */
 .nous-settings .nous-mono-input {
 	text-align: right;
+	/* Obsidian's default Setting text input is sized for a short value -
+	   a full URL like a local server's base URL truncated inside it. */
+	min-width: 260px;
 }
 .nous-status-row .setting-item-description {
 	font-family: var(--nous-font-mono);

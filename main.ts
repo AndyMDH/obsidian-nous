@@ -2999,7 +2999,13 @@ class NousSettingTab extends PluginSettingTab {
 
 		const meetingItems: SettingGroupItem[] = [];
 
-		if (Platform.isMacOS && this.showAdvanced) {
+		// Unconditional on macOS, like Voice capture's "Speech model" status
+		// below - whether meeting capture actually works is basic info every
+		// user needs, not an advanced setting. Without this, the whole
+		// Meeting capture group rendered as an empty heading with nothing
+		// under it for every non-advanced user, since every other item here
+		// requires showAdvanced.
+		if (Platform.isMacOS) {
 			meetingItems.push({
 				name: "Native recorder status",
 				render: (setting) => {
@@ -3050,6 +3056,13 @@ class NousSettingTab extends PluginSettingTab {
 								}
 							})
 						);
+				},
+			});
+		} else {
+			meetingItems.push({
+				name: "",
+				render: (setting) => {
+					setting.setDesc("Meeting capture needs macOS.").setClass("setting-item-description");
 				},
 			});
 		}
