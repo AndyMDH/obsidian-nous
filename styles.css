@@ -343,6 +343,18 @@
 	background: var(--nous-accent);
 	filter: brightness(1.08);
 }
+/* Every plain (non-CTA) button in the wizard - Back, Skip, Test, Install,
+   etc. - gets the same light-grey rounded-rect wash on hover as the
+   mode-cards and skip link, instead of relying on Obsidian's own default
+   button hover (which is minimal in this theme). */
+.nous-modal button:not(.mod-cta) {
+	border-radius: var(--nous-radius-input);
+	transition: background-color 0.12s ease;
+}
+.nous-modal button:not(.mod-cta):hover,
+.nous-modal button:not(.mod-cta):focus-visible {
+	background: var(--nous-surface-2);
+}
 .nous-wizard-primary button.mod-cta {
 	width: 100%;
 	justify-content: center;
