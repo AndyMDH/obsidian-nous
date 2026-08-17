@@ -3316,7 +3316,11 @@ function buildTranscriptDecorations(view: EditorView): DecorationSet {
 	return builder.finish();
 }
 
-const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" width="88" height="88" aria-hidden="true"><rect x="4" y="4" width="104" height="104" rx="28" fill="#f5f5f5" stroke="#d5d9e0" stroke-width="2"/><path d="M 38 80 L 38 50 Q 38 42 48 42 L 60 42 Q 74 42 74 56 L 74 80" fill="none" stroke="#2d3142" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><circle cx="82" cy="30" r="7" fill="#eb6c36"/></svg>`;
+// Clip-n badge (docs/NOUS-REDESIGN.md §2): an n whose right leg bends back
+// up like paperclip wire, light wire on a moss squircle. Sized by CSS at
+// each call site (56px wizard hero, 26px settings header) - width/height
+// below are just the SVG's own default before CSS overrides them.
+const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" width="56" height="56" aria-hidden="true"><rect x="4" y="4" width="104" height="104" rx="30" fill="#4C5138"/><path d="M36 86 V46 C36 33 45 24 56 24 C68 24 78 33 78 46 V70 A10 10 0 0 1 58 70 V52" stroke="#F5F2ED" stroke-width="10" fill="none" stroke-linecap="round"/></svg>`;
 
 class OnboardingModal extends Modal {
 	private lastCaptureStatus: CapturePrerequisiteStatus | null = null;

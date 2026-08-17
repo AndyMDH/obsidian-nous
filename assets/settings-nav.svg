@@ -13,7 +13,7 @@
   <text x="30" y="136" font-size="13.5" fill="#57606a">Appearance</text>
   <text x="30" y="162" font-size="13.5" fill="#57606a">Community plugins</text>
   <text x="30" y="196" font-size="12" font-weight="700" fill="#57606a">COMMUNITY PLUGINS</text>
-  <rect x="20" y="208" width="200" height="30" rx="6" fill="#eb6c36"/>
+  <rect x="20" y="208" width="200" height="30" rx="6" fill="#4C5138"/>
   <text x="30" y="228" font-size="13.5" font-weight="600" fill="#ffffff">Nous</text>
 
   <!-- main pane -->

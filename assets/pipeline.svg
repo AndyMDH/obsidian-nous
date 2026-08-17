@@ -9,7 +9,7 @@
       <polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/>
     </marker>
     <marker id="np-arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#eb6c36"/>
+      <polygon points="0 0, 8 3, 0 6" fill="#4C5138"/>
     </marker>
   </defs>
 
@@ -18,8 +18,8 @@
 
   <!-- connectors (drawn before boxes) -->
   <line x1="168" y1="100" x2="200" y2="100" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#np-arrow)"/>
-  <line x1="340" y1="100" x2="372" y2="100" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
-  <line x1="512" y1="100" x2="544" y2="100" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
+  <line x1="340" y1="100" x2="372" y2="100" stroke="#4C5138" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
+  <line x1="512" y1="100" x2="544" y2="100" stroke="#4C5138" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
   <line x1="684" y1="100" x2="716" y2="100" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#np-arrow)"/>
 
   <!-- 1. You capture — input -->
@@ -37,9 +37,9 @@
   <text x="270" y="122" text-anchor="middle" font-size="9" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">00-Inbox/</text>
 
   <!-- 3. Nous — focal -->
-  <rect x="372" y="64" width="140" height="72" rx="6" fill="#fbe9df" stroke="#eb6c36" stroke-width="1"/>
+  <rect x="372" y="64" width="140" height="72" rx="6" fill="#EDE9E1" stroke="#4C5138" stroke-width="1"/>
   <rect x="380" y="70" width="28" height="12" rx="2" fill="transparent" stroke="rgba(235,108,54,0.5)" stroke-width="0.8"/>
-  <text x="394" y="79" text-anchor="middle" font-size="7" fill="#eb6c36" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.08em">AI</text>
+  <text x="394" y="79" text-anchor="middle" font-size="7" fill="#4C5138" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.08em">AI</text>
   <text x="442" y="104" text-anchor="middle" font-size="12" font-weight="600" fill="#2d3142">Nous enriches</text>
   <text x="442" y="122" text-anchor="middle" font-size="9" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace">title · tags · links</text>
 
@@ -60,13 +60,13 @@
   <!-- legend -->
   <line x1="28" y1="176" x2="872" y2="176" stroke="rgba(45,49,66,0.10)" stroke-width="0.8"/>
   <text x="28" y="196" font-size="8" fill="#4f5d75" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" letter-spacing="0.14em">LEGEND</text>
-  <rect x="28" y="208" width="16" height="12" rx="2" fill="#fbe9df" stroke="#eb6c36" stroke-width="1"/>
+  <rect x="28" y="208" width="16" height="12" rx="2" fill="#EDE9E1" stroke="#4C5138" stroke-width="1"/>
   <text x="52" y="218" font-size="9" fill="#2d3142">Focal / the engine</text>
   <rect x="188" y="208" width="16" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1"/>
   <text x="212" y="218" font-size="9" fill="#2d3142">Output layer</text>
   <rect x="332" y="208" width="16" height="12" rx="2" fill="#f0f1f3" stroke="#4f5d75" stroke-width="1"/>
   <text x="356" y="218" font-size="9" fill="#2d3142">Store</text>
-  <line x1="452" y1="214" x2="484" y2="214" stroke="#eb6c36" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
+  <line x1="452" y1="214" x2="484" y2="214" stroke="#4C5138" stroke-width="1.2" marker-end="url(#np-arrow-accent)"/>
   <text x="492" y="218" font-size="9" fill="#2d3142">Primary flow</text>
   <line x1="596" y1="214" x2="628" y2="214" stroke="#4f5d75" stroke-width="1.2" marker-end="url(#np-arrow)"/>
   <text x="636" y="218" font-size="9" fill="#2d3142">Flow</text>
