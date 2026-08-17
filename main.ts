@@ -3558,7 +3558,7 @@ class OnboardingModal extends Modal {
 		});
 		this.addModeCard(cards, {
 			title: "I have an API key or local model",
-			sub: "Anthropic, OpenAI, Gemini, or run free & local",
+			sub: "Anthropic, OpenAI, Gemini, or run local",
 			onChoose: () => this.renderConnectChoice(),
 		});
 
@@ -3887,7 +3887,7 @@ class OnboardingModal extends Modal {
 		const body = this.contentEl.createEl("p", { cls: "nous-wizard-body is-center" });
 		body.appendText("Drop anything in ");
 		body.createEl("code", { text: this.plugin.settings.inboxFolder });
-		body.appendText(". It comes back tagged.");
+		body.appendText(". It comes back tagged - your tag list starts empty and grows as you capture.");
 		// Only warnings survive to this screen - tips live in the tour and docs.
 		if (status) {
 			for (const item of onboardingFinishNextActions(status).filter((item) => item.warning)) {
@@ -3976,7 +3976,7 @@ class OnboardingModal extends Modal {
 		steps.push({
 			title: "That is everything",
 			icon: "sparkles",
-			text: "Wikis build themselves. The rest lives in settings.",
+			text: "Wikis build themselves. Want a hotkey for capture? Settings → Hotkeys - Obsidian has to be focused for it to fire.",
 			link: {
 				text: "Read the docs",
 				href: "https://github.com/AndyMDH/obsidian-nous/tree/main/docs",
