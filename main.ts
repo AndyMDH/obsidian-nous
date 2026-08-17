@@ -3976,7 +3976,7 @@ class OnboardingModal extends Modal {
 		steps.push({
 			title: "That is everything",
 			icon: "sparkles",
-			text: "Wikis build themselves. Want a hotkey for capture? Settings → Hotkeys - Obsidian has to be focused for it to fire.",
+			text: "Wikis build themselves. Set hotkeys for capture in Settings → Hotkeys.",
 			link: {
 				text: "Read the docs",
 				href: "https://github.com/AndyMDH/obsidian-nous/tree/main/docs",
