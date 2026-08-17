@@ -1007,9 +1007,21 @@ body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-proper
 
 /* Transcript callout bar: the only [!note] callout the pipeline emits -
    toCollapsedCallout() in src/logic.ts always titles it "Transcript".
-   Obsidian's own fold arrow/collapse behavior is untouched, just retoned. */
+   Obsidian's own fold arrow/collapse behavior is untouched, just retoned.
+
+   [!note] is Obsidian's own built-in callout type, with its own default
+   blue --callout-color - background/title/icon color alone (below)
+   weren't enough to override it in practice (still rendered blue),
+   because Obsidian's own callout CSS computes several sub-parts (the
+   tinted background among them) directly from that variable rather than
+   from independently-settable colors. Overriding --callout-color itself
+   to a neutral grey RGB triple - the format Obsidian's rgba(var(...))
+   pattern expects, not a hex value - fixes it at the source instead of
+   fighting each derived part; explicit !important on our own
+   declarations as a second line of defense. */
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] {
-	background: var(--nous-surface-2);
+	--callout-color: 138, 132, 122;
+	background: var(--nous-surface-2) !important;
 	border: none;
 	border-radius: 12px;
 	padding: 10px 14px;
@@ -1017,11 +1029,11 @@ body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-proper
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] .callout-title {
 	font-size: 13px;
 	font-weight: 600;
-	color: var(--nous-muted);
+	color: var(--nous-muted) !important;
 }
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] .callout-icon,
 body.nous-styled-notes .markdown-preview-view:has(.metadata-property[data-property-key="enriched_at"]) .callout[data-callout="note"] .callout-fold {
-	color: var(--nous-faint);
+	color: var(--nous-faint) !important;
 }
 /* Transcript = archive, in BOTH views: reading blocks are tagged by the
    post-processor, editor lines by a CodeMirror decoration. */
