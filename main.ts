@@ -932,10 +932,24 @@ export default class NousPlugin extends Plugin {
 			child.stdin?.end();
 		});
 
-		if (!(await this.hasWhisperCli())) {
+		// Check the standard brew-installed name directly, not
+		// this.hasWhisperCli() (which reads settings.whisperCliPath) - a
+		// leftover custom path (for example, pointed at a bogus location to
+		// simulate "not installed" for testing) would otherwise report
+		// failure forever even right after a real, successful install.
+		const check = await this.cliExec(DEFAULT_WHISPER_CLI_BIN, ["--help"], {
+			cwd: os.tmpdir(),
+			env,
+			timeoutMs: QUICK_CLI_TIMEOUT_MS,
+		});
+		if (check.code !== 0) {
 			throw new Error(
 				'Install finished, but "whisper-cli" still is not runnable - check Settings → Nous → Advanced settings → Whisper CLI path.'
 			);
+		}
+		if (this.settings.whisperCliPath.trim() && this.settings.whisperCliPath.trim() !== DEFAULT_WHISPER_CLI_BIN) {
+			this.settings.whisperCliPath = "";
+			await this.saveSettings();
 		}
 	}
 
