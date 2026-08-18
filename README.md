@@ -126,9 +126,6 @@ new capture waits in `00-Inbox` until you open it again.*
   `Them:` voice. Meeting capture needs macOS 15 or later. Live voice
   transcription is a beta feature and needs an OpenAI key.
 
-For more detail, read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) or
-[`docs/USAGE.md`](docs/USAGE.md).
-
 ## Documentation
 
 Install and Tutorial links are at the top of this page. Two more docs go
