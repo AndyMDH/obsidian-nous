@@ -177,15 +177,22 @@ function nousNotice(message: string, duration?: number): Notice {
 // A folder dropped straight into the inbox (e.g. an entire GitHub repo
 // dragged in) nests its files a level or more deep - the inbox scan has to
 // walk subfolders too, or those files sit there forever with no error, since
-// nothing is technically wrong with them. "duplicates" is walked past deliberately - it is
-// the one inbox subfolder that must stay untouched by normal processing.
-function collectFilesRecursive(folder: TFolder, matches: (file: TFile) => boolean): TFile[] {
+// nothing is technically wrong with them. Only the inbox's OWN "duplicates"
+// subfolder is skipped (isRoot guards that) - a dropped folder that happens
+// to contain its own subfolder named "duplicates" (a photo-dedup export,
+// say) must still be walked, or its files are silently, permanently skipped
+// with no log line to explain why.
+function collectFilesRecursive(
+	folder: TFolder,
+	matches: (file: TFile) => boolean,
+	isRoot = true
+): TFile[] {
 	const found: TFile[] = [];
 	for (const child of folder.children) {
 		if (child instanceof TFile) {
 			if (matches(child)) found.push(child);
-		} else if (child instanceof TFolder && child.name !== "duplicates") {
-			found.push(...collectFilesRecursive(child, matches));
+		} else if (child instanceof TFolder && !(isRoot && child.name === "duplicates")) {
+			found.push(...collectFilesRecursive(child, matches, false));
 		}
 	}
 	return found;
@@ -304,18 +311,43 @@ export default class NousPlugin extends Plugin {
 	// that a rerun is owed, so the run that's already in flight schedules
 	// exactly one more pass right after it finishes.
 	private cliRerunQueued = false;
+	// API mode's counterpart to cliRunInProgress/cliRerunQueued above - without
+	// it, dragging several files in at once fires overlapping
+	// processInboxViaApi() runs that each snapshot the tag registry/note index
+	// independently, so duplicate detection and wiki updates can race on the
+	// same file/wiki page (lost update).
+	private apiRunInProgress = false;
+	private apiRerunQueued = false;
 	// Suppresses the auto-process-on-create listener while importFromNotion()
 	// is bulk-writing files, so a large import doesn't fire one enrichment
 	// run per file. processInbox() runs once, after the whole batch lands.
 	private notionImportInProgress = false;
 	private voiceRecorder: MediaRecorder | null = null;
 	private voiceStream: MediaStream | null = null;
+	// toggleVoiceCapture()'s only "already recording" guard is
+	// this.voiceRecorder?.state === "recording" - but voiceRecorder isn't
+	// assigned until after two awaited calls (the backend check, then
+	// getUserMedia()). Two rapid toggles (a double-click, a hotkey fired
+	// twice) both pass that guard before either await resolves, both
+	// acquire a mic stream, and the second silently overwrites the first's
+	// - leaking its track and orphaning its onstop handler. This flag
+	// closes that window.
+	private voiceCaptureStarting = false;
 	private voiceRibbonEl: HTMLElement | null = null;
 	private voiceStatusBarEl: HTMLElement | null = null;
 	private meetingRibbonEl: HTMLElement | null = null;
 	private meetingStatusBarEl: HTMLElement | null = null;
 	private meetingPollInterval: number | null = null;
 	private nativeRecorderLastProblem: string | null = null;
+	// toggleMeetingCapture() decides start-vs-stop from an awaited status
+	// check (nativeRecorderStatus()) - two rapid clicks (a double-click on
+	// the phone ribbon) can both see "not recording" before either one's
+	// "start" has actually landed, both call createLiveNativeMeetingNote(),
+	// and the second overwrites activeNativeMeetingNotePath, orphaning the
+	// first live note (it never receives a transcript when the one real
+	// recording eventually stops). This flag rejects the second click
+	// outright instead.
+	private meetingToggleInProgress = false;
 	private meetingTranscribing = false;
 	// Live "REC 00:42" timers - warm-paper spec §3's status-bar states.
 	private voiceRecordingTimer: number | null = null;
@@ -523,9 +555,31 @@ export default class NousPlugin extends Plugin {
 		});
 	}
 
+	// Obsidian's own Component lifecycle (registerEvent/registerInterval/
+	// addCommand, all used throughout onload above) already tears itself
+	// down automatically on unload - a live mic MediaStream/MediaRecorder
+	// the plugin opened directly via browser APIs is not covered by that,
+	// so a plugin disable/reload mid-recording would otherwise leave the
+	// mic running indefinitely with nothing left able to stop it. The
+	// native meeting recorder is deliberately left alone here - it is a
+	// separate OS process designed to keep recording across a plugin
+	// reload, not something this plugin should kill.
+	onunload() {
+		this.voiceRecorder?.stop();
+		void this.liveCaptureModal?.stopAndClose();
+	}
+
 	async loadSettings() {
 		const data = (await this.loadData()) as Partial<NousSettings> | null;
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, data);
+		// apiKeys/models are per-provider maps - a plain Object.assign above
+		// replaces the whole map with whatever's on disk, so a provider added
+		// in a later version (e.g. glm) is missing entirely from an older
+		// data.json and comes back undefined instead of "", instead of
+		// falling back to DEFAULT_SETTINGS's empty default like every other
+		// setting does. Merge these two maps key-by-key instead.
+		this.settings.apiKeys = Object.assign({}, DEFAULT_SETTINGS.apiKeys, data?.apiKeys);
+		this.settings.models = Object.assign({}, DEFAULT_SETTINGS.models, data?.models);
 		// Installs that predate the wizard already have settings on disk -
 		// don't greet a configured vault with a first-run welcome.
 		if (data && data.onboarded === undefined) {
@@ -1342,7 +1396,13 @@ export default class NousPlugin extends Plugin {
 	}
 
 	private async createTagFileIfMissing(tagName: string) {
-		const path = `${this.settings.tagsFolder}/${tagName}.md`;
+		// tagName is model-generated (Step 3's "new tag" path, API mode) -
+		// unlike every other filename builder here, this one skipped
+		// sanitizeFilename, so a stray "/" in a model's tag name (e.g.
+		// "finance/budgeting" instead of kebab-case) would silently create a
+		// nested path instead of a flat tag file, corrupting the tag
+		// registry's flat-file assumption.
+		const path = `${this.settings.tagsFolder}/${logic.sanitizeFilename(tagName)}.md`;
 		if (await this.app.vault.adapter.exists(path)) return;
 		const today = new Date().toISOString().slice(0, 10);
 		await this.app.vault.create(path, logic.buildTagFileContent(tagName, today));
@@ -1493,33 +1553,39 @@ export default class NousPlugin extends Plugin {
 			this.voiceRecorder.stop();
 			return;
 		}
-		if (!(await this.hasAudioTranscriptionBackend())) {
-			new VoiceCaptureSetupModal(this.app, this).open();
-			return;
-		}
+		if (this.voiceCaptureStarting) return;
+		this.voiceCaptureStarting = true;
 		try {
-			this.voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		} catch {
-			nousNotice("Can't hear you - allow microphone access for Obsidian in System Settings.", 8000);
-			return;
+			if (!(await this.hasAudioTranscriptionBackend())) {
+				new VoiceCaptureSetupModal(this.app, this).open();
+				return;
+			}
+			try {
+				this.voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+			} catch {
+				nousNotice("Can't hear you - allow microphone access for Obsidian in System Settings.", 8000);
+				return;
+			}
+			const mimeType = pickVoiceMimeType();
+			const recorder = mimeType ? new MediaRecorder(this.voiceStream, { mimeType }) : new MediaRecorder(this.voiceStream);
+			const chunks: Blob[] = [];
+			recorder.ondataavailable = (e) => {
+				if (e.data.size > 0) chunks.push(e.data);
+			};
+			recorder.onstop = () => {
+				this.voiceStream?.getTracks().forEach((t) => t.stop());
+				this.voiceStream = null;
+				this.voiceRecorder = null;
+				this.setVoiceRecordingIndicator(false);
+				void this.saveVoiceRecording(recorder.mimeType || "audio/webm", chunks);
+			};
+			recorder.start();
+			this.voiceRecorder = recorder;
+			this.setVoiceRecordingIndicator(true);
+			nousNotice("🔴 Recording - tap again when you're done.", 4000);
+		} finally {
+			this.voiceCaptureStarting = false;
 		}
-		const mimeType = pickVoiceMimeType();
-		const recorder = mimeType ? new MediaRecorder(this.voiceStream, { mimeType }) : new MediaRecorder(this.voiceStream);
-		const chunks: Blob[] = [];
-		recorder.ondataavailable = (e) => {
-			if (e.data.size > 0) chunks.push(e.data);
-		};
-		recorder.onstop = () => {
-			this.voiceStream?.getTracks().forEach((t) => t.stop());
-			this.voiceStream = null;
-			this.voiceRecorder = null;
-			this.setVoiceRecordingIndicator(false);
-			void this.saveVoiceRecording(recorder.mimeType || "audio/webm", chunks);
-		};
-		recorder.start();
-		this.voiceRecorder = recorder;
-		this.setVoiceRecordingIndicator(true);
-		nousNotice("🔴 Recording - tap again when you're done.", 4000);
 	}
 
 	// Only true when every fallback condition is satisfied: opt-in toggle,
@@ -1620,14 +1686,19 @@ export default class NousPlugin extends Plugin {
 			nousNotice("Meeting capture only works on macOS, sorry.");
 			return;
 		}
+		if (this.meetingToggleInProgress) return;
+		this.meetingToggleInProgress = true;
+		try {
+			const nativeStatus = await this.nativeRecorderStatus();
+			if (nativeStatus.available) {
+				await this.toggleNativeMeetingCapture(nativeStatus);
+				return;
+			}
 
-		const nativeStatus = await this.nativeRecorderStatus();
-		if (nativeStatus.available) {
-			await this.toggleNativeMeetingCapture(nativeStatus);
-			return;
+			this.settingsNotice(MEETING_RECORDER_MISSING_NOTICE, 15000);
+		} finally {
+			this.meetingToggleInProgress = false;
 		}
-
-		this.settingsNotice(MEETING_RECORDER_MISSING_NOTICE, 15000);
 	}
 
 	private async toggleNativeMeetingCapture(status: NativeRecorderStatus) {
@@ -2204,8 +2275,20 @@ export default class NousPlugin extends Plugin {
 		if (!(await this.app.vault.adapter.exists(dupFolder))) {
 			await this.app.vault.createFolder(dupFolder);
 		}
-		await this.app.fileManager.renameFile(file, `${dupFolder}/${file.name}`);
+		// Two files sharing a basename (a dictation tool's generic "Voice
+		// Memo.m4a", a re-synced export) would otherwise collide on rename.
+		const dest = await this.uniqueVaultPath(`${dupFolder}/${file.name}`);
+		await this.app.fileManager.renameFile(file, dest);
 		await this.purgeOldDuplicates(dupFolder);
+	}
+
+	// The text-capture path already parked empty stubs in duplicates/ with a
+	// log line explaining why - the image/PDF/audio checks below returned
+	// false with neither, so a corrupt/empty capture of those types sat in
+	// the inbox and was silently re-checked, forever, on every single run.
+	private async skipEmptyCapture(file: TFile, kind: string): Promise<void> {
+		await this.moveToDuplicates(file);
+		await this.appendLog(`SKIPPED: ${file.name} - empty ${kind} file, moved to duplicates/`);
 	}
 
 	private async purgeOldDuplicates(dupFolder: string): Promise<void> {
@@ -2242,25 +2325,38 @@ export default class NousPlugin extends Plugin {
 	}
 
 	async processInboxViaApi() {
+		if (this.apiRunInProgress) {
+			this.apiRerunQueued = true;
+			return;
+		}
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		if (!folder) return;
 		const files = collectFilesRecursive(folder, (f) => logic.isCaptureFile(f.extension));
 		if (files.length === 0) return;
 
-		let enriched = 0;
-		for (const file of files) {
-			try {
-				if (await this.processFile(file)) enriched++;
-			} catch (e) {
-				const msg = e instanceof Error ? e.message : String(e);
-				nousNotice(`Stumbled on "${file.name}" - more in your Nous log`, 10000);
-				await this.appendLog(`ERROR: ${file.name} - ${msg}`);
+		this.apiRunInProgress = true;
+		try {
+			let enriched = 0;
+			for (const file of files) {
+				try {
+					if (await this.processFile(file)) enriched++;
+				} catch (e) {
+					const msg = e instanceof Error ? e.message : String(e);
+					nousNotice(`Stumbled on "${file.name}" - more in your Nous log`, 10000);
+					await this.appendLog(`ERROR: ${file.name} - ${msg}`);
+				}
 			}
-		}
 
-		if (enriched > 0) {
-			nousNotice(`✨ ${enriched} note${enriched === 1 ? "" : "s"} enriched.`);
-			await this.buildWikisViaApi();
+			if (enriched > 0) {
+				nousNotice(`✨ ${enriched} note${enriched === 1 ? "" : "s"} enriched.`);
+				await this.buildWikisViaApi();
+			}
+		} finally {
+			this.apiRunInProgress = false;
+		}
+		if (this.apiRerunQueued) {
+			this.apiRerunQueued = false;
+			void this.processInboxViaApi();
 		}
 	}
 
@@ -2315,11 +2411,14 @@ export default class NousPlugin extends Plugin {
 					if (binary.byteLength === 0) continue;
 					transcript = await this.transcribeAudio(file.extension.toLowerCase(), binary, file.name);
 				}
-				const notePath = `${this.settings.inboxFolder}/${file.basename} (voice).md`;
-				const audioDest = `${this.settings.meetingsFolder}/${file.name}`;
+				// Two audio files sharing a basename (common with generic
+				// dictation-tool filenames, and more likely now that a dropped
+				// folder's subfolders get walked too) would otherwise collide.
+				const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${file.basename} (voice).md`);
+				const audioDest = await this.uniqueVaultPath(`${this.settings.meetingsFolder}/${file.name}`);
 				await this.app.vault.create(
 					notePath,
-					`${transcript.trim()}\n\n![[${file.name}]]\n`
+					`${transcript.trim()}\n\n![[${audioDest.slice(audioDest.lastIndexOf("/") + 1)}]]\n`
 				);
 				await this.app.fileManager.renameFile(file, audioDest);
 				await this.appendLog(`TRANSCRIBED: ${file.name} -> ${notePath}`);
@@ -2541,7 +2640,10 @@ export default class NousPlugin extends Plugin {
 
 			if (isImage) {
 				let binary = await this.app.vault.readBinary(file);
-				if (binary.byteLength === 0) return false;
+				if (binary.byteLength === 0) {
+					await this.skipEmptyCapture(file, "image");
+					return false;
+				}
 
 				if (isHeic) {
 					if (!Platform.isDesktopApp) {
@@ -2573,7 +2675,10 @@ export default class NousPlugin extends Plugin {
 				};
 			} else if (isPdf) {
 				const binary = await this.app.vault.readBinary(file);
-				if (binary.byteLength === 0) return false;
+				if (binary.byteLength === 0) {
+					await this.skipEmptyCapture(file, "PDF");
+					return false;
+				}
 
 				attachment = {
 					kind: "document",
@@ -2587,7 +2692,10 @@ export default class NousPlugin extends Plugin {
 					raw = liveTranscript;
 				} else {
 					const binary = await this.app.vault.readBinary(file);
-					if (binary.byteLength === 0) return false;
+					if (binary.byteLength === 0) {
+						await this.skipEmptyCapture(file, "audio");
+						return false;
+					}
 					// Transcript goes through the normal text-enrichment path.
 					raw = await this.transcribeAudio(ext, binary, file.name);
 				}
@@ -2671,7 +2779,12 @@ export default class NousPlugin extends Plugin {
 			const existingWikiLink = await this.findExistingWikiLink(result.tags);
 			const enrichedAt = new Date().toISOString();
 			const finalFilename = logic.meetingFilename(result.date, result.title);
-			const destPath = `${this.settings.meetingsFolder}/${finalFilename}`;
+			// Two captures on the same day landing on the same LLM-chosen title
+			// (two generic "Standup" fragments, say) would otherwise collide -
+			// vault.create() throws, and since destPath is deterministic from
+			// date+title, every retry hits the exact same collision forever,
+			// permanently stranding the original capture in the inbox.
+			const destPath = await this.uniqueVaultPath(`${this.settings.meetingsFolder}/${finalFilename}`);
 
 			if (isImage || isPdf) {
 				const attachmentFilename = logic.meetingAttachmentFilename(result.date, result.title, effectiveExtension);
@@ -3443,6 +3556,8 @@ class NousSettingTab extends PluginSettingTab {
 								if (!Number.isNaN(n) && n > 0) {
 									this.plugin.settings.wikiThreshold = n;
 									await this.plugin.saveSettings();
+								} else {
+									nousNotice("Wiki threshold needs a whole number above 0 - not saved.", 6000);
 								}
 							})
 						);
@@ -3464,6 +3579,8 @@ class NousSettingTab extends PluginSettingTab {
 									if (!Number.isNaN(n) && n > 0) {
 										this.plugin.settings.dedupLookback = n;
 										await this.plugin.saveSettings();
+									} else {
+										nousNotice("Duplicate-check lookback needs a whole number above 0 - not saved.", 6000);
 									}
 								})
 							);
@@ -3585,7 +3702,11 @@ class NousSettingTab extends PluginSettingTab {
 						// read as paths, not prose.
 						text.inputEl.addClass("nous-mono-input");
 						text.setValue(this.plugin.settings[key] as string).onChange(async (value) => {
-							(this.plugin.settings[key] as string) = value.trim();
+							// An empty folder path isn't just cosmetically wrong -
+							// it makes isInInbox() match startsWith("/"), which is
+							// never true, so captures silently stop being picked
+							// up at all.
+							(this.plugin.settings[key] as string) = value.trim() || (DEFAULT_SETTINGS[key] as string);
 							await this.plugin.saveSettings();
 						});
 					});
@@ -4054,7 +4175,13 @@ class OnboardingModal extends Modal {
 				const parts = [
 					`Imported ${result.imported} note${result.imported === 1 ? "" : "s"} into ${this.plugin.settings.inboxFolder}`,
 				];
-				if (result.skipped > 0) parts.push(`skipped ${result.skipped} already there`);
+				// Worded carefully: a skip means a same-titled file already sits
+				// in the inbox - almost always a re-import, but two distinct
+				// Notion pages that happen to share a title look identical here
+				// too, so this must not claim certainty it doesn't have.
+				if (result.skipped > 0) {
+					parts.push(`skipped ${result.skipped} matching a title already in your inbox`);
+				}
 				const tail = this.plugin.settings.onboarded
 					? "Enriching now."
 					: "Finish setup and they'll be enriched.";
@@ -4541,6 +4668,20 @@ class LiveVoiceCaptureModal extends Modal {
 		} catch {
 			nousNotice("Can't hear you - allow microphone access for Obsidian in System Settings.", 8000);
 			this.close();
+			return;
+		}
+
+		// Stop/Cancel/Esc can land while getUserMedia() was still pending -
+		// stopAndClose()/cancel() already ran with this.recorder/this.stream
+		// still null, set handled=true, and closed the modal. Without this
+		// check, the code below would start a real MediaRecorder (and live
+		// transcription) on an instance nothing can reach any more -
+		// stopAndClose()/cancel() both bail immediately when handled is
+		// already true, so it could never be stopped except by quitting
+		// Obsidian. Tear the stream down instead of using it.
+		if (this.handled) {
+			this.stream.getTracks().forEach((t) => t.stop());
+			this.stream = null;
 			return;
 		}
 

@@ -12,6 +12,7 @@ import {
 	extractSummaryText,
 	firstSentence,
 	buildMeetingMarkdown,
+	yamlString,
 	toCollapsedCallout,
 	convertLegacyTranscriptToCallout,
 	buildTagFileContent,
@@ -208,9 +209,33 @@ test("buildMeetingMarkdown inserts win_* fields right after tags, only when win 
 		"status",
 		"enriched_at",
 	]);
-	assert.match(withWin, /win_client: Acme/);
-	assert.match(withWin, /win_metric: \$50k saved/);
-	assert.match(withWin, /win_headcount: \n/);
+	assert.match(withWin, /win_client: "Acme"/);
+	assert.match(withWin, /win_metric: "\$50k saved"/);
+	assert.match(withWin, /win_headcount: ""\n/);
+});
+
+// Regression guard: title/attendees/project/tags are LLM-generated free
+// text, not code - a bare `title: Standup: Sprint 12` breaks the YAML
+// parse at the *first* colon, corrupting the whole frontmatter block (tags,
+// date, type all fail to read back). Frontmatter scalars must always be
+// quoted.
+test("yamlString quotes and escapes a value for safe YAML frontmatter", () => {
+	assert.equal(yamlString("Standup: Sprint 12"), '"Standup: Sprint 12"');
+	assert.equal(yamlString('Say "hi"'), '"Say \\"hi\\""');
+	assert.equal(yamlString("C:\\path"), '"C:\\\\path"');
+});
+
+test("buildMeetingMarkdown quotes a title/attendee/project containing a colon so frontmatter still parses", () => {
+	const md = buildMeetingMarkdown(
+		baseResult({ title: "Standup: Sprint 12", attendees: ["Smith, John"], project: "Client: Acme" }),
+		"raw",
+		"2026-07-02T12:00:00.000Z",
+		null
+	);
+	const fmBlock = md.split("---\n")[1].trim().split("\n");
+	assert.equal(fmBlock[2], 'title: "Standup: Sprint 12"');
+	assert.equal(fmBlock[3], 'attendees: ["Smith, John"]');
+	assert.equal(fmBlock[5], 'project: "Client: Acme"');
 });
 
 test("buildWinsMarkdown groups by category with counts, newest first within each", () => {

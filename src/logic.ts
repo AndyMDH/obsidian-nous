@@ -4,6 +4,16 @@ export function sanitizeFilename(title: string): string {
 	return title.replace(/[\\/:*?"<>|]/g, "-").trim();
 }
 
+// Frontmatter scalar values (title, attendee names, project, win details)
+// are LLM-generated free text, not code - a colon-space, a leading #, or any
+// other YAML-special character breaks the unquoted form and can silently
+// corrupt the whole frontmatter block's parse (tags/date/type all fail to
+// read back). Always double-quoting is simpler and safer than trying to
+// detect exactly which values are "plain-scalar safe".
+export function yamlString(value: string): string {
+	return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
 export function meetingFilename(date: string, title: string): string {
 	return `${date} ${sanitizeFilename(title)}.md`;
 }
@@ -212,21 +222,25 @@ export function buildMeetingMarkdown(
 		"---",
 		`type: ${result.type}`,
 		`date: ${result.date}`,
-		`title: ${result.title}`,
+		`title: ${yamlString(result.title)}`,
 	];
 	if (result.type === "meeting") {
-		fmLines.push(`attendees: [${result.attendees.join(", ")}]`);
+		fmLines.push(`attendees: [${result.attendees.map(yamlString).join(", ")}]`);
 	}
-	fmLines.push(`source: ${result.source}`, `project: ${result.project}`, `tags: [${result.tags.join(", ")}]`);
+	fmLines.push(
+		`source: ${result.source}`,
+		`project: ${yamlString(result.project)}`,
+		`tags: [${result.tags.map(yamlString).join(", ")}]`
+	);
 	// Only present when "win" is in tags - mirrors meeting-enricher's Step
 	// 3.5 in src/skillTemplates.ts (CLI mode), same field order.
 	if (result.win) {
 		fmLines.push(
 			`win_category: ${result.win.category}`,
-			`win_headcount: ${result.win.headcount}`,
-			`win_client: ${result.win.client}`,
-			`win_repo: ${result.win.repo}`,
-			`win_metric: ${result.win.metric}`
+			`win_headcount: ${yamlString(result.win.headcount)}`,
+			`win_client: ${yamlString(result.win.client)}`,
+			`win_repo: ${yamlString(result.win.repo)}`,
+			`win_metric: ${yamlString(result.win.metric)}`
 		);
 	}
 	fmLines.push(`status: enriched`, `enriched_at: ${enrichedAt}`, "---", "");
@@ -345,7 +359,7 @@ export function buildWikiMarkdown(
 	const fm = [
 		"---",
 		"type: wiki",
-		`topic: ${topic}`,
+		`topic: ${yamlString(topic)}`,
 		`created: ${created}`,
 		`updated: ${updated}`,
 		`sources: ${sources.length}`,

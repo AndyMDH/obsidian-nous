@@ -121,15 +121,23 @@ Build this frontmatter block (field order matters, keep it stable):
 ---
 type: meeting               # or "note" per Step 1
 date: YYYY-MM-DD
-title: <inferred concise title>
-attendees: [<names found in transcript>]   # omit this field entirely for type: note
+title: "<inferred concise title>"
+attendees: ["<names found in transcript>"]   # omit this field entirely for type: note
 source: voice                # or "pasted"
-project: <inferred client/project or "internal">
+project: "<inferred client/project or \\"internal\\">"
 tags: [<from registry only - see Step 3>]
 status: enriched
 enriched_at: <ISO 8601 timestamp, e.g. 2026-07-01T18:30:00+02:00>
 ---
 \`\`\`
+
+**Always double-quote \`title\`, each \`attendees\` entry, and \`project\`** -
+these come straight from the transcript, and an unquoted value containing a
+colon (\`Standup: Sprint 12\`), a leading \`#\`, or other YAML-special
+character breaks the whole frontmatter block's parse, not just that one
+field. Escape any \`"\` inside the value as \`\\"\`. \`tags\` come from the
+controlled registry (Step 3) and are already safe kebab-case, so they do not
+need quoting.
 
 If \`tags\` ends up including \`win\`, five more fields go right after \`tags\` -
 see Step 3.5.
@@ -205,7 +213,10 @@ Fill each field only from what the note actually states. **Leave a field
 blank rather than guessing or inferring** — an empty field is correct and
 expected when the note doesn't mention that detail; a wrong guess is not. For
 notes without \`win\` in their tags, omit all five of these fields entirely
-rather than writing them blank.
+rather than writing them blank. When a field is filled in, double-quote it
+(\`win_client: "Acme"\`) for the same reason as \`title\`/\`project\` above -
+free text can contain a colon and break the parse unquoted. A blank field
+stays exactly \`win_headcount:\` with nothing after the colon, not \`""\`.
 
 ## Step 4 — Body enrichment
 
@@ -293,8 +304,14 @@ the same topic name. If linking to an existing wiki, use its actual filename
 1. Determine final filename: \`YYYY-MM-DD <title>.md\` (using the date and title
    from frontmatter). Sanitize the title for filesystem safety (no \`/\`, \`:\`,
    etc.) but keep it human-readable.
-2. Write the fully enriched content to \`${f.meetings}/<final filename>\`.
-3. For a text file: remove the original from \`${f.inbox}/\` - its content is
+2. **Check whether \`${f.meetings}/<final filename>\` already exists before
+   writing.** Two different captures on the same day can land on the same
+   title (two "Standup" fragments, say) - if the file already exists, append
+   \` 2\`, \` 3\`, and so on to the title (before the \`.md\`) until you find a
+   filename that does not exist, and use that instead. Never overwrite an
+   existing note here.
+3. Write the fully enriched content to \`${f.meetings}/<final filename>\`.
+4. For a text file: remove the original from \`${f.inbox}/\` - its content is
    now fully copied into the new note. **For an image or PDF file: move
    (rename) it into \`${f.meetings}/\` instead of deleting it**, using the same
    date+title as the note but keeping the file's original extension (e.g.
@@ -303,7 +320,7 @@ the same topic name. If linking to an existing wiki, use its actual filename
    Report.md\`) - this is the file the \`## Captured image\`/\`## Captured
    document\` embed points to, so it must actually exist at that path
    afterward, not be deleted.
-4. Append to \`.nous/pipeline.log\`:
+5. Append to \`.nous/pipeline.log\`:
    \`<ISO timestamp> ENRICHED: <final filename> - tags: [<tags>] - project: <project>\`
 
 ## Rules of engagement
