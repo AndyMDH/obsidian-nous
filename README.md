@@ -61,7 +61,6 @@ Mac.
 - [Get started](#get-started)
 - [How it works](#how-it-works)
 - [Documentation](#documentation)
-- [For developers](#for-developers)
 - [License](#license)
 
 ## Get started
@@ -132,24 +131,16 @@ For more detail, read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) or
 
 ## Documentation
 
+Install and Tutorial links are at the top of this page. Two more docs go
+deeper:
+
 | | |
 |---|---|
-| [`docs/TUTORIAL.md`](docs/TUTORIAL.md) | A slow, step-by-step walkthrough of your first hour with Nous. |
-| [`docs/USAGE.md`](docs/USAGE.md) | Every provider, hotkey, and troubleshooting step. |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The design behind Nous — layers, data flow, and choices. |
 | [`docs/TECHNICAL.md`](docs/TECHNICAL.md) | A map of the code, for contributors. |
 
-## For developers
-
-```bash
-npm install && npm run build && npm test
-npm run build:recorder
-npm run build:recorder:universal && npm run package:recorder
-```
-
-Core logic lives in `src/` and needs no Obsidian dependency. `main.ts`
-connects it to the app. The native Mac meeting helper lives in
-`native/nous-recorder/`.
+For build commands and the release process, see
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
