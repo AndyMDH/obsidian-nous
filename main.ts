@@ -4348,7 +4348,7 @@ class OnboardingModal extends Modal {
 		this.setScreenMode("hero");
 		const steps = this.tourSteps();
 		const current = steps[Math.max(0, Math.min(step, steps.length - 1))];
-		this.renderTopRow(step, steps.length, step > 0 ? () => this.renderTour(step - 1) : undefined);
+		this.renderTopRow(step, steps.length, step > 0 ? () => this.renderTour(step - 1) : () => this.renderFinish());
 		this.setTitle(current.title);
 		this.renderHeroIcon(current.icon);
 		this.renderBody(current.text, { center: true });
