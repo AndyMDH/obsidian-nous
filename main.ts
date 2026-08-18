@@ -1,6 +1,7 @@
 import { RangeSetBuilder } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import {
+	AbstractInputSuggest,
 	App,
 	FileSystemAdapter,
 	MarkdownView,
@@ -11,6 +12,7 @@ import {
 	PluginSettingTab,
 	Setting,
 	TFile,
+	TFolder,
 	addIcon,
 	requestUrl,
 	requireApiVersion,
@@ -250,6 +252,10 @@ export default class NousPlugin extends Plugin {
 	settings: NousSettings;
 	private inFlight = new Set<string>();
 	private cliRunInProgress = false;
+	// Suppresses the auto-process-on-create listener while importFromNotion()
+	// is bulk-writing files, so a large import doesn't fire one enrichment
+	// run per file. processInbox() runs once, after the whole batch lands.
+	private notionImportInProgress = false;
 	private voiceRecorder: MediaRecorder | null = null;
 	private voiceStream: MediaStream | null = null;
 	private voiceRibbonEl: HTMLElement | null = null;
@@ -396,6 +402,12 @@ export default class NousPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			id: "import-from-notion",
+			name: "Import from Notion",
+			callback: () => new OnboardingModal(this.app, this, "notion-import").open(),
+		});
+
+		this.addCommand({
 			id: "open-settings",
 			name: "Open settings",
 			callback: () => this.openNousSettings(),
@@ -440,7 +452,7 @@ export default class NousPlugin extends Plugin {
 		if (this.settings.autoProcessOnCreate) {
 			this.registerEvent(
 				this.app.vault.on("create", (file) => {
-					if (file instanceof TFile && this.isInInbox(file)) {
+					if (file instanceof TFile && this.isInInbox(file) && !this.notionImportInProgress) {
 						// Dictation/sync tools create then immediately rewrite a
 						// file - let it settle before reading.
 						window.setTimeout(() => void this.processInbox(), 2000);
@@ -1290,6 +1302,68 @@ export default class NousPlugin extends Plugin {
 			"Quick thought after today's kickoff with the new client: they want the reporting dashboard live before the end of next quarter, but their data quality is a mess - half the customer records are missing regions. Maria offered to run a cleanup sprint first. I should sketch the dashboard wireframe this week and check whether we can reuse the ETL setup from the last project.\n"
 		);
 		nousNotice("Dropped a sample note in your inbox - watch it come to life.");
+	}
+
+	// Reads every .md file under a vault folder the user pointed at (their
+	// unzipped Notion "Markdown & CSV" export, dragged into the vault) and
+	// copies each one into the inbox with Notion's ID suffix stripped from
+	// the title. Deliberately does no Notion-specific parsing beyond that -
+	// the text lands in the inbox exactly like any other capture, so the
+	// normal enrichment pipeline tags and structures it. Page links and
+	// images referencing other exported files are not rewritten, so those
+	// won't resolve after import.
+	async importFromNotion(vaultFolderPath: string): Promise<{ imported: number; skipped: number }> {
+		const source = this.app.vault.getFolderByPath(vaultFolderPath);
+		if (!source) throw new Error(`No folder "${vaultFolderPath}" in this vault.`);
+
+		await this.ensureFolderExists(this.settings.inboxFolder);
+
+		const files: TFile[] = [];
+		const collect = (folder: TFolder) => {
+			for (const child of folder.children) {
+				if (child instanceof TFile && child.extension === "md") files.push(child);
+				else if (child instanceof TFolder) collect(child);
+			}
+		};
+		collect(source);
+
+		this.notionImportInProgress = true;
+		let imported = 0;
+		let skipped = 0;
+		try {
+			for (const file of files) {
+				const title = logic.sanitizeFilename(logic.stripNotionIdSuffix(file.basename));
+				const destPath = await this.uniqueInboxPath(title);
+				if (!destPath) {
+					skipped++;
+					continue;
+				}
+				const content = await this.app.vault.read(file);
+				await this.app.vault.create(destPath, content);
+				imported++;
+			}
+		} finally {
+			this.notionImportInProgress = false;
+		}
+
+		// Mid-wizard (not yet onboarded), a provider may not be connected -
+		// finish() runs processInbox() itself once setup completes. Already
+		// set up, run it now so the import doesn't sit there unprocessed.
+		if (imported > 0 && this.settings.onboarded) {
+			void this.processInbox();
+		}
+
+		return { imported, skipped };
+	}
+
+	// Notion re-exports the same workspace with fresh IDs each time, so a
+	// second import of an already-imported page would otherwise silently
+	// duplicate it - skip (not overwrite) anything already sitting in the
+	// inbox under that title.
+	private async uniqueInboxPath(title: string): Promise<string | null> {
+		const path = `${this.settings.inboxFolder}/${title}.md`;
+		if (!(await this.app.vault.adapter.exists(path))) return path;
+		return null;
 	}
 
 	// Drops a #win-tagged capture skeleton in the inbox and opens it for
@@ -3575,6 +3649,27 @@ function registerNousIcons(): void {
 	);
 }
 
+// Type-ahead over the vault's own folders for the Notion-import screen's
+// "which folder did you drag the export into" field - there's no reason to
+// make someone type a path by hand when Obsidian already knows every folder.
+class VaultFolderSuggest extends AbstractInputSuggest<TFolder> {
+	constructor(app: App, inputEl: HTMLInputElement) {
+		super(app, inputEl);
+	}
+
+	protected getSuggestions(query: string): TFolder[] {
+		const q = query.toLowerCase();
+		return this.app.vault
+			.getAllFolders(false)
+			.filter((folder) => folder.path.toLowerCase().includes(q))
+			.slice(0, 50);
+	}
+
+	renderSuggestion(folder: TFolder, el: HTMLElement) {
+		el.setText(folder.path);
+	}
+}
+
 class OnboardingModal extends Modal {
 	private lastCaptureStatus: CapturePrerequisiteStatus | null = null;
 	// The chevron+dots row (docs/NOUS-REDESIGN.md §3, step 1) sits above
@@ -3589,13 +3684,18 @@ class OnboardingModal extends Modal {
 	// "tour" reopens straight to the 60-second walkthrough, skipping setup -
 	// lets a user who is already connected revisit it later without redoing
 	// provider setup. See the "show-tour" command.
-	constructor(app: App, private plugin: NousPlugin, private startAt: "welcome" | "tour" = "welcome") {
+	constructor(
+		app: App,
+		private plugin: NousPlugin,
+		private startAt: "welcome" | "tour" | "notion-import" = "welcome"
+	) {
 		super(app);
 		this.modalEl.addClass("nous-modal");
 	}
 
 	onOpen() {
 		if (this.startAt === "tour") this.renderTour(0);
+		else if (this.startAt === "notion-import") this.renderNotionImport();
 		else this.renderWelcome();
 	}
 
@@ -3745,6 +3845,11 @@ class OnboardingModal extends Modal {
 			sub: "Anthropic, OpenAI, Gemini, or run local",
 			onChoose: () => this.renderConnectChoice(),
 		});
+		this.addModeCard(cards, {
+			title: "Migrating from Notion?",
+			sub: "Import your exported pages first",
+			onChoose: () => this.renderNotionImport(),
+		});
 
 		const themeLink = this.contentEl.createDiv({ cls: "nous-wizard-skip" });
 		themeLink.setAttribute("role", "button");
@@ -3779,6 +3884,60 @@ class OnboardingModal extends Modal {
 			// user's first capture happens to trigger folder creation.
 			await this.plugin.ensureCoreFolders();
 			this.close();
+		});
+	}
+
+	// Reached from Welcome's third card, or the "Import from Notion" command
+	// for users who already finished setup. A one-time bulk import, not an
+	// ongoing sync - see importFromNotion() for exactly what it does and
+	// doesn't do (no property mapping, no link/image rewriting).
+	private renderNotionImport() {
+		this.clear();
+		this.setScreenMode("form");
+		this.setTitle("Import from Notion");
+		this.renderTopRow(0, 4, () => this.renderWelcome());
+		this.renderBody(
+			"In Notion: Settings → Export all workspace content → Markdown & CSV. Unzip it, drag the folder into this vault, then point Nous at it below."
+		);
+
+		let folderPath = "";
+		new Setting(this.contentEl).setName("Folder in your vault").addText((text) => {
+			text.setPlaceholder("e.g. Notion Export");
+			new VaultFolderSuggest(this.app, text.inputEl);
+			text.onChange((value) => {
+				folderPath = value.trim();
+			});
+		});
+
+		this.renderBody(
+			"Imports the text of every page as a new capture, tagged the same way as anything else you drop in the inbox. Notion's page links and images don't carry over yet - just the words."
+		);
+
+		const primary = this.renderPrimary("Import", async () => {
+			if (!folderPath) {
+				nousNotice("Pick a folder first.");
+				return;
+			}
+			primary.setButtonText("Importing…").setDisabled(true);
+			try {
+				const result = await this.plugin.importFromNotion(folderPath);
+				if (result.imported === 0 && result.skipped === 0) {
+					nousNotice(`No Notion pages found in "${folderPath}".`, 8000);
+					primary.setButtonText("Import").setDisabled(false);
+					return;
+				}
+				const parts = [`Imported ${result.imported} note${result.imported === 1 ? "" : "s"}`];
+				if (result.skipped > 0) parts.push(`skipped ${result.skipped} already in your inbox`);
+				const tail = this.plugin.settings.onboarded
+					? "Enriching now."
+					: "Finish setup and they'll be enriched.";
+				nousNotice(`${parts.join(", ")}. ${tail}`, 8000);
+				this.renderWelcome();
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e);
+				nousNotice(`Couldn't import - ${msg}`, 10000);
+				primary.setButtonText("Import").setDisabled(false);
+			}
 		});
 	}
 

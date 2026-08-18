@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.7.0
+
+Import notes from Notion:
+
+- A new "Migrating from Notion?" card on the welcome screen (also an
+  "Import from Notion" command, for anyone who already finished
+  setup). Export your workspace from Notion as Markdown & CSV, unzip
+  it, drag the folder anywhere into your vault, then point Nous at it.
+- Each page's text lands in your inbox with Notion's ID suffix
+  stripped from the title, then goes through the same enrichment
+  every other capture gets - no separate import format to learn.
+  Notion's page links and images don't carry over yet, just the
+  words. Importing the same export twice skips pages already sitting
+  in your inbox instead of duplicating them.
+
 ## 2.6.3
 
 Addressed the plugin health scorecard's biggest finding: `:has()`

@@ -415,6 +415,17 @@ function humanizeWinCategory(category: string): string {
 	return category.charAt(0).toUpperCase() + category.slice(1);
 }
 
+// Notion's Markdown export suffixes every page and database row with a
+// 32-char hex ID, space-separated from the title (`Meeting Notes
+// 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d.md`). Strip it so the imported note's
+// title reads the way it did in Notion.
+const NOTION_ID_SUFFIX = / [0-9a-f]{32}$/i;
+
+export function stripNotionIdSuffix(basename: string): string {
+	const stripped = basename.replace(NOTION_ID_SUFFIX, "").trim();
+	return stripped || basename;
+}
+
 export interface NoteMeta {
 	filename: string;
 	title: string;

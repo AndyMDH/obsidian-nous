@@ -22,6 +22,7 @@ import {
 	isCaptureFile,
 	meetingAttachmentFilename,
 	arrayBufferToBase64,
+	stripNotionIdSuffix,
 } from "../src/logic.ts";
 import type { EnrichResult, WikiSynthesisResult, WinDetails } from "../src/types.ts";
 
@@ -464,4 +465,25 @@ test("clusterByTag excludes fragment-tagged notes from eligibility counting", ()
 	assert.ok(internal);
 	assert.equal(internal.notes.length, 2);
 	assert.ok(!internal.notes.some((n) => n.filename === "b"));
+});
+
+test("stripNotionIdSuffix removes Notion's trailing 32-char hex ID", () => {
+	assert.equal(
+		stripNotionIdSuffix("Meeting Notes 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d"),
+		"Meeting Notes"
+	);
+	assert.equal(
+		stripNotionIdSuffix("Meeting Notes 1A2B3C4D5E6F7A8B9C0D1E2F3A4B5C6D"),
+		"Meeting Notes"
+	);
+});
+
+test("stripNotionIdSuffix leaves ordinary filenames untouched", () => {
+	assert.equal(stripNotionIdSuffix("Q2 Planning"), "Q2 Planning");
+	assert.equal(stripNotionIdSuffix("Notes from 2026-07-01"), "Notes from 2026-07-01");
+});
+
+test("stripNotionIdSuffix falls back to the original when stripping would empty it", () => {
+	const idOnly = " 1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d";
+	assert.equal(stripNotionIdSuffix(idOnly), idOnly);
 });
