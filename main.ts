@@ -156,7 +156,14 @@ function nousNoticeFragment(message: string): DocumentFragment {
 // (OnboardingModal, NousSettingTab, LiveVoiceCaptureModal, QueryModal)
 // that don't hold a plugin reference for this alone.
 function nousNotice(message: string, duration?: number): Notice {
-	return new Notice(nousNoticeFragment(message), duration);
+	const notice = new Notice(nousNoticeFragment(message), duration);
+	// noticeEl over the newer containerEl/messageEl - those need 1.8.7,
+	// this plugin's minAppVersion is 1.6.6. Marks this as ours so CSS can
+	// target it directly instead of :has(.nous-notice-icon), which the
+	// plugin health scanner flags as a real perf risk (broad selector
+	// invalidation re-evaluated on every DOM change).
+	notice.noticeEl.addClass("nous-notice");
+	return notice;
 }
 
 // Electron's renderer exposes a real `require` global (Obsidian runs with
@@ -282,6 +289,59 @@ export default class NousPlugin extends Plugin {
 			const headingLine = lines.findIndex((line) => line.trim() === "## Transcript");
 			if (headingLine === -1 || info.lineStart < headingLine) return;
 			el.addClass("nous-transcript-block");
+		});
+
+		// Reading view: mark the note's own type on .markdown-preview-view
+		// itself (nous-kind-meeting/-wiki/-tag), replacing what used to be
+		// three separate :has(.metadata-property[...]) selector roots
+		// threaded through every note-styling rule below - 105 :has() uses
+		// eliminated (Obsidian's plugin health scanner flags :has() as a
+		// real performance risk: broad selector invalidation on every DOM
+		// change, re-evaluated per rule). Priority mirrors the old
+		// :has()/:not()/:not() logic exactly: topic wins if present (wiki),
+		// else enriched_at (meeting/note), else created alone (tag page) -
+		// safe because the pipeline never writes more than one of these
+		// three to the same note.
+		this.registerMarkdownPostProcessor((el, ctx) => {
+			const previewRoot = el.closest(".markdown-preview-view");
+			if (!previewRoot) return;
+			const fm = ctx.frontmatter as Record<string, unknown> | null | undefined;
+			const kind = fm?.topic !== undefined ? "wiki" : fm?.enriched_at !== undefined ? "meeting" : fm?.created !== undefined ? "tag" : null;
+			previewRoot.classList.remove("nous-kind-meeting", "nous-kind-wiki", "nous-kind-tag");
+			if (kind) previewRoot.classList.add(`nous-kind-${kind}`);
+		});
+
+		// Reading view: tag a block with which named section it's the
+		// heading for, or the content immediately under, replacing the
+		// remaining div:has(> h2[data-heading="X"]) [+ div] selectors -
+		// same :has() performance concern as the kind-tagger above, same
+		// technique as the existing transcript-heading scan below.
+		this.registerMarkdownPostProcessor((el, ctx) => {
+			const info = ctx.getSectionInfo(el);
+			if (!info) return;
+			const lines = info.text.split("\n");
+			const ownLine = lines[info.lineStart]?.trim() ?? "";
+			if (ownLine === "## Related") el.addClass("nous-heading-related");
+
+			let prevNonBlank: string | null = null;
+			for (let i = info.lineStart - 1; i >= 0; i--) {
+				const line = lines[i]?.trim();
+				if (line) {
+					prevNonBlank = line;
+					break;
+				}
+			}
+			if (!prevNonBlank) return;
+			const afterClass: Record<string, string> = {
+				"## Open questions": "nous-after-open-questions",
+				"## Action items": "nous-after-action-items",
+				"## Related": "nous-after-related",
+				"## Timeline": "nous-after-timeline",
+				"## Sources": "nous-after-sources",
+			};
+			const specific = afterClass[prevNonBlank];
+			if (specific) el.addClass(specific);
+			if (prevNonBlank.startsWith("## ")) el.addClass("nous-after-heading");
 		});
 
 		// Editing view: same treatment via line decorations.
@@ -1026,7 +1086,7 @@ export default class NousPlugin extends Plugin {
 			const link = el.createEl("a", { text: "Open Nous settings" });
 			link.addEventListener("click", () => this.openNousSettings());
 		});
-		new Notice(fragment, timeoutMs);
+		new Notice(fragment, timeoutMs).noticeEl.addClass("nous-notice");
 	}
 
 	private getVaultBasePath(): string | null {
