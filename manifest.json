@@ -1,7 +1,7 @@
 {
   "id": "nous",
   "name": "Nous",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "minAppVersion": "1.6.6",
   "description": "Turns meetings, voice notes, photos, and PDFs into a tagged, linked knowledge base - built as context your AI assistant can use.",
   "author": "Andy Ho",
