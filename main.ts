@@ -3949,12 +3949,16 @@ class OnboardingModal extends Modal {
 				} catch (e) {
 					const msg = e instanceof Error ? e.message : String(e);
 					nousNotice(`Couldn't open the folder picker - ${msg}`, 10000);
+					await this.plugin.appendLog(`ERROR: Notion import folder picker - ${msg}`);
 				}
 				return;
 			}
 			primary.setButtonText("Importing…").setDisabled(true);
 			try {
 				const result = await this.plugin.importFromNotion(folderPath);
+				await this.plugin.appendLog(
+					`NOTION IMPORT: ${folderPath} - imported ${result.imported}, skipped ${result.skipped}`
+				);
 				if (result.imported === 0 && result.skipped === 0) {
 					nousNotice("No Notion pages found in that folder.", 8000);
 					primary.setButtonText("Import").setDisabled(false);
@@ -3972,6 +3976,7 @@ class OnboardingModal extends Modal {
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
 				nousNotice(`Couldn't import - ${msg}`, 10000);
+				await this.plugin.appendLog(`ERROR: Notion import from ${folderPath} - ${msg}`);
 				primary.setButtonText("Import").setDisabled(false);
 			}
 		});
