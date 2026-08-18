@@ -47,9 +47,14 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 		},
 		{
 			name: "Voice notes",
+			// Short on purpose - the button right here handles step one, and
+			// step two (also a button, no Terminal needed) only shows up once
+			// step one is done. Still says "two steps," not "download this
+			// and you're set" - the model alone was the exact silent-success
+			// bug this screen used to have.
 			desc: status.voiceReady
 				? "Ready."
-				: "Needs speech-to-text: use Download model below plus \"brew install whisper-cpp\", or add a Gemini/OpenAI key.",
+				: "Needs speech-to-text - two one-click installs, no Terminal.",
 			warning: !status.voiceReady,
 		},
 		{

@@ -5,7 +5,6 @@ import {
 	meetingFilename,
 	wikiFilename,
 	extractFilenameDateHint,
-	snippet,
 	extractTranscriptSnippet,
 	extractEnrichedSections,
 	splitManualNotesFromTranscript,
@@ -45,13 +44,6 @@ test("wikiFilename appends the Wiki suffix to avoid colliding with the tag note"
 test("extractFilenameDateHint finds a leading YYYY-MM-DD", () => {
 	assert.equal(extractFilenameDateHint("2026-07-02 13.45.00.md"), "2026-07-02");
 	assert.equal(extractFilenameDateHint("random-capture.md"), null);
-});
-
-test("snippet strips frontmatter and truncates", () => {
-	const body = `---\ntype: meeting\n---\n${"x".repeat(300)}`;
-	const s = snippet(body, 200);
-	assert.equal(s.length, 203); // 200 chars + "..."
-	assert.ok(!s.includes("type: meeting"));
 });
 
 test("extractTranscriptSnippet pulls from ## Transcript, not the Summary", () => {

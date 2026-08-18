@@ -25,7 +25,6 @@ export interface NousSettings {
 	// additive on top of the existing local-whisper/batch pipeline, which
 	// stays the safety net whenever this is off, unavailable, or fails.
 	liveTranscriptionEnabled: boolean;
-	styledNotes: boolean;
 	inboxFolder: string;
 	meetingsFolder: string;
 	wikisFolder: string;
@@ -87,7 +86,6 @@ export const DEFAULT_SETTINGS: NousSettings = {
 	whisperModelPath: "",
 	nativeRecorderPath: "nous-recorder",
 	liveTranscriptionEnabled: false,
-	styledNotes: true,
 	inboxFolder: "00-Inbox",
 	meetingsFolder: "10-Notes",
 	wikisFolder: "30-Wikis",

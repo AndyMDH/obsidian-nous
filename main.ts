@@ -127,6 +127,11 @@ const AGENT_CLI_TIMEOUT_MS = 15 * 60 * 1000;
 // the connection...") from spinning forever with no error and no way for
 // the user to tell what went wrong.
 const QUICK_CLI_TIMEOUT_MS = 15 * 1000;
+// `brew install whisper-cpp` is usually well under a minute (a small,
+// bottled formula) but can run longer compiling from source or on a slow
+// connection - generous, but still bounded, so a genuinely stuck install
+// doesn't wait forever with no way out beyond quitting Obsidian.
+const WHISPER_CLI_INSTALL_TIMEOUT_MS = 5 * 60 * 1000;
 // afconvert (CoreAudio) can read AIFF/WAV/CAF/M4A/MP3 but not WebM/Opus, so
 // local transcription silently fails if the browser records WebM (Chromium's
 // default with no mimeType hint) - ask for an afconvert-readable container
@@ -177,6 +182,18 @@ function nousNotice(message: string, duration?: number): Notice {
 	// invalidation re-evaluated on every DOM change).
 	notice.noticeEl.addClass("nous-notice");
 	return notice;
+}
+
+// Shared by every place a whisper install button exists (Settings, the
+// recording popup, the setup checklist) - a single definition instead of
+// three nearly-identical copies of "add a quiet Cancel button right after
+// this one." A free function since, like nousNotice above, the call sites
+// are spread across unrelated Modal/PluginSettingTab classes.
+function attachCancelButton(afterEl: HTMLElement, onCancel: () => void): HTMLButtonElement {
+	const cancel = createEl("button", { cls: "nous-numbered-cancel", text: "Cancel" });
+	afterEl.insertAdjacentElement("afterend", cancel);
+	cancel.addEventListener("click", onCancel);
+	return cancel;
 }
 
 // A folder dropped straight into the inbox (e.g. an entire GitHub repo
@@ -370,7 +387,7 @@ export default class NousPlugin extends Plugin {
 	async onload() {
 		registerNousIcons();
 		await this.loadSettings();
-		document.body.toggleClass("nous-styled-notes", this.settings.styledNotes);
+		document.body.addClass("nous-styled-notes");
 		this.register(() => document.body.removeClass("nous-styled-notes"));
 
 		// Reading view: tag every block at or below the "## Transcript"
@@ -757,8 +774,19 @@ export default class NousPlugin extends Plugin {
 	// thing in memory - the small model is ~466MB, still sizable), verify,
 	// then rename into place. The VAD model rides along but its failure is
 	// non-fatal.
+	// Set right before a download starts, checked from inside the progress
+	// callback so cancelWhisperDownload() can interrupt an in-flight request
+	// (a ~466MB transfer is not instant, and until this there was no way to
+	// back out of one once started).
+	private whisperDownloadCancelled = false;
+
+	cancelWhisperDownload(): void {
+		this.whisperDownloadCancelled = true;
+	}
+
 	async downloadWhisperModels(onProgress: (text: string) => void): Promise<string> {
 		if (!Platform.isMacOS) throw new Error("Local whisper transcription is macOS-only.");
+		this.whisperDownloadCancelled = false;
 		const { fs, os, path } = await loadNodeModules();
 		const dir = path.join(os.homedir(), ...WHISPER_MODELS_DIR_SEGMENTS);
 		await fs.mkdir(dir, { recursive: true });
@@ -770,6 +798,7 @@ export default class NousPlugin extends Plugin {
 				if (source.required) installedPath = target;
 				continue;
 			}
+			if (this.whisperDownloadCancelled) throw new Error("cancelled");
 			try {
 				const pointerResponse = await requestUrl({ url: source.pointerUrl, method: "GET", throw: false });
 				if (pointerResponse.status >= 400) throw new Error(`checksum fetch failed (${pointerResponse.status})`);
@@ -782,6 +811,7 @@ export default class NousPlugin extends Plugin {
 				if (source.required) installedPath = target;
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
+				if (msg === "cancelled") throw e;
 				if (source.required) throw new Error(`could not download ${source.filename}: ${msg}`);
 				await this.appendLog(`WARN: optional VAD model download failed: ${msg}`);
 			}
@@ -795,23 +825,131 @@ export default class NousPlugin extends Plugin {
 		return installedPath;
 	}
 
-	// Shared by the settings tab and the setup wizard: one persistent notice
-	// that live-updates with progress, then a terse outcome line (detail goes
-	// to the log, per the project's notice style).
-	async downloadWhisperModelsWithNotice(): Promise<boolean> {
-		const notice = nousNotice("Fetching your speech model…", 0);
+	// Shared control-flow for "long-running task behind a persistent notice
+	// that can be cancelled" - the model download and the whisper-cli install
+	// both open a notice, update it on success/cancel/failure, log failures,
+	// and fade the notice out after a delay. Written out in full twice before
+	// this consolidated the skeleton into one place; only the wording (and,
+	// for the download, live byte progress) varies per call site.
+	private async runCancellableTaskWithNotice(
+		startMessage: string,
+		task: (onProgress: (text: string) => void) => Promise<unknown>,
+		messages: { success: string; cancelled: string; failure: (detail: string) => string },
+		logPrefix: string
+	): Promise<boolean> {
+		const notice = nousNotice(startMessage, 0);
 		try {
-			await this.downloadWhisperModels((text) => notice.setMessage(nousNoticeFragment(text)));
-			notice.setMessage(nousNoticeFragment("Speech model installed - your voice notes now transcribe right here on your Mac."));
+			await task((text) => notice.setMessage(nousNoticeFragment(text)));
+			notice.setMessage(nousNoticeFragment(messages.success));
 			window.setTimeout(() => notice.hide(), 8000);
 			return true;
 		} catch (e) {
 			const msg = e instanceof Error ? e.message : String(e);
-			await this.appendLog(`ERROR: speech-model download failed: ${msg}`);
-			notice.setMessage(nousNoticeFragment("model download failed - more in your Nous log"));
-			window.setTimeout(() => notice.hide(), 10000);
+			if (msg === "cancelled") {
+				notice.setMessage(nousNoticeFragment(messages.cancelled));
+				window.setTimeout(() => notice.hide(), 6000);
+				return false;
+			}
+			await this.appendLog(`ERROR: ${logPrefix}: ${msg}`);
+			notice.setMessage(nousNoticeFragment(messages.failure(msg)));
+			window.setTimeout(() => notice.hide(), 12000);
 			return false;
 		}
+	}
+
+	async downloadWhisperModelsWithNotice(): Promise<boolean> {
+		return this.runCancellableTaskWithNotice(
+			"Fetching your speech model…",
+			(onProgress) => this.downloadWhisperModels(onProgress),
+			{
+				success: "Speech model installed - your voice notes now transcribe right here on your Mac.",
+				cancelled: "Download cancelled.",
+				failure: () => "model download failed - more in your Nous log",
+			},
+			"speech-model download failed"
+		);
+	}
+
+	// Set right before the install starts, checked from the child-process
+	// callback so a real "SIGTERM because timed out" can be told apart from
+	// "SIGTERM because cancelWhisperCliInstall() was called" - both look
+	// identical to Node's error.killed otherwise.
+	private whisperCliInstallCancelled = false;
+	private whisperCliInstallChild: import("child_process").ChildProcess | null = null;
+
+	cancelWhisperCliInstall(): void {
+		this.whisperCliInstallCancelled = true;
+		this.whisperCliInstallChild?.kill();
+	}
+
+	// A dedicated execFile call rather than going through the shared
+	// cliExec() - this needs to hold onto the child process for
+	// cancelWhisperCliInstall() to kill, and threading a cancel token
+	// through cliExec's shared type would touch every other caller
+	// (claude, whisper-cli --help, the recorder) for the sake of the one
+	// call site that actually needs it.
+	async installWhisperCli(): Promise<void> {
+		if (!Platform.isMacOS) throw new Error("Local whisper transcription is macOS-only.");
+		this.whisperCliInstallCancelled = false;
+		const { execFile, os } = await loadNodeModules();
+		const env = this.cliEnv();
+
+		const brewCheck = await this.cliExec("brew", ["--version"], {
+			cwd: os.tmpdir(),
+			env,
+			timeoutMs: QUICK_CLI_TIMEOUT_MS,
+		});
+		if (brewCheck.code !== 0) {
+			throw new Error('Homebrew is not installed - install it from brew.sh, then try again.');
+		}
+
+		await new Promise<void>((resolve, reject) => {
+			const child = execFile(
+				"brew",
+				["install", "whisper-cpp"],
+				{
+					cwd: os.tmpdir(),
+					env,
+					maxBuffer: 20 * 1024 * 1024,
+					timeout: WHISPER_CLI_INSTALL_TIMEOUT_MS,
+					killSignal: "SIGTERM",
+				},
+				(error, stdout, stderr) => {
+					this.whisperCliInstallChild = null;
+					if (!error) {
+						resolve();
+						return;
+					}
+					if (this.whisperCliInstallCancelled) {
+						reject(new Error("cancelled"));
+						return;
+					}
+					const detail = (stderr?.toString().trim() || stdout?.toString().trim() || error.message).slice(0, 300);
+					reject(new Error(detail || "(no output)"));
+				}
+			);
+			this.whisperCliInstallChild = child;
+			child.stdin?.end();
+		});
+
+		if (!(await this.hasWhisperCli())) {
+			throw new Error(
+				'Install finished, but "whisper-cli" still is not runnable - check Settings → Nous → Advanced settings → Whisper CLI path.'
+			);
+		}
+	}
+
+	async installWhisperCliWithNotice(): Promise<boolean> {
+		return this.runCancellableTaskWithNotice(
+			"Installing local transcription… this can take a minute or two.",
+			() => this.installWhisperCli(),
+			{
+				success: "Local transcription installed.",
+				cancelled: "Install cancelled.",
+				failure: (detail) => `Install didn't work - ${detail}`,
+			},
+			"whisper-cli install failed"
+		);
 	}
 
 	private async streamDownloadToFile(
@@ -849,6 +987,15 @@ export default class NousPlugin extends Plugin {
 					let received = 0;
 					let lastReported = 0;
 					response.on("data", (chunk: Buffer) => {
+						// Checked here, not just between files - a single model is
+						// ~466MB, so cancelWhisperDownload() has to be able to
+						// interrupt a transfer already in progress, not just stop
+						// the next one from starting.
+						if (this.whisperDownloadCancelled) {
+							request.destroy();
+							reject(new Error("cancelled"));
+							return;
+						}
 						hash.update(chunk);
 						received += chunk.length;
 						// Progress at most every ~16 MB so the UI update itself
@@ -1278,6 +1425,16 @@ export default class NousPlugin extends Plugin {
 		return this.app.vault.adapter instanceof FileSystemAdapter
 			? this.app.vault.adapter.getBasePath()
 			: null;
+	}
+
+	// The same "bail with a notice" guard three CLI-mode entry points each
+	// wrote out by hand (processInboxViaCli, runWikiBuilderCli,
+	// runVaultQuery) - one definition instead of three copies of the exact
+	// same message that could drift if only one ever got edited.
+	private requireVaultBasePath(): string | null {
+		const basePath = this.getVaultBasePath();
+		if (!basePath) nousNotice("Couldn't find your vault's file path.", 10000);
+		return basePath;
 	}
 
 	// Named allowlist rather than spreading all of process.env - the CLI only
@@ -1714,24 +1871,30 @@ export default class NousPlugin extends Plugin {
 		}
 		if (this.voiceStatusBarEl) {
 			if (recording) {
-				const startedAt = Date.now();
-				const tick = () => {
-					if (!this.voiceStatusBarEl) return;
-					const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-					this.renderStatusBarState(
-						this.voiceStatusBarEl,
-						"nous-recording",
-						logic.formatRecordingElapsed(elapsed),
-						{ pulse: true }
-					);
-				};
-				tick();
-				this.voiceRecordingTimer = window.setInterval(tick, 1000);
+				this.startRecordingElapsedTimer(this.voiceStatusBarEl, (id) => {
+					this.voiceRecordingTimer = id;
+				});
 				this.voiceStatusBarEl.show();
 			} else {
 				this.voiceStatusBarEl.hide();
 			}
 		}
+	}
+
+	// Shared by both indicators - the only differences between voice and
+	// meeting recording were the ribbon icon/label and the hide condition,
+	// both handled by the callers already, so this is just the elapsed-time
+	// tick both used to duplicate.
+	private startRecordingElapsedTimer(statusBarEl: HTMLElement, setTimer: (id: number) => void) {
+		const startedAt = Date.now();
+		const tick = () => {
+			const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+			this.renderStatusBarState(statusBarEl, "nous-recording", logic.formatRecordingElapsed(elapsed), {
+				pulse: true,
+			});
+		};
+		tick();
+		setTimer(window.setInterval(tick, 1000));
 	}
 
 	// One button for full meeting capture (both sides of a call). Obsidian's
@@ -2031,15 +2194,12 @@ export default class NousPlugin extends Plugin {
 			}
 
 			await this.ensureFolderExists(this.settings.inboxFolder);
-			let notePath: string;
 			const content = buildCompletedNativeRecordingNote(transcript.stamp, transcript.transcript, manualNotes);
-			if (liveFile) {
-				await this.app.vault.modify(liveFile, content);
-				notePath = liveFile.path;
-			} else {
-				notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${transcript.stamp} Meeting transcript.md`);
-				await this.app.vault.create(notePath, content);
-			}
+			const notePath = await this.writeNativeMeetingNote(
+				liveFile,
+				content,
+				`${transcript.stamp} Meeting transcript.md`
+			);
 			await this.appendLog(`TRANSCRIBED: ${path.basename(recordingDir)} -> ${notePath}`);
 			await this.archiveNativeRecording(recordingDir);
 			if (liveFile || !this.settings.autoProcessOnCreate) void this.processInbox();
@@ -2142,20 +2302,30 @@ export default class NousPlugin extends Plugin {
 		const { path } = await loadNodeModules();
 		await this.ensureFolderExists(this.settings.inboxFolder);
 		const stamp = this.meetingStampFromRecordingDir(recordingDir);
-		let notePath: string;
 		const content = buildPendingNativeRecordingNote(recordingDir, stamp, manualNotes);
-		if (liveFile) {
-			await this.app.vault.modify(liveFile, content);
-			notePath = liveFile.path;
-		} else {
-			notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${stamp} Meeting recording needs transcription.md`);
-			await this.app.vault.create(notePath, content);
-		}
+		const notePath = await this.writeNativeMeetingNote(
+			liveFile,
+			content,
+			`${stamp} Meeting recording needs transcription.md`
+		);
 		await this.appendLog(`PENDING: ${path.basename(recordingDir)} needs speech-to-text setup -> ${notePath}`);
 		nousNotice(
 			"Recording saved! Set up speech-to-text later, then run 'Nous: Process inbox now' to finish it off.",
 			12000
 		);
+	}
+
+	// Shared by both the completed and pending native-recording notes: a live
+	// note open for questions during the recording becomes the note itself
+	// (in place), otherwise a fresh file is created in the inbox.
+	private async writeNativeMeetingNote(liveFile: TFile | null, content: string, fallbackFilename: string): Promise<string> {
+		if (liveFile) {
+			await this.app.vault.modify(liveFile, content);
+			return liveFile.path;
+		}
+		const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${fallbackFilename}`);
+		await this.app.vault.create(notePath, content);
+		return notePath;
 	}
 
 	private async markLiveNativeMeetingNoteProblem(
@@ -2282,19 +2452,9 @@ export default class NousPlugin extends Plugin {
 		if (this.meetingStatusBarEl) {
 			if (recording) {
 				this.meetingTranscribing = false;
-				const startedAt = Date.now();
-				const tick = () => {
-					if (!this.meetingStatusBarEl) return;
-					const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-					this.renderStatusBarState(
-						this.meetingStatusBarEl,
-						"nous-recording",
-						logic.formatRecordingElapsed(elapsed),
-						{ pulse: true }
-					);
-				};
-				tick();
-				this.meetingRecordingTimer = window.setInterval(tick, 1000);
+				this.startRecordingElapsedTimer(this.meetingStatusBarEl, (id) => {
+					this.meetingRecordingTimer = id;
+				});
 				this.meetingStatusBarEl.show();
 			} else if (!this.meetingTranscribing) {
 				this.meetingStatusBarEl.hide();
@@ -2422,11 +2582,8 @@ export default class NousPlugin extends Plugin {
 			this.cliRerunQueued = true;
 			return;
 		}
-		const basePath = this.getVaultBasePath();
-		if (!basePath) {
-			nousNotice("Couldn't find your vault's file path.", 10000);
-			return;
-		}
+		const basePath = this.requireVaultBasePath();
+		if (!basePath) return;
 
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		const hasFiles = folder && collectFilesRecursive(folder, (f) => logic.isCaptureFile(f.extension)).length > 0;
@@ -2574,11 +2731,8 @@ export default class NousPlugin extends Plugin {
 	}
 
 	private async runWikiBuilderCli() {
-		const basePath = this.getVaultBasePath();
-		if (!basePath) {
-			nousNotice("Couldn't find your vault's file path.", 10000);
-			return;
-		}
+		const basePath = this.requireVaultBasePath();
+		if (!basePath) return;
 		await this.ensureSkillsInstalled();
 		const before = await this.readLogLineCount();
 		const result = await this.cliExec(
@@ -2604,11 +2758,8 @@ export default class NousPlugin extends Plugin {
 			nousNotice("Vault search needs CLI mode - switch it in settings → Nous.", 10000);
 			return;
 		}
-		const basePath = this.getVaultBasePath();
-		if (!basePath) {
-			nousNotice("Couldn't find your vault's file path.", 10000);
-			return;
-		}
+		const basePath = this.requireVaultBasePath();
+		if (!basePath) return;
 		await this.ensureSkillsInstalled();
 		nousNotice("Searching your vault…");
 		const result = await this.cliExec(
@@ -3636,17 +3787,23 @@ class NousSettingTab extends PluginSettingTab {
 								return;
 							}
 							if (hasModel && !hasCli) {
-								setting.setDesc(
-									'Model downloaded. One more step: run "brew install whisper-cpp" in Terminal, then reopen this tab.'
+								setting.setDesc("Model downloaded. One more step, installed automatically:");
+								setting.addButton((b) =>
+									b.setButtonText("Install").setCta().onClick(() => {
+										b.setDisabled(true).setButtonText("Installing…");
+										attachCancelButton(b.buttonEl, () => this.plugin.cancelWhisperCliInstall());
+										void this.plugin.installWhisperCliWithNotice().finally(() => this.update());
+									})
 								);
 								return;
 							}
 							setting.setDesc(
-								'One download (~466 MB), fully private. Also needs one Terminal command: "brew install whisper-cpp".'
+								'One download (~466 MB), fully private. Also installed automatically, in one more step after.'
 							);
 							setting.addButton((b) =>
 								b.setButtonText("Download model").setCta().onClick(() => {
-									b.setDisabled(true);
+									b.setDisabled(true).setButtonText("Downloading…");
+									attachCancelButton(b.buttonEl, () => this.plugin.cancelWhisperDownload());
 									void this.plugin.downloadWhisperModelsWithNotice().finally(() => this.update());
 								})
 							);
@@ -3791,17 +3948,42 @@ class VoiceCaptureSetupModal extends Modal {
 			void Promise.all([this.plugin.hasWhisperModel(), this.plugin.hasWhisperCli()]).then(
 				([hasModel, hasCli]) => {
 					if (hasModel && !hasCli) {
-						setting.setDesc(
-							'Model already downloaded. One more step: run "brew install whisper-cpp" in Terminal, then try recording again.'
+						setting.setDesc("Model already downloaded. One more step, installed automatically:");
+						setting.addButton((button) =>
+							button.setButtonText("Install").setCta().onClick(() => {
+								button.setDisabled(true).setButtonText("Installing…");
+								const cancel = attachCancelButton(button.buttonEl, () =>
+									this.plugin.cancelWhisperCliInstall()
+								);
+								void this.plugin.installWhisperCliWithNotice().then((ok) => {
+									if (ok) {
+										this.close();
+										return;
+									}
+									cancel.remove();
+									button.setDisabled(false).setButtonText("Install");
+								});
+							})
 						);
 						return;
 					}
-					setting.setDesc('One download (~466 MB). Fully private. Also needs one Terminal command: "brew install whisper-cpp".');
+					setting.setDesc('One download (~466 MB). Fully private. Also installed automatically, in one more step after.');
 					setting.addButton((button) =>
 						button.setButtonText("Download model").setCta().onClick(() => {
-							button.setDisabled(true);
-							this.close();
-							void this.plugin.downloadWhisperModelsWithNotice();
+							// Stays open instead of closing immediately - closing
+							// right away left the only way to cancel a ~466MB
+							// transfer already in flight as a floating notice with
+							// no obvious button on it.
+							button.setDisabled(true).setButtonText("Downloading…");
+							const cancel = attachCancelButton(button.buttonEl, () => this.plugin.cancelWhisperDownload());
+							void this.plugin.downloadWhisperModelsWithNotice().then((ok) => {
+								if (ok) {
+									this.close();
+									return;
+								}
+								cancel.remove();
+								button.setDisabled(false).setButtonText("Download model");
+							});
 						})
 					);
 				}
@@ -4315,7 +4497,7 @@ class OnboardingModal extends Modal {
 				.addOption("openai", "OpenAI")
 				.addOption("gemini", "Gemini")
 				.addOption("glm", "GLM (Z.ai)")
-				.addOption("local", "Local (e.g. Ollama)")
+				.addOption("local", "Local (OpenAI-compatible, e.g. Ollama)")
 				.setValue(provider())
 				.onChange(async (value) => {
 					this.plugin.settings.apiProvider = value as ApiProvider;
@@ -4523,9 +4705,25 @@ class OnboardingModal extends Modal {
 							([hasModel, hasCli]) => {
 								if (hasModel && hasCli) return;
 								if (hasModel && !hasCli) {
-									actions.createSpan({
-										cls: "nous-numbered-hint",
-										text: 'Model downloaded - one more step: run "brew install whisper-cpp" in Terminal.',
+									const installButton = actions.createEl("button", {
+										cls: "mod-cta",
+										text: "Install",
+									});
+									installButton.addEventListener("click", () => {
+										void (async () => {
+											installButton.textContent = "Installing…";
+											installButton.disabled = true;
+											const cancel = attachCancelButton(installButton, () =>
+												this.plugin.cancelWhisperCliInstall()
+											);
+											const ok = await this.plugin.installWhisperCliWithNotice();
+											cancel.remove();
+											if (ok) this.renderCapturePrerequisites();
+											else {
+												installButton.textContent = "Install";
+												installButton.disabled = false;
+											}
+										})();
 									});
 									return;
 								}
@@ -4537,7 +4735,9 @@ class OnboardingModal extends Modal {
 									void (async () => {
 										button.textContent = "Downloading…";
 										button.disabled = true;
+										const cancel = attachCancelButton(button, () => this.plugin.cancelWhisperDownload());
 										const ok = await this.plugin.downloadWhisperModelsWithNotice();
+										cancel.remove();
 										if (ok) this.renderCapturePrerequisites();
 										else {
 											button.textContent = "Download model";

@@ -76,11 +76,6 @@ function truncate(text: string, maxChars: number): string {
 		: collapsed;
 }
 
-// First ~200 chars of raw body, frontmatter stripped.
-export function snippet(body: string, maxChars = 200): string {
-	return truncate(body.replace(/^---\n[\s\S]*?\n---\n/, ""), maxChars);
-}
-
 // Callout marker for the collapsed Transcript section - present in every
 // note written since the collapsed-transcript change; legacy notes still
 // have the plain "## Transcript" heading until migrated (or forever, if a

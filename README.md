@@ -70,7 +70,7 @@ macOS-only. Live voice transcription (beta) needs an OpenAI key.
 | 🔗 | **Automatic links** | Related notes connect to each other without manual work. |
 | 📖 | **Self-updating wikis** | Once a topic has enough notes, Nous writes and maintains a wiki page for it. |
 | 🔒 | **Local-first** | Claude Code CLI, local speech-to-text, and Ollama keep data on your machine — API keys are optional. |
-| 🎨 | **An editorial look, on by default** | Notes render with a chip header, small-caps sections, and a folded transcript instead of a raw properties table. Opt into the full vault-wide theme in Settings → Nous → Appearance — see [the Nous look](docs/USAGE.md#the-nous-look). |
+| 🎨 | **An editorial look, on by default** | Notes render with a chip header, small-caps sections, and a folded transcript instead of a raw properties table. Add the matching Warm Paper theme from the setup wizard's welcome screen - see [the Nous look](docs/USAGE.md#the-nous-look). |
 
 ## Your vault as AI context
 
@@ -101,12 +101,12 @@ notes from Notion? Pick that card instead - it imports your export directly
 into the pipeline.)
 
 The wizard then checks two optional things: voice notes and meeting capture.
-Both need local speech-to-text, set up in two steps: download a speech model
-in the wizard (one click, about 466 MB), then run one command in Terminal
-(`brew install whisper-cpp`). Text, images, and PDFs work right away, with no
-setup. Skip voice and meeting setup for now if you want - finish it later in
-Settings → Nous. The wizard also offers a one-click Warm Paper theme install,
-for Nous's own look across the rest of Obsidian.
+Both need local speech-to-text - two one-click installs in the wizard (a
+~466MB model, then the engine that runs it), no Terminal involved. Text,
+images, and PDFs work right away, with no setup. Skip voice and meeting setup
+for now if you want - finish it later in Settings → Nous. The wizard also
+offers a one-click Warm Paper theme install, for Nous's own look across the
+rest of Obsidian.
 
 <p align="center">
   <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav.svg">
@@ -147,9 +147,8 @@ change each one in Settings → Nous.
 - **Voice transcription has two paths.** With a Gemini or OpenAI key, there
   is nothing to install - the key is used only for speech-to-text. For the
   fully private path, [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
-  runs on your Mac and your voice never leaves it: setup downloads the
-  speech model in one click, and `brew install whisper-cpp` is the one
-  terminal command in the whole product.
+  runs on your Mac and your voice never leaves it - setup installs it in two
+  clicks (model, then engine), no Terminal needed.
 - **The native `nous-recorder` helper records meetings on macOS** (setup
   installs it). When the recording starts, Nous opens a live note for your
   questions. When you stop, an online call becomes a `Me:`/`Them:`

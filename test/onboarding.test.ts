@@ -34,7 +34,7 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 			["Meeting capture", true],
 		]
 	);
-	assert.match(items[1].desc, /Download model|Gemini\/OpenAI/);
+	assert.match(items[1].desc, /speech-to-text/i);
 	assert.match(items[2].desc, /native recorder/i);
 	assert.match(items[2].desc, /click Install below/);
 });
@@ -47,20 +47,18 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 // (the two-piece check lives in main.ts's hasAudioTranscriptionBackend(),
 // which isn't unit-testable without spawning a process) - what's testable,
 // and what must never regress, is that the copy shown for "not ready" keeps
-// naming the whisper-cli step and not just the model download.
-test("voice notes not-ready copy names the whisper-cli install step, not just the model download", () => {
+// signaling two separate steps, not just the model download (the model
+// alone was the exact silent-success bug this screen used to have).
+test("voice notes not-ready copy names two steps, not just the model download", () => {
 	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "unsupported" });
 	assert.equal(items[1].warning, true);
-	assert.match(items[1].desc, /whisper-cpp/);
-	assert.match(items[1].desc, /Download model/);
+	assert.match(items[1].desc, /two/i);
+	assert.match(items[1].desc, /install/i);
 });
 
-test("voice notes not-ready copy is the exact two-piece message (catches silent reverts to a one-piece check)", () => {
+test("voice notes not-ready copy is the exact short two-step message (catches silent reverts to a one-piece check)", () => {
 	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "unsupported" });
-	assert.equal(
-		items[1].desc,
-		'Needs speech-to-text: use Download model below plus "brew install whisper-cpp", or add a Gemini/OpenAI key.'
-	);
+	assert.equal(items[1].desc, "Needs speech-to-text - two one-click installs, no Terminal.");
 });
 
 test("capture prerequisite checklist distinguishes native recorder readiness", () => {

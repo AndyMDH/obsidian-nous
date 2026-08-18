@@ -570,10 +570,28 @@
 .nous-numbered-actions {
 	flex-shrink: 0;
 	align-self: center;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 .nous-numbered-hint {
 	font-size: 12px;
 	color: var(--nous-muted);
+}
+/* A quiet text button, not a second CTA - sits next to the download button
+   only while a download is actually in progress, so a ~466MB transfer has
+   a real way to back out instead of none at all. */
+.nous-numbered-cancel {
+	background: none;
+	border: none;
+	box-shadow: none;
+	padding: 0;
+	font-size: 12px;
+	color: var(--nous-muted);
+	cursor: pointer;
+}
+.nous-numbered-cancel:hover {
+	color: var(--nous-text);
 }
 
 /* Every other setting row in the wizard (mode cards' skip row spacing,
@@ -884,8 +902,8 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Styled Nous notes (docs/NOUS-REDESIGN.md §5, settings toggle, default
-   on). Scoped strictly to notes Nous generates: meeting/note pages carry
+/* Styled Nous notes (docs/NOUS-REDESIGN.md §5, always on). Scoped strictly
+   to notes Nous generates: meeting/note pages carry
    enriched_at, wikis carry topic, tag pages carry created but neither of
    those two - hand-written notes are never touched.
    Three note-type selector roots, reused throughout this section: */
