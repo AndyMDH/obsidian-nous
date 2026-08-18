@@ -3,7 +3,6 @@ import { strict as assert } from "node:assert";
 import {
 	MEETING_RECORDER_MISSING_NOTICE,
 	ONBOARDING_PREREQUISITES_TEXT,
-	VOICE_TRANSCRIPTION_SETUP_NOTICE,
 	capturePrerequisitesContinueText,
 	capturePrerequisiteItems,
 	hasGeminiOrOpenAiTranscriptionKey,
@@ -21,19 +20,19 @@ test("voice transcription fallback accepts only Gemini or OpenAI keys", () => {
 });
 
 test("new-user copy says voice notes need speech-to-text setup", () => {
-	for (const text of [ONBOARDING_PREREQUISITES_TEXT, VOICE_TRANSCRIPTION_SETUP_NOTICE]) {
-		assert.match(text, /speech-to-text|whisper\.cpp|Gemini\/OpenAI|Gemini or OpenAI/i);
-	}
-	// The notice itself is deliberately terse - it must point at the fix, not
-	// explain the whole backend story.
-	assert.match(VOICE_TRANSCRIPTION_SETUP_NOTICE, /Settings → Nous → Voice capture/);
+	assert.match(ONBOARDING_PREREQUISITES_TEXT, /speech-to-text|whisper\.cpp|Gemini\/OpenAI|Gemini or OpenAI/i);
 });
 
 test("new-user copy sends meeting capture to the native recorder first", () => {
 	assert.match(ONBOARDING_PREREQUISITES_TEXT, /native/);
 	assert.match(ONBOARDING_PREREQUISITES_TEXT, /saves the recording|finishes it later/);
-	// Terse notice: names the problem and points at the exact settings path.
-	assert.match(MEETING_RECORDER_MISSING_NOTICE, /Meeting capture → Install/);
+});
+
+// Regression guard: this notice is shown via settingsNotice(), which already
+// appends its own clickable "Open Nous settings" link - the text must not
+// re-spell the click-path too, or the same bubble says "go here" twice.
+test("meeting recorder missing notice stays terse - settingsNotice's own link handles navigation", () => {
+	assert.equal(MEETING_RECORDER_MISSING_NOTICE, "Meeting recorder isn't installed yet.");
 });
 
 test("capture prerequisite checklist marks missing optional capture setup", () => {

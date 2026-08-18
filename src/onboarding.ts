@@ -1,8 +1,7 @@
-export const VOICE_TRANSCRIPTION_SETUP_NOTICE =
-	"Speech-to-text isn't set up yet - one click in Settings → Nous → Voice capture fixes it.";
-
-export const MEETING_RECORDER_MISSING_NOTICE =
-	"Meeting recorder isn't installed yet - Settings → Nous → Meeting capture → Install.";
+// Shown via settingsNotice(), which already appends its own clickable "Open
+// Nous settings" link - spelling out the click-path in the text too was
+// redundant on top of that link (two ways to say "go here" in one bubble).
+export const MEETING_RECORDER_MISSING_NOTICE = "Meeting recorder isn't installed yet.";
 
 export const ONBOARDING_PREREQUISITES_TEXT =
 	"Text, images, and PDFs work after that choice. Voice notes also need speech-to-text: local whisper.cpp on macOS, or a Gemini/OpenAI key used only for transcription. For meetings on macOS, install the native Nous recorder. If speech-to-text is not ready yet, Nous still saves the recording and finishes it later.";

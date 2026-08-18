@@ -104,6 +104,12 @@ import type { SkillFolders } from "./src/skillTemplates";
 
 const LOG_FOLDER = ".nous";
 const LOG_FILE = `${LOG_FOLDER}/pipeline.log`;
+// appendLog() had no cap at all - a full read-modify-write of the whole
+// file, every single line, forever, with the file only ever growing. Kept
+// generous (a few thousand lines is still a small text file) since this log
+// is the one real debugging tool for CLI mode, where the plugin can't see
+// what the `claude` agent itself did.
+const LOG_MAX_LINES = 5000;
 
 // "local" never has a key (it's a reachable-server URL, not a credential) -
 // excluded from secretStorage handling in loadSettings()/saveSettings().
@@ -359,6 +365,14 @@ export default class NousPlugin extends Plugin {
 	// transcribeAudio() call entirely. Keyed by vault path, one-shot: read
 	// and deleted by whichever pipeline branch consumes it.
 	private liveTranscripts = new Map<string, string>();
+	// A pending-transcription note gets rescanned on every processInbox()
+	// run - which fires very often (every new capture, every app open) - so
+	// without this, "waiting on speech-to-text" repeated as a fresh notice
+	// bubble every single time, for as long as the note stayed pending. One
+	// notice per file per Obsidian session is enough; the note's own body
+	// already explains what to do permanently, so nothing is lost by not
+	// repeating the toast.
+	private notifiedPendingTranscription = new Set<string>();
 	// Not private: LiveVoiceCaptureModal clears this on its own onClose (all
 	// close paths - Stop, Cancel, Esc/click-outside - route through there).
 	liveCaptureModal: LiveVoiceCaptureModal | null = null;
@@ -1325,10 +1339,27 @@ export default class NousPlugin extends Plugin {
 		}
 		if (await this.app.vault.adapter.exists(LOG_FILE)) {
 			const existing = await this.app.vault.adapter.read(LOG_FILE);
-			await this.app.vault.adapter.write(LOG_FILE, existing + line);
+			const lines = existing.split("\n").filter((l) => l.length > 0);
+			lines.push(line.trimEnd());
+			// Trim from the front once over the cap, rather than letting a
+			// personal-vault log file grow without bound forever.
+			const kept = lines.length > LOG_MAX_LINES ? lines.slice(-LOG_MAX_LINES) : lines;
+			await this.app.vault.adapter.write(LOG_FILE, kept.join("\n") + "\n");
 		} else {
 			await this.app.vault.adapter.write(LOG_FILE, line);
 		}
+	}
+
+	// CLI mode's meeting-enricher/wiki-builder skills append to the log
+	// directly via Bash, per src/skillTemplates.ts's instructions - entirely
+	// outside appendLog() above, so its cap alone can't bound a vault that's
+	// mostly used in CLI mode. Called once before each CLI run instead.
+	private async trimLogIfNeeded(): Promise<void> {
+		if (!(await this.app.vault.adapter.exists(LOG_FILE))) return;
+		const existing = await this.app.vault.adapter.read(LOG_FILE);
+		const lines = existing.split("\n").filter((l) => l.length > 0);
+		if (lines.length <= LOG_MAX_LINES) return;
+		await this.app.vault.adapter.write(LOG_FILE, lines.slice(-LOG_MAX_LINES).join("\n") + "\n");
 	}
 
 	private async listTagRegistry(): Promise<string[]> {
@@ -2434,19 +2465,15 @@ export default class NousPlugin extends Plugin {
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		if (!folder) return;
 		const files = collectFilesRecursive(folder, (f) => ["md", "txt"].includes(f.extension.toLowerCase()));
-		let warnedMissingBackend = false;
 		for (const file of files) {
 			const content = await this.app.vault.read(file);
 			const pending = parsePendingNativeRecordingNote(content);
 			if (!pending) continue;
 
 			if (!(await this.hasAudioTranscriptionBackend())) {
-				if (!warnedMissingBackend) {
-					nousNotice(
-						"A meeting recording is waiting on speech-to-text - set it up in settings → Nous → voice capture.",
-						12000
-					);
-					warnedMissingBackend = true;
+				if (!this.notifiedPendingTranscription.has(file.path)) {
+					this.notifiedPendingTranscription.add(file.path);
+					this.settingsNotice("A meeting recording is waiting on speech-to-text.", 12000);
 				}
 				continue;
 			}
@@ -2473,6 +2500,7 @@ export default class NousPlugin extends Plugin {
 		await this.transcribeInboxAudioForCli();
 		await this.transcribePendingNativeRecordingsForCli();
 		await this.ensureSkillsInstalled();
+		await this.trimLogIfNeeded();
 		const before = await this.readLogLineCount();
 		const env = this.cliEnv();
 
@@ -2714,10 +2742,10 @@ export default class NousPlugin extends Plugin {
 				const pendingNativeRecording = parsePendingNativeRecordingNote(raw);
 				if (pendingNativeRecording) {
 					if (!(await this.hasAudioTranscriptionBackend())) {
-						nousNotice(
-							`"${file.name}" is waiting on speech-to-text - set it up in Settings → Nous → Voice capture.`,
-							12000
-						);
+						if (!this.notifiedPendingTranscription.has(file.path)) {
+							this.notifiedPendingTranscription.add(file.path);
+							this.settingsNotice(`"${file.name}" is waiting on speech-to-text.`, 12000);
+						}
 						return false;
 					}
 					const transcript = await this.transcribeNativeMeetingRecording(pendingNativeRecording.recordingDir);
