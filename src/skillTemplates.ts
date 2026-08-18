@@ -31,10 +31,13 @@ Vault root is the current working directory. All paths below are relative to it.
 
 Process every \`.md\`, \`.txt\`, image file (${IMAGE_EXTENSIONS_MD}, plus
 ${HEIC_EXTENSIONS_MD} - see the HEIC/HEIF conversion note in Step 1 - not GIF,
-unsupported), and PDF file (${PDF_EXTENSIONS_MD}) directly inside
-\`${f.inbox}/\` (not \`${f.inbox}/duplicates/\`). Process files **one at a
-time, fully, before moving to the next** — read, enrich, move, log, then
-proceed.
+unsupported), and PDF file (${PDF_EXTENSIONS_MD}) anywhere under
+\`${f.inbox}/\`, including subfolders (a user can drop a whole folder in at
+once) - except \`${f.inbox}/duplicates/\`, which this skill never reads from
+except for the purge check below. Process files **one at a time, fully,
+before moving to the next** — read, enrich, move, log, then proceed. After a
+file is moved or deleted, if its parent subfolder under \`${f.inbox}/\` is now
+empty, delete that subfolder too.
 
 Skip a file if its frontmatter already contains \`status: enriched\` — it's
 already been processed. Also skip a file whose frontmatter contains

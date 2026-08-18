@@ -11,6 +11,7 @@ import {
 	PluginSettingTab,
 	Setting,
 	TFile,
+	TFolder,
 	addIcon,
 	requestUrl,
 	requireApiVersion,
@@ -164,6 +165,23 @@ function nousNotice(message: string, duration?: number): Notice {
 	// invalidation re-evaluated on every DOM change).
 	notice.noticeEl.addClass("nous-notice");
 	return notice;
+}
+
+// A folder dropped straight into the inbox (e.g. an entire GitHub repo
+// dragged in) nests its files a level or more deep - the inbox scan has to
+// walk subfolders too, or those files sit there forever with no error, since
+// nothing is technically wrong with them. "duplicates" is walked past deliberately - it is
+// the one inbox subfolder that must stay untouched by normal processing.
+function collectFilesRecursive(folder: TFolder, matches: (file: TFile) => boolean): TFile[] {
+	const found: TFile[] = [];
+	for (const child of folder.children) {
+		if (child instanceof TFile) {
+			if (matches(child)) found.push(child);
+		} else if (child instanceof TFolder && child.name !== "duplicates") {
+			found.push(...collectFilesRecursive(child, matches));
+		}
+	}
+	return found;
 }
 
 // Electron's renderer exposes a real `require` global (Obsidian runs with
@@ -2186,9 +2204,7 @@ export default class NousPlugin extends Plugin {
 	async processInboxViaApi() {
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		if (!folder) return;
-		const files = folder.children.filter(
-			(f): f is TFile => f instanceof TFile && logic.isCaptureFile(f.extension)
-		);
+		const files = collectFilesRecursive(folder, (f) => logic.isCaptureFile(f.extension));
 		if (files.length === 0) return;
 
 		let enriched = 0;
@@ -2221,9 +2237,7 @@ export default class NousPlugin extends Plugin {
 		}
 
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
-		const hasFiles = folder?.children.some(
-			(f) => f instanceof TFile && logic.isCaptureFile(f.extension)
-		);
+		const hasFiles = folder && collectFilesRecursive(folder, (f) => logic.isCaptureFile(f.extension)).length > 0;
 		if (!hasFiles) return;
 
 		this.cliRunInProgress = true;
@@ -2239,8 +2253,8 @@ export default class NousPlugin extends Plugin {
 	private async transcribeInboxAudioForCli(): Promise<void> {
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		if (!folder) return;
-		const audioFiles = folder.children.filter(
-			(f): f is TFile => f instanceof TFile && logic.AUDIO_EXTENSIONS.includes(f.extension.toLowerCase())
+		const audioFiles = collectFilesRecursive(folder, (f) =>
+			logic.AUDIO_EXTENSIONS.includes(f.extension.toLowerCase())
 		);
 		for (const file of audioFiles) {
 			try {
@@ -2273,9 +2287,7 @@ export default class NousPlugin extends Plugin {
 	private async transcribePendingNativeRecordingsForCli(): Promise<void> {
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		if (!folder) return;
-		const files = folder.children.filter(
-			(f): f is TFile => f instanceof TFile && ["md", "txt"].includes(f.extension.toLowerCase())
-		);
+		const files = collectFilesRecursive(folder, (f) => ["md", "txt"].includes(f.extension.toLowerCase()));
 		let warnedMissingBackend = false;
 		for (const file of files) {
 			const content = await this.app.vault.read(file);
