@@ -43,9 +43,9 @@
 Nous turns each capture — a typed thought, a voice memo, a call, a photo, a
 PDF — into a summarized note, tagged from a controlled vocabulary and linked
 to related notes. When a topic has enough notes, Nous writes a self-updating
-wiki page that collects them. And it is local-first: Claude Code CLI, local
-whisper.cpp, and Ollama send nothing off your machine — direct API keys are
-opt-in.
+wiki page that collects them. It is local-first: Claude Code CLI, local
+speech-to-text, and Ollama send nothing off your machine — direct API keys
+are opt-in.
 
 **Works on:** Desktop only (macOS, Windows, Linux). Meeting capture is
 macOS-only. Live voice transcription (beta) needs an OpenAI key.
@@ -69,7 +69,7 @@ macOS-only. Live voice transcription (beta) needs an OpenAI key.
 | 🏷️ | **Automatic tags** | Every capture gets tags from a controlled vocabulary — no manual sorting. |
 | 🔗 | **Automatic links** | Related notes connect to each other without manual work. |
 | 📖 | **Self-updating wikis** | Once a topic has enough notes, Nous writes and maintains a wiki page for it. |
-| 🔒 | **Local-first** | Claude Code CLI, local whisper.cpp, and Ollama keep data on your machine — API keys are optional. |
+| 🔒 | **Local-first** | Claude Code CLI, local speech-to-text, and Ollama keep data on your machine — API keys are optional. |
 | 🎨 | **An editorial look, on by default** | Notes render with a chip header, small-caps sections, and a folded transcript instead of a raw properties table. Opt into the full vault-wide theme in Settings → Nous → Appearance — see [the Nous look](docs/USAGE.md#the-nous-look). |
 
 ## Your vault as AI context
@@ -95,12 +95,18 @@ Or open [Nous's page on Obsidian's site](https://obsidian.md/plugins?id=nous) di
 
 ## Quickstart
 
-**1. Enable Nous** — a setup wizard opens automatically. Choose how Nous
-writes notes: a Claude subscription, a free local model, or an API key.
-(Migrating notes from Notion? Pick that card instead - it imports your
-export directly into the pipeline.) Then the wizard checks the optional
-voice and meeting setup, and offers a one-click Warm Paper theme install if
-you want Nous's own look for the rest of Obsidian too.
+**1. Enable Nous** — a setup wizard opens by itself. Pick how Nous writes
+notes: a Claude subscription, an API key, or a free local model. (Migrating
+notes from Notion? Pick that card instead - it imports your export directly
+into the pipeline.)
+
+The wizard then checks two optional things: voice notes and meeting capture.
+Both need local speech-to-text, set up in two steps: download a speech model
+in the wizard (one click, about 466 MB), then run one command in Terminal
+(`brew install whisper-cpp`). Text, images, and PDFs work right away, with no
+setup. Skip voice and meeting setup for now if you want - finish it later in
+Settings → Nous. The wizard also offers a one-click Warm Paper theme install,
+for Nous's own look across the rest of Obsidian.
 
 <p align="center">
   <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav.svg">

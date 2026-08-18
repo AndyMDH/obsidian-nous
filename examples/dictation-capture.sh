@@ -19,5 +19,27 @@ if [ -z "$TEXT" ]; then
   exit 0
 fi
 
-FILE="$VAULT/$INBOX_FOLDER/$(date +%Y-%m-%d\ %H.%M.%S).md"
-printf '%s\n' "$TEXT" > "$FILE"
+DEST="$VAULT/$INBOX_FOLDER"
+STAMP="$(date +%Y-%m-%d\ %H.%M.%S)"
+
+# If VAULT/INBOX_FOLDER is wrong (a moved vault, a renamed folder), do not
+# lose the dictation with no trace - save it to the Desktop instead, where
+# it is still easy to find, and say clearly why.
+if [ ! -d "$DEST" ]; then
+  mkdir -p "$HOME/Desktop"
+  FALLBACK="$HOME/Desktop/Nous dictation failed - $STAMP.md"
+  printf '%s\n' "$TEXT" >"$FALLBACK"
+  echo "dictation-capture.sh: '$DEST' does not exist. Saved to '$FALLBACK' instead." >&2
+  exit 1
+fi
+
+FILE="$DEST/$STAMP.md"
+# Two dictations in the same second would otherwise silently overwrite
+# each other - add a numeral instead of losing the first one.
+N=2
+while [ -e "$FILE" ]; do
+  FILE="$DEST/$STAMP ($N).md"
+  N=$((N + 1))
+done
+
+printf '%s\n' "$TEXT" >"$FILE"

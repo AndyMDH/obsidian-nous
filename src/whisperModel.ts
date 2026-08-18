@@ -14,9 +14,13 @@ export interface WhisperModelSource {
 
 export const WHISPER_MODEL_SOURCES: WhisperModelSource[] = [
 	{
-		filename: "ggml-large-v3-turbo.bin",
-		pointerUrl: "https://huggingface.co/ggerganov/whisper.cpp/raw/main/ggml-large-v3-turbo.bin",
-		downloadUrl: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin",
+		// ~466MB vs. the large model's ~1.6GB - a noticeably lighter first
+		// download for a modest accuracy trade-off, which is the right
+		// default for personal notes/meetings. Anyone who wants the larger
+		// model can still point "Whisper model path" at it manually.
+		filename: "ggml-small.bin",
+		pointerUrl: "https://huggingface.co/ggerganov/whisper.cpp/raw/main/ggml-small.bin",
+		downloadUrl: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
 		required: true,
 	},
 	{

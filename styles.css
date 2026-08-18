@@ -495,6 +495,16 @@
 	border-radius: var(--nous-radius-input);
 	color: var(--nous-text);
 }
+.nous-modal select {
+	/* Without this, macOS renders the closed box's text through native
+	   AppKit chrome instead of this stylesheet - it still picks up the
+	   background-color override above, but the text stays a pale system
+	   default color regardless of --nous-text, unreadable until browser
+	   selection-highlight forces contrast back in (exactly the "the text
+	   is dark once I highlight over it" symptom). */
+	appearance: none;
+	-webkit-appearance: none;
+}
 .nous-modal.is-form input[type="text"],
 .nous-modal.is-form input[type="password"],
 .nous-modal.is-form select {

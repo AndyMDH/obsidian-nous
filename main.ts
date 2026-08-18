@@ -694,7 +694,7 @@ export default class NousPlugin extends Plugin {
 		}
 		const localHint = local && "failure" in local ? ` Local attempt failed: ${local.failure}` : "";
 		throw new Error(
-			`Audio capture needs local whisper-cli (Settings → Nous → Voice capture) or a Gemini/OpenAI API key. A key is only used to turn speech into text - enrichment still runs in your chosen mode.${localHint}`
+			`Audio capture needs local speech-to-text (Settings → Nous → Voice capture) or a Gemini/OpenAI API key. A key is only used to turn speech into text - enrichment still runs in your chosen mode.${localHint}`
 		);
 	}
 
@@ -705,7 +705,18 @@ export default class NousPlugin extends Plugin {
 	// Display-only default path (used synchronously by the settings tab), so
 	// this avoids the async node-module loader - macOS-only feature, so a
 	// plain "/" join is safe (no need for the "path" module's platform logic).
+	// Points at the small model (~466MB) - the default download target for
+	// anyone setting up from scratch. See resolveWhisperModelPath() below for
+	// what actually gets used once a model exists on disk.
 	defaultWhisperModelPath(): string {
+		return `${process.env.HOME ?? ""}/.local/share/whisper-models/ggml-small.bin`;
+	}
+
+	// The large model (~1.6GB) was the only default before this session -
+	// anyone who already downloaded it keeps working without needing to
+	// notice anything changed, or re-download a smaller model they don't
+	// need. New installs never target this path; it's read-only migration.
+	private legacyWhisperModelPath(): string {
 		return `${process.env.HOME ?? ""}/.local/share/whisper-models/ggml-large-v3-turbo.bin`;
 	}
 
@@ -721,15 +732,31 @@ export default class NousPlugin extends Plugin {
 			.catch(() => false);
 	}
 
+	// A configured path is trusted as-is (existence checked by the caller).
+	// With no configured path, prefer whichever default model is actually on
+	// disk - the small one if this is a fresh setup, the legacy large one if
+	// this vault already had it before the smaller default shipped - falling
+	// back to the small path if neither exists yet (nothing to transcribe
+	// with, but the right place for a future download to land).
+	private async resolveWhisperModelPath(): Promise<string> {
+		const configured = this.settings.whisperModelPath.trim();
+		if (configured) return configured;
+		const small = this.defaultWhisperModelPath();
+		if (await NousPlugin.fileExists(small)) return small;
+		const legacy = this.legacyWhisperModelPath();
+		if (await NousPlugin.fileExists(legacy)) return legacy;
+		return small;
+	}
+
 	async hasWhisperModel(): Promise<boolean> {
-		const modelPath = this.settings.whisperModelPath.trim() || this.defaultWhisperModelPath();
-		return NousPlugin.fileExists(modelPath);
+		return NousPlugin.fileExists(await this.resolveWhisperModelPath());
 	}
 
 	// One-click speech-model install: fetch the git-lfs pointer for the
-	// expected sha256/size, stream the model to disk (1.6 GB - never buffer it
-	// in memory), verify, then rename into place. The VAD model rides along
-	// but its failure is non-fatal.
+	// expected sha256/size, stream the model to disk (never buffer the whole
+	// thing in memory - the small model is ~466MB, still sizable), verify,
+	// then rename into place. The VAD model rides along but its failure is
+	// non-fatal.
 	async downloadWhisperModels(onProgress: (text: string) => void): Promise<string> {
 		if (!Platform.isMacOS) throw new Error("Local whisper transcription is macOS-only.");
 		const { fs, os, path } = await loadNodeModules();
@@ -915,7 +942,7 @@ export default class NousPlugin extends Plugin {
 	): Promise<{ text: string; segments: TranscriptSegment[] } | { failure: string } | null> {
 		if (!Platform.isMacOS) return null; // afconvert is macOS-only
 
-		const modelPath = this.settings.whisperModelPath.trim() || this.defaultWhisperModelPath();
+		const modelPath = await this.resolveWhisperModelPath();
 		if (!(await NousPlugin.fileExists(modelPath))) return null;
 
 		const { fs: fsPromises, os, path } = await loadNodeModules();
@@ -982,7 +1009,7 @@ export default class NousPlugin extends Plugin {
 			.trim();
 		return text
 			? { text, segments }
-			: { failure: "whisper-cli produced no speech text (silence, or the recording was too quiet)" };
+			: { failure: "local transcription produced no speech text (silence, or the recording was too quiet)" };
 	}
 
 	// Local transcription for a finalized audio FILE (a native-recorder track):
@@ -992,7 +1019,7 @@ export default class NousPlugin extends Plugin {
 	// fall back to the in-memory path (which can also reach cloud keys).
 	private async transcribeFileLocallyWithSegments(filePath: string): Promise<TrackTranscript | null> {
 		if (!Platform.isMacOS) return null;
-		const modelPath = this.settings.whisperModelPath.trim() || this.defaultWhisperModelPath();
+		const modelPath = await this.resolveWhisperModelPath();
 		if (!(await NousPlugin.fileExists(modelPath))) return null;
 
 		const { fs: fsPromises, os, path } = await loadNodeModules();
@@ -1014,7 +1041,7 @@ export default class NousPlugin extends Plugin {
 				await this.appendLog(`WARN: local transcription of ${path.basename(filePath)}: ${result.failure}`);
 				// No speech is a result, not an error - do not re-decode the
 				// whole file in memory just to hear the same silence.
-				if (result.failure.startsWith("whisper-cli produced no speech text")) {
+				if (result.failure.startsWith("local transcription produced no speech text")) {
 					return { text: "", segments: [] };
 				}
 				return null;
@@ -3610,12 +3637,12 @@ class NousSettingTab extends PluginSettingTab {
 							}
 							if (hasModel && !hasCli) {
 								setting.setDesc(
-									'Model downloaded. Still need whisper-cli: run "brew install whisper-cpp" in Terminal, then reopen this tab.'
+									'Model downloaded. One more step: run "brew install whisper-cpp" in Terminal, then reopen this tab.'
 								);
 								return;
 							}
 							setting.setDesc(
-								"One download (~1.6 GB), fully private. Also needs \"brew install whisper-cpp\"."
+								'One download (~466 MB), fully private. Also needs one Terminal command: "brew install whisper-cpp".'
 							);
 							setting.addButton((b) =>
 								b.setButtonText("Download model").setCta().onClick(() => {
@@ -3765,11 +3792,11 @@ class VoiceCaptureSetupModal extends Modal {
 				([hasModel, hasCli]) => {
 					if (hasModel && !hasCli) {
 						setting.setDesc(
-							'Model already downloaded. Still need whisper-cli: run "brew install whisper-cpp" in Terminal, then try recording again.'
+							'Model already downloaded. One more step: run "brew install whisper-cpp" in Terminal, then try recording again.'
 						);
 						return;
 					}
-					setting.setDesc('One download (~1.6 GB). Fully private. Also needs "brew install whisper-cpp".');
+					setting.setDesc('One download (~466 MB). Fully private. Also needs one Terminal command: "brew install whisper-cpp".');
 					setting.addButton((button) =>
 						button.setButtonText("Download model").setCta().onClick(() => {
 							button.setDisabled(true);
@@ -4439,7 +4466,7 @@ class OnboardingModal extends Modal {
 		// connection in the first place.
 		const isCli = this.plugin.settings.executionMode === "cli";
 		this.renderTopRow(1, 3, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
-		this.setTitle("What works now");
+		this.setTitle("Setting up");
 		const statusEl = this.contentEl.createDiv({ cls: "nous-capture-checklist" });
 		statusEl.createEl("p", { cls: "nous-wizard-body", text: "Checking capture setup..." });
 		const continueButton = this.renderPrimary("Checking...", () => this.renderFinish());
@@ -4449,9 +4476,6 @@ class OnboardingModal extends Modal {
 			.then((status) => {
 				this.lastCaptureStatus = status;
 				statusEl.empty();
-				// Numbered hairline rows (§3 "What works now" spec) - 01/02/03
-				// plus the item name and its one-line status.
-				const list = statusEl.createDiv({ cls: "nous-numbered-list" });
 				const items = capturePrerequisiteItems(status);
 				// capturePrerequisiteItems() always calls text/image/PDF capture
 				// "Ready" - true once the connection test passed, but this
@@ -4464,16 +4488,31 @@ class OnboardingModal extends Modal {
 						warning: true,
 					};
 				}
+				// This is a setup screen, not a status report - Nous already
+				// knows what's ready, so there's nothing to gain by telling
+				// the user that too. Only what still needs a decision or an
+				// action shows up here; row numbers count what's actually
+				// shown, not the original 3-item list, so it reads as a clean
+				// to-do list instead of a checklist with gaps in it.
+				const pending = items
+					.map((item, originalIndex) => ({ item, originalIndex }))
+					.filter(({ item }) => item.warning);
+				if (pending.length === 0) {
+					statusEl.createEl("p", { cls: "nous-wizard-body", text: "Everything is ready." });
+				}
+				// Numbered hairline rows (§3 "What works now" spec) - 01/02/03
+				// plus the item name and its one-line status.
+				const list = statusEl.createDiv({ cls: "nous-numbered-list" });
 				// Buttons live on their own numbered row now, instead of a
 				// separate block below repeating the same "needs X" story a
 				// second time - a brand-new user with nothing installed used
 				// to see the same two problems named twice each (once in the
 				// checklist, once in its own paragraph+button underneath).
-				items.forEach((item, index) => {
+				pending.forEach(({ item, originalIndex: index }, displayIndex) => {
 					const row = list.createDiv({
 						cls: item.warning ? "nous-numbered-row is-warning" : "nous-numbered-row",
 					});
-					row.createDiv({ cls: "nous-numbered-index", text: String(index + 1).padStart(2, "0") });
+					row.createDiv({ cls: "nous-numbered-index", text: String(displayIndex + 1).padStart(2, "0") });
 					const text = row.createDiv({ cls: "nous-numbered-text" });
 					text.createDiv({ cls: "nous-numbered-name", text: item.name });
 					text.createDiv({ cls: "nous-numbered-desc", text: item.desc });
@@ -4486,7 +4525,7 @@ class OnboardingModal extends Modal {
 								if (hasModel && !hasCli) {
 									actions.createSpan({
 										cls: "nous-numbered-hint",
-										text: 'Model downloaded - still needs "brew install whisper-cpp".',
+										text: 'Model downloaded - one more step: run "brew install whisper-cpp" in Terminal.',
 									});
 									return;
 								}
