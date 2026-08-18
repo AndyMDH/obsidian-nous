@@ -1,7 +1,6 @@
 import { RangeSetBuilder } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import {
-	AbstractInputSuggest,
 	App,
 	FileSystemAdapter,
 	MarkdownView,
@@ -12,7 +11,6 @@ import {
 	PluginSettingTab,
 	Setting,
 	TFile,
-	TFolder,
 	addIcon,
 	requestUrl,
 	requireApiVersion,
@@ -229,6 +227,27 @@ function loadNodeModules(): Promise<NodeModules> {
 		});
 	}
 	return nodeModulesPromise;
+}
+
+// The native folder-picker dialog Notion import uses (main.ts's
+// importFromNotion) is Electron-provided, not a Node builtin, so it doesn't
+// belong in NodeModules above - loaded the same lazy window.require() way
+// for the same reason (Electron's renderer can't resolve a bare specifier
+// via a real import()). "@electron/remote" is what current Electron calls
+// this since core Electron dropped the old `electron.remote` shortcut;
+// Obsidian's main process enables it for plugin windows.
+type ElectronRemoteDialog = {
+	showOpenDialog: (options: { properties: string[] }) => Promise<{ canceled: boolean; filePaths: string[] }>;
+};
+let electronRemoteDialogPromise: Promise<ElectronRemoteDialog> | null = null;
+function loadElectronRemoteDialog(): Promise<ElectronRemoteDialog> {
+	if (!electronRemoteDialogPromise) {
+		electronRemoteDialogPromise = Promise.resolve().then(() => {
+			const remote = window.require("@electron/remote") as { dialog: ElectronRemoteDialog };
+			return remote.dialog;
+		});
+	}
+	return electronRemoteDialogPromise;
 }
 
 // "ws" (live/streaming voice transcription - see src/realtimeTranscribe.ts)
@@ -1304,41 +1323,52 @@ export default class NousPlugin extends Plugin {
 		nousNotice("Dropped a sample note in your inbox - watch it come to life.");
 	}
 
-	// Reads every .md file under a vault folder the user pointed at (their
-	// unzipped Notion "Markdown & CSV" export, dragged into the vault) and
-	// copies each one into the inbox with Notion's ID suffix stripped from
-	// the title. Deliberately does no Notion-specific parsing beyond that -
-	// the text lands in the inbox exactly like any other capture, so the
-	// normal enrichment pipeline tags and structures it. Page links and
-	// images referencing other exported files are not rewritten, so those
-	// won't resolve after import.
-	async importFromNotion(vaultFolderPath: string): Promise<{ imported: number; skipped: number }> {
-		const source = this.app.vault.getFolderByPath(vaultFolderPath);
-		if (!source) throw new Error(`No folder "${vaultFolderPath}" in this vault.`);
+	// Lets a desktop user pick their unzipped Notion "Markdown & CSV" export
+	// with a native folder dialog - no need to drag it into the vault first,
+	// Nous reads straight off disk. Returns null if the user cancelled.
+	async pickNotionExportFolder(): Promise<string | null> {
+		const dialog = await loadElectronRemoteDialog();
+		const result = await dialog.showOpenDialog({ properties: ["openDirectory"] });
+		if (result.canceled || result.filePaths.length === 0) return null;
+		return result.filePaths[0];
+	}
+
+	// Reads every .md file under a folder on disk (the unzipped Notion
+	// export) and copies each one into the inbox with Notion's ID suffix
+	// stripped from the title. Deliberately does no Notion-specific parsing
+	// beyond that - the text lands in the inbox exactly like any other
+	// capture, so the normal enrichment pipeline tags and structures it.
+	// Page links and images referencing other exported files are not
+	// rewritten, so those won't resolve after import.
+	async importFromNotion(sourceFolderPath: string): Promise<{ imported: number; skipped: number }> {
+		const { fs, path } = await loadNodeModules();
 
 		await this.ensureFolderExists(this.settings.inboxFolder);
 
-		const files: TFile[] = [];
-		const collect = (folder: TFolder) => {
-			for (const child of folder.children) {
-				if (child instanceof TFile && child.extension === "md") files.push(child);
-				else if (child instanceof TFolder) collect(child);
+		const filePaths: string[] = [];
+		const collect = async (dir: string) => {
+			const entries = await fs.readdir(dir, { withFileTypes: true });
+			for (const entry of entries) {
+				const full = path.join(dir, entry.name);
+				if (entry.isDirectory()) await collect(full);
+				else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) filePaths.push(full);
 			}
 		};
-		collect(source);
+		await collect(sourceFolderPath);
 
 		this.notionImportInProgress = true;
 		let imported = 0;
 		let skipped = 0;
 		try {
-			for (const file of files) {
-				const title = logic.sanitizeFilename(logic.stripNotionIdSuffix(file.basename));
+			for (const filePath of filePaths) {
+				const basename = path.basename(filePath, path.extname(filePath));
+				const title = logic.sanitizeFilename(logic.stripNotionIdSuffix(basename));
 				const destPath = await this.uniqueInboxPath(title);
 				if (!destPath) {
 					skipped++;
 					continue;
 				}
-				const content = await this.app.vault.read(file);
+				const content = await fs.readFile(filePath, "utf8");
 				await this.app.vault.create(destPath, content);
 				imported++;
 			}
@@ -3649,27 +3679,6 @@ function registerNousIcons(): void {
 	);
 }
 
-// Type-ahead over the vault's own folders for the Notion-import screen's
-// "which folder did you drag the export into" field - there's no reason to
-// make someone type a path by hand when Obsidian already knows every folder.
-class VaultFolderSuggest extends AbstractInputSuggest<TFolder> {
-	constructor(app: App, inputEl: HTMLInputElement) {
-		super(app, inputEl);
-	}
-
-	protected getSuggestions(query: string): TFolder[] {
-		const q = query.toLowerCase();
-		return this.app.vault
-			.getAllFolders(false)
-			.filter((folder) => folder.path.toLowerCase().includes(q))
-			.slice(0, 50);
-	}
-
-	renderSuggestion(folder: TFolder, el: HTMLElement) {
-		el.setText(folder.path);
-	}
-}
-
 class OnboardingModal extends Modal {
 	private lastCaptureStatus: CapturePrerequisiteStatus | null = null;
 	// The chevron+dots row (docs/NOUS-REDESIGN.md §3, step 1) sits above
@@ -3800,14 +3809,26 @@ class OnboardingModal extends Modal {
 	// clickable mode-cards, just with different content.
 	private addModeCard(
 		container: HTMLElement,
-		options: { title: string; sub: string; filled?: boolean; onChoose: () => void | Promise<void> }
+		options: {
+			title: string;
+			sub?: string;
+			filled?: boolean;
+			// A shorter, sub-less row for an option that isn't a mode choice
+			// like the others (Notion import) - still a full-width card, not
+			// a link, but reads as secondary next to the two real decisions.
+			compact?: boolean;
+			onChoose: () => void | Promise<void>;
+		}
 	) {
-		const card = container.createDiv({ cls: options.filled ? "nous-mode-card is-filled" : "nous-mode-card" });
+		const cls = ["nous-mode-card", options.filled && "is-filled", options.compact && "is-compact"]
+			.filter(Boolean)
+			.join(" ");
+		const card = container.createDiv({ cls });
 		card.setAttribute("role", "button");
 		card.setAttribute("tabindex", "0");
 		const text = card.createDiv({ cls: "nous-mode-card-text" });
 		text.createDiv({ cls: "nous-mode-card-title", text: options.title });
-		text.createDiv({ cls: "nous-mode-card-sub", text: options.sub });
+		if (options.sub) text.createDiv({ cls: "nous-mode-card-sub", text: options.sub });
 		const arrow = card.createDiv({ cls: "nous-mode-card-arrow" });
 		setIcon(arrow, "chevron-right");
 		const choose = () => void options.onChoose();
@@ -3845,9 +3866,12 @@ class OnboardingModal extends Modal {
 			sub: "Anthropic, OpenAI, Gemini, or run local",
 			onChoose: () => this.renderConnectChoice(),
 		});
+		// Not a mode choice like the two above it, so it's shorter and has
+		// no sub-line - reads as secondary without needing its own line of
+		// standalone text below the cards.
 		this.addModeCard(cards, {
 			title: "Migrating from Notion?",
-			sub: "Import your exported pages first",
+			compact: true,
 			onChoose: () => this.renderNotionImport(),
 		});
 
@@ -3896,38 +3920,50 @@ class OnboardingModal extends Modal {
 		this.setScreenMode("form");
 		this.setTitle("Import from Notion");
 		this.renderTopRow(0, 4, () => this.renderWelcome());
-		this.renderBody(
-			"In Notion: Settings → Export all workspace content → Markdown & CSV. Unzip it, drag the folder into this vault, then point Nous at it below."
-		);
 
-		let folderPath = "";
-		new Setting(this.contentEl).setName("Folder in your vault").addText((text) => {
-			text.setPlaceholder("e.g. Notion Export");
-			new VaultFolderSuggest(this.app, text.inputEl);
-			text.onChange((value) => {
-				folderPath = value.trim();
-			});
-		});
+		if (!Platform.isDesktopApp) {
+			this.renderBody("Notion import needs the desktop app, sorry.");
+			return;
+		}
 
-		this.renderBody(
-			"Imports the text of every page as a new capture, tagged the same way as anything else you drop in the inbox. Notion's page links and images don't carry over yet - just the words."
-		);
+		this.renderBody("Export from Notion as Markdown & CSV, then unzip it.");
 
-		const primary = this.renderPrimary("Import", async () => {
+		const status = this.contentEl.createEl("p", { cls: "nous-wizard-body is-center" });
+		status.hide();
+
+		// One button doing double duty, same as every other wizard screen's
+		// single primary action - "Choose folder…" until one is picked, then
+		// "Import". Two separate buttons (plus one disabled until the other
+		// is used) doesn't match how the rest of the wizard reads.
+		let folderPath: string | null = null;
+		const primary = this.renderPrimary("Choose folder…", async () => {
 			if (!folderPath) {
-				nousNotice("Pick a folder first.");
+				try {
+					const picked = await this.plugin.pickNotionExportFolder();
+					if (!picked) return;
+					folderPath = picked;
+					const name = picked.split(/[\\/]/).pop() ?? picked;
+					status.setText(`"${name}" - text only, links and images don't come along yet.`);
+					status.show();
+					primary.setButtonText("Import");
+				} catch (e) {
+					const msg = e instanceof Error ? e.message : String(e);
+					nousNotice(`Couldn't open the folder picker - ${msg}`, 10000);
+				}
 				return;
 			}
 			primary.setButtonText("Importing…").setDisabled(true);
 			try {
 				const result = await this.plugin.importFromNotion(folderPath);
 				if (result.imported === 0 && result.skipped === 0) {
-					nousNotice(`No Notion pages found in "${folderPath}".`, 8000);
+					nousNotice("No Notion pages found in that folder.", 8000);
 					primary.setButtonText("Import").setDisabled(false);
 					return;
 				}
-				const parts = [`Imported ${result.imported} note${result.imported === 1 ? "" : "s"}`];
-				if (result.skipped > 0) parts.push(`skipped ${result.skipped} already in your inbox`);
+				const parts = [
+					`Imported ${result.imported} note${result.imported === 1 ? "" : "s"} into ${this.plugin.settings.inboxFolder}`,
+				];
+				if (result.skipped > 0) parts.push(`skipped ${result.skipped} already there`);
 				const tail = this.plugin.settings.onboarded
 					? "Enriching now."
 					: "Finish setup and they'll be enriched.";

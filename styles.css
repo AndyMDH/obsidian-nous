@@ -648,6 +648,16 @@
 .nous-mode-card.is-filled .nous-mode-card-arrow {
 	color: var(--nous-accent);
 }
+/* Not a mode choice like the two cards above it (Migrating from Notion) -
+   shorter and lighter so it reads as secondary without becoming a link. */
+.nous-mode-card.is-compact {
+	padding: 9px 16px;
+}
+.nous-mode-card.is-compact .nous-mode-card-title {
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--nous-muted);
+}
 
 /* ------------------------------------------------------------------ */
 /* Settings tab (docs/NOUS-REDESIGN.md §4): 26px badge + name + version

@@ -7,7 +7,8 @@ Import notes from Notion:
 - A new "Migrating from Notion?" card on the welcome screen (also an
   "Import from Notion" command, for anyone who already finished
   setup). Export your workspace from Notion as Markdown & CSV, unzip
-  it, drag the folder anywhere into your vault, then point Nous at it.
+  it, then pick the folder with a normal folder window - no need to
+  drag it into your vault first. Desktop only.
 - Each page's text lands in your inbox with Notion's ID suffix
   stripped from the title, then goes through the same enrichment
   every other capture gets - no separate import format to learn.
