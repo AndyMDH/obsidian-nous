@@ -106,12 +106,15 @@ stop, it's transcribed by the normal batch pipeline (local whisper.cpp, or
 Gemini/OpenAI) exactly as if live mode had never been turned on — a capture
 is never lost because live transcription had trouble.
 
-Transcription (speech → text) prefers **local whisper.cpp** on macOS if
-`whisper-cli` and a model are installed (`brew install whisper-cpp`, path
-configurable under Nous's **Advanced settings**) — nothing leaves your
-machine, no API key needed. Without that set up, it falls back to a **Gemini
-or OpenAI** API key in Nous's settings, even in Claude Code or GLM mode, where
-it's used *only* for transcription (Claude and GLM have no audio API yet).
+Transcription (speech → text) prefers **local whisper.cpp** on macOS if it
+is installed — nothing leaves your machine, no API key needed. The setup
+wizard offers a one-click install for both the model and the `whisper-cli`
+engine, no Terminal needed. Skipped it during setup? Run "Nous: Open setup
+wizard" from the command palette to finish it later (the path is
+configurable under Nous's **Advanced settings**, if you already have your
+own install). Without that set up, it falls back to a **Gemini or OpenAI**
+API key in Nous's settings, even in Claude Code or GLM mode, where it's used
+*only* for transcription (Claude and GLM have no audio API yet).
 
 <details>
 <summary><strong>Power option: a system-wide dictation hotkey</strong></summary>
@@ -135,9 +138,7 @@ directly.
 If the helper is missing, the setup wizard and Settings → Nous → Meeting
 capture show an **Install** button. Click it once. Nous downloads its recorder,
 checks the download, puts it in this vault's plugin folder, checks that it can
-run, and uses it automatically. If you put your own helper somewhere else,
-open Settings → Nous → Advanced settings and set
-**Nous Recorder path** to the full path.
+run, and uses it automatically.
 
 Then click the **📞 phone icon** in the left sidebar (or command palette →
 "Nous: Start/stop meeting recording") when the meeting starts, and click it again

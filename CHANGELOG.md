@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.8.5
+
+- Removed the "Nous Recorder path" Advanced setting - it configured a
+  binary Nous already builds and installs itself, to one fixed
+  location, so overriding it only ever risked confusion, never helped.
+- Removed the Settings tab's own "Speech model" install button. The
+  wizard already offers the same one-click model download and
+  whisper-cli install - having it in two places was two ways to fix
+  the same thing. Skipped it during setup? Finish it later from
+  Settings → Nous → "Rerun setup."
+
+## 2.8.4
+
+- Fixed the whisper-cli installer reporting "install finished, but
+  still not runnable" even after a real, successful install - it was
+  re-checking a leftover custom path instead of the standard location
+  Homebrew actually installs to. A successful install now also clears
+  a stale custom path automatically.
+
 ## 2.8.3
 
 - Fixed a real bug behind the "washed out" Settings tab headings some
