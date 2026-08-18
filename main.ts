@@ -2012,9 +2012,6 @@ export default class NousPlugin extends Plugin {
 	}
 
 	private async nativeRecorderCommand(): Promise<string> {
-		const configured = this.settings.nativeRecorderPath.trim() || DEFAULT_NATIVE_RECORDER_BIN;
-		if (configured !== DEFAULT_NATIVE_RECORDER_BIN) return configured;
-
 		const managed = await this.managedNativeRecorderPath();
 		if (managed && (await NousPlugin.fileExists(managed))) return managed;
 
@@ -2093,8 +2090,6 @@ export default class NousPlugin extends Plugin {
 		}
 
 		this.nativeRecorderLastProblem = null;
-		this.settings.nativeRecorderPath = DEFAULT_NATIVE_RECORDER_BIN;
-		await this.saveSettings();
 		return target;
 	}
 
@@ -3732,27 +3727,6 @@ class NousSettingTab extends PluginSettingTab {
 			});
 		}
 
-		if (this.showAdvanced && Platform.isMacOS) {
-			meetingItems.push({
-				name: "Nous Recorder path",
-				render: (setting) => {
-					setting
-						.setDesc(
-							"Command or full path to the recorder helper. The default usually works."
-						)
-						.addText((text) =>
-							text
-								.setPlaceholder(DEFAULT_NATIVE_RECORDER_BIN)
-								.setValue(this.plugin.settings.nativeRecorderPath)
-								.onChange(async (value) => {
-									this.plugin.settings.nativeRecorderPath = value.trim() || DEFAULT_NATIVE_RECORDER_BIN;
-									await this.plugin.saveSettings();
-								})
-						);
-				},
-			});
-		}
-
 		if (this.showAdvanced) {
 			meetingItems.push({
 				name: "Wiki threshold",
@@ -3800,44 +3774,6 @@ class NousSettingTab extends PluginSettingTab {
 		items.push({ type: "group", heading: "Meeting capture", cls: "nous-settings-group", items: meetingItems });
 
 		const voiceItems: SettingGroupItem[] = [];
-
-		if (Platform.isMacOS) {
-			voiceItems.push({
-				name: "Speech model",
-				render: (setting) => {
-					setting.setDesc("Checking…");
-					void Promise.all([this.plugin.hasWhisperModel(), this.plugin.hasWhisperCli()]).then(
-						([hasModel, hasCli]) => {
-							if (hasModel && hasCli) {
-								setting.setDesc("Speech model installed - voice notes transcribe locally.");
-								return;
-							}
-							if (hasModel && !hasCli) {
-								setting.setDesc("Model downloaded. One more step, installed automatically:");
-								setting.addButton((b) =>
-									b.setButtonText("Install").setCta().onClick(() => {
-										b.setDisabled(true).setButtonText("Installing…");
-										attachCancelButton(b.buttonEl, () => this.plugin.cancelWhisperCliInstall());
-										void this.plugin.installWhisperCliWithNotice().finally(() => this.update());
-									})
-								);
-								return;
-							}
-							setting.setDesc(
-								'One download (~466 MB), fully private. Also installed automatically, in one more step after.'
-							);
-							setting.addButton((b) =>
-								b.setButtonText("Download model").setCta().onClick(() => {
-									b.setDisabled(true).setButtonText("Downloading…");
-									attachCancelButton(b.buttonEl, () => this.plugin.cancelWhisperDownload());
-									void this.plugin.downloadWhisperModelsWithNotice().finally(() => this.update());
-								})
-							);
-						}
-					);
-				},
-			});
-		}
 
 		voiceItems.push({
 			name: "Live voice transcription (beta)",

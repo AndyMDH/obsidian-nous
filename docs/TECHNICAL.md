@@ -293,7 +293,6 @@ Settings are persisted by Obsidian via `this.loadData()` / `this.saveData()` int
 | `localBaseUrl` | Endpoint for local OpenAI-compatible servers. |
 | `claudeCliPath` | Path or command for the `claude` CLI. |
 | `whisperCliPath` / `whisperModelPath` | Local whisper.cpp binary/model paths for voice transcription (macOS). |
-| `nativeRecorderPath` | Path or command for the native macOS meeting recorder helper. |
 | `liveTranscriptionEnabled` | Opt-in, desktop-only live/streaming dictation via OpenAI's Realtime API. |
 | `inboxFolder` / `meetingsFolder` / `wikisFolder` / `tagsFolder` / `queriesFolder` | Folder names for each layer - see `ARCHITECTURE.md`. |
 | `wikiThreshold` | Minimum non-fragment notes before a wiki is created. |

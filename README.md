@@ -75,8 +75,9 @@ Or open [Nous's page on Obsidian's site](https://obsidian.md/plugins?id=nous) di
 
 **1. Enable Nous.** A setup wizard opens on its own. Pick how Nous writes
 notes: a Claude subscription, an API key, or a free local model. Voice notes
-and meeting capture are optional, each a one-click install - skip either
-and finish later in Settings → Nous.
+and meeting capture are optional, each a one-click install - skip either for
+now. Meeting capture installs later from Settings → Nous; voice notes finish
+through "Rerun setup," in the same place.
 
 <p align="center">
   <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav.svg">
