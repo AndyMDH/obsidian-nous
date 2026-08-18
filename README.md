@@ -60,7 +60,6 @@ Mac.
 
 - [Get started](#get-started)
 - [How it works](#how-it-works)
-- [Documentation](#documentation)
 - [License](#license)
 
 ## Get started
@@ -125,19 +124,6 @@ new capture waits in `00-Inbox` until you open it again.*
 - **Limits.** In a group call, Nous shows every other speaker as one
   `Them:` voice. Meeting capture needs macOS 15 or later. Live voice
   transcription is a beta feature and needs an OpenAI key.
-
-## Documentation
-
-Install and Tutorial links are at the top of this page. Two more docs go
-deeper:
-
-| | |
-|---|---|
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | The design behind Nous — layers, data flow, and choices. |
-| [`docs/TECHNICAL.md`](docs/TECHNICAL.md) | A map of the code, for contributors. |
-
-For build commands and the release process, see
-[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

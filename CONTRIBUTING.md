@@ -1,5 +1,11 @@
 # Contributing to Nous
 
+Two docs go deeper on how Nous works, before you change anything:
+
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — the design behind Nous:
+  layers, data flow, and choices.
+- [`docs/TECHNICAL.md`](docs/TECHNICAL.md) — a map of the code.
+
 ## Branch strategy
 
 - **`main`** is always release-ready. Every commit on `main` corresponds to
