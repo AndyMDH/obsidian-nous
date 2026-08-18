@@ -954,16 +954,21 @@ export default class NousPlugin extends Plugin {
 		}
 	}
 
-	private async canUseLocalAudioTranscription(): Promise<boolean> {
+	// Split from canUseLocalAudioTranscription so the setup UI can tell "no
+	// model yet" apart from "model's here, whisper-cli isn't" - those need
+	// different instructions, not the same "Download model" button repeated.
+	async hasWhisperCli(): Promise<boolean> {
 		if (!Platform.isMacOS) return false;
-
-		const modelPath = this.settings.whisperModelPath.trim() || this.defaultWhisperModelPath();
-		if (!(await NousPlugin.fileExists(modelPath))) return false;
-
 		const { os } = await loadNodeModules();
 		const whisperCli = this.settings.whisperCliPath.trim() || DEFAULT_WHISPER_CLI_BIN;
 		const result = await this.cliExec(whisperCli, ["--help"], { cwd: os.tmpdir(), env: this.cliEnv() });
 		return result.code === 0;
+	}
+
+	private async canUseLocalAudioTranscription(): Promise<boolean> {
+		if (!Platform.isMacOS) return false;
+		if (!(await this.hasWhisperModel())) return false;
+		return this.hasWhisperCli();
 	}
 
 	private async hasAudioTranscriptionBackend(): Promise<boolean> {
@@ -3433,21 +3438,29 @@ class NousSettingTab extends PluginSettingTab {
 				name: "Speech model",
 				render: (setting) => {
 					setting.setDesc("Checking…");
-					void this.plugin.hasWhisperModel().then((present) => {
-						if (present) {
-							setting.setDesc("Speech model installed - voice notes transcribe locally.");
-							return;
+					void Promise.all([this.plugin.hasWhisperModel(), this.plugin.hasWhisperCli()]).then(
+						([hasModel, hasCli]) => {
+							if (hasModel && hasCli) {
+								setting.setDesc("Speech model installed - voice notes transcribe locally.");
+								return;
+							}
+							if (hasModel && !hasCli) {
+								setting.setDesc(
+									'Model downloaded. Still need whisper-cli: run "brew install whisper-cpp" in Terminal, then reopen this tab.'
+								);
+								return;
+							}
+							setting.setDesc(
+								"One download (~1.6 GB), fully private. Also needs \"brew install whisper-cpp\"."
+							);
+							setting.addButton((b) =>
+								b.setButtonText("Download model").setCta().onClick(() => {
+									b.setDisabled(true);
+									void this.plugin.downloadWhisperModelsWithNotice().finally(() => this.update());
+								})
+							);
 						}
-						setting.setDesc(
-							"One download (~1.6 GB), fully private. Also needs \"brew install whisper-cpp\"."
-						);
-						setting.addButton((b) =>
-							b.setButtonText("Download model").setCta().onClick(() => {
-								b.setDisabled(true);
-								void this.plugin.downloadWhisperModelsWithNotice().finally(() => this.update());
-							})
-						);
-					});
+					);
 				},
 			});
 		}
@@ -3578,16 +3591,26 @@ class VoiceCaptureSetupModal extends Modal {
 		this.contentEl.createEl("p", { cls: "nous-wizard-body", text: "Voice notes need speech-to-text. Pick one:" });
 
 		if (Platform.isMacOS) {
-			new Setting(this.contentEl)
-				.setName("Private (recommended)")
-				.setDesc('One download (~1.6 GB). Fully private. Also needs "brew install whisper-cpp".')
-				.addButton((button) =>
-					button.setButtonText("Download model").setCta().onClick(() => {
-						button.setDisabled(true);
-						this.close();
-						void this.plugin.downloadWhisperModelsWithNotice();
-					})
-				);
+			const setting = new Setting(this.contentEl).setName("Private (recommended)");
+			setting.setDesc("Checking…");
+			void Promise.all([this.plugin.hasWhisperModel(), this.plugin.hasWhisperCli()]).then(
+				([hasModel, hasCli]) => {
+					if (hasModel && !hasCli) {
+						setting.setDesc(
+							'Model already downloaded. Still need whisper-cli: run "brew install whisper-cpp" in Terminal, then try recording again.'
+						);
+						return;
+					}
+					setting.setDesc('One download (~1.6 GB). Fully private. Also needs "brew install whisper-cpp".');
+					setting.addButton((button) =>
+						button.setButtonText("Download model").setCta().onClick(() => {
+							button.setDisabled(true);
+							this.close();
+							void this.plugin.downloadWhisperModelsWithNotice();
+						})
+					);
+				}
+			);
 		}
 
 		new Setting(this.contentEl)
@@ -3861,6 +3884,13 @@ class OnboardingModal extends Modal {
 		// Welcome spec: "✕ only (no dots)").
 		this.renderLogo();
 		this.renderBody("Your vault, thinking with you. Pick a brain to start.", { center: true });
+
+		if (this.app.vault.getRoot().children.length > 0) {
+			this.renderBody(
+				'This vault already has files in it. Nous adds its own folders (00-Inbox, 10-Notes, 20-Tags, 30-Wikis) here. For a clean space instead, use a new vault (Obsidian\'s "Open another vault" menu) before continuing.',
+				{ center: true }
+			);
+		}
 
 		const cards = this.contentEl.createDiv({ cls: "nous-mode-cards" });
 		this.addModeCard(cards, {
@@ -4224,6 +4254,12 @@ class OnboardingModal extends Modal {
 							recorderStatusSetting.setDesc(`Could not check the native recorder: ${msg}`);
 							recorderStatusSetting.settingEl.toggleClass("mod-warning", true);
 						});
+				}
+				if (Platform.isMacOS && !status.voiceReady && status.meeting === "needs-recorder") {
+					statusEl.createEl("p", {
+						cls: "nous-wizard-body",
+						text: "Two unrelated things below: the recorder captures meeting audio, and the speech model turns any recording into text.",
+					});
 				}
 				if (Platform.isMacOS && !status.voiceReady) {
 					void this.plugin.hasWhisperModel().then((present) => {
