@@ -56,12 +56,6 @@ background context, for free -
 **Works on:** Mac, Windows, and Linux computers. Meeting capture needs a
 Mac.
 
-## Contents
-
-- [Get started](#get-started)
-- [How it works](#how-it-works)
-- [License](#license)
-
 ## Get started
 
 Just go through the wizard. It walks you through every step below.
