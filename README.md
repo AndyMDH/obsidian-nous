@@ -34,12 +34,24 @@
 </p>
 
 Nous turns anything you capture into a tagged note. A capture can be a
-thought, a voice memo, a call, a photo, or a PDF. Nous links each new note
-to related notes on its own. Once a topic has enough notes, Nous writes a
-wiki page for it and keeps that page current.
+thought, a voice memo, a call, a photo, or a PDF.
 
-Nous keeps your data on your machine by default. It works with the Claude
-Code app, local speech-to-text, or Ollama. An API key is optional.
+Nous can write your notes through the Claude Code app, a direct API key, or
+a free local model in Ollama. Only local speech-to-text and Ollama keep
+your notes on your machine. The Claude Code app and a direct API key both
+send your notes to that provider.
+
+Tags and links turn scattered captures into one connected picture, with no
+manual sorting. A tag groups every note on the same topic. A link connects
+a note to the notes near it, so you can trace an idea across time. Once a
+topic has enough notes, Nous writes one wiki page that pulls them together,
+and keeps it current as you capture more.
+
+Notes get a clean, editorial look by default - see
+[the Nous look](docs/USAGE.md#the-nous-look). You can also point Claude
+Code at your vault, so every coding project gets your tagged notes as
+background context, for free -
+[why this works](https://xebia.com/blog/personal-rag-without-the-drag/).
 
 **Works on:** Mac, Windows, and Linux computers. Meeting capture needs a
 Mac.
@@ -47,7 +59,6 @@ Mac.
 ## Contents
 
 - [Get started](#get-started)
-- [Features](#features)
 - [How it works](#how-it-works)
 - [Documentation](#documentation)
 - [For developers](#for-developers)
@@ -93,18 +104,6 @@ tagged and linked to related notes.
 
 *Note: Obsidian must stay open for Nous to work. If Obsidian is closed, a
 new capture waits in `00-Inbox` until you open it again.*
-
-## Features
-
-| | | |
-|---|---|---|
-| 🎙️ | **Capture anything** | Type, paste, drop a file, or record a voice note or a meeting. Meeting capture is Mac only. |
-| 🏷️ | **Automatic tags** | Every capture gets tags from a fixed list. You sort nothing by hand. |
-| 🔗 | **Automatic links** | Related notes connect to each other on their own. |
-| 📖 | **Self-updating wikis** | Once a topic has enough notes, Nous writes and keeps a wiki page for it. |
-| 🔒 | **Local-first** | The Claude Code app, local speech-to-text, and Ollama keep data on your machine. An API key is optional. |
-| 🎨 | **A clean look, on by default** | A clean header and a folded transcript replace the raw properties list. See [the Nous look](docs/USAGE.md#the-nous-look). |
-| 🧠 | **Your vault as AI context** | Point Claude Code at your vault. Every project then knows about your tagged notes, for free. [Why this works](https://xebia.com/blog/personal-rag-without-the-drag/). |
 
 ## How it works
 
