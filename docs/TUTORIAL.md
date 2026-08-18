@@ -1,85 +1,82 @@
 # Tutorial: your first hour with Nous
 
-The [README](../README.md) is a fast reference; [USAGE.md](USAGE.md) is
-full detail on every option. This page is neither — it's a slow, hand-holding
-walkthrough for the first time you actually use Nous, written for someone who
-has never touched it before.
+The [README](../README.md) is a fast reference. [USAGE.md](USAGE.md) covers
+every option in full detail. This page is different. It is a slow
+walkthrough for your first time with Nous. It is for someone who has never
+used Nous before.
 
-## What Nous actually does, in plain terms
+## What Nous does
 
-You give it something — typed text, a voice memo, a pasted meeting
-transcript, a photo, a PDF — and within seconds it comes back as a tidy note:
-titled, summarized, tagged, and linked to anything related you've already
-captured. You never format or file anything yourself.
+You give Nous something - typed text, a voice memo, a meeting transcript, a
+photo, or a PDF. Within seconds, it comes back as a note: titled,
+summarized, tagged, and linked to related notes you already have. You never
+format or file anything yourself.
 
-Everything lives in four folders it manages for you:
+Nous manages four folders for you:
 
-| Folder | What's in it |
+| Folder | What is in it |
 |---|---|
-| `00-Inbox` | Where a capture briefly sits before Nous processes it |
-| `10-Notes` | Finished notes — this is where you'll actually read things |
-| `20-Tags` | One file per tag, so tags are visible/clickable in your graph |
-| `30-Wikis` | Hub pages Nous writes once a topic has enough notes behind it |
+| `00-Inbox` | A capture sits here for a moment before Nous processes it. |
+| `10-Notes` | Finished notes. You read things here. |
+| `20-Tags` | One file per tag. Tags become clickable in your graph. |
+| `30-Wikis` | Hub pages. Nous writes one once a topic has enough notes. |
 
-You'll mostly only ever look at `10-Notes` and occasionally `30-Wikis`. The
-rest runs itself.
+You will look at `10-Notes` most often, and `30-Wikis` sometimes. Nous runs
+the rest on its own.
 
-## Step 1: install and the setup wizard
+## Step 1: install Nous and go through the wizard
 
-1. Settings → Community plugins → turn on community plugins if you haven't
-   already → **Browse** → search "Nous" → **Install** → **Enable**.
-2. A setup wizard opens by itself the first time. First, choose how Nous
-   should write and organize notes:
-   - **Claude subscription** — if you already pay for Claude Pro/Max and have
-     [Claude Code](https://docs.claude.com/claude-code) installed, this is
-     free (no separate billing).
-   - **A local model** (e.g. [Ollama](https://ollama.com)) — free, ~2 min
-     setup, and nothing ever leaves your machine.
-   - **An API key** — Anthropic, OpenAI, Gemini, or Z.ai. Billed separately.
-     Note: "Nous: Query vault" (agentic search over your notes) needs the
-     Claude subscription path above - it is not available in API-key mode.
-3. The wizard tests that choice, checks optional voice and meeting recording
-   setup, then drops a sample note in your inbox so you can watch the whole
-   thing happen once, live.
+1. Open Settings, then Community plugins. Turn on community plugins.
+2. Click Browse. Search for "Nous." Click Install, then click Enable.
+3. A setup wizard opens on its own. Pick how Nous writes your notes:
+   - **Claude subscription.** Free, if you already pay for Claude Pro or
+     Max and have [Claude Code](https://docs.claude.com/claude-code)
+     installed.
+   - **A local model**, for example [Ollama](https://ollama.com). Free.
+     Takes about two minutes. Nothing leaves your machine.
+   - **An API key.** Anthropic, OpenAI, Gemini, or Z.ai. Billed
+     separately. Note: "Nous: Query vault" needs the Claude subscription
+     path. It does not work in API-key mode.
+4. The wizard checks your choice, then offers voice and meeting setup. It
+   drops a sample note in your inbox, so you can watch the whole process
+   once.
 
 <p align="center">
   <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="../assets/settings-nav.svg">
 </p>
 
-If you skip that sample note or want to redo setup later: command palette
-(`Cmd/Ctrl+P`) → "Nous: Open setup wizard."
+To skip the sample note, or to redo setup later, open the command palette
+(`Cmd` or `Ctrl+P`) and run **"Nous: Open setup wizard."**
 
-## Step 2: your first capture (the simplest way)
+## Step 2: your first capture
 
-No extra setup needed for this one — good first test that everything's
-wired up correctly:
+This step needs no setup. It is a good first test.
 
-1. Right-click **`00-Inbox`** in the file explorer → **New note**.
-2. Type a sentence or two — anything. E.g. "Testing Nous - this should turn
-   into a real note in a few seconds."
-3. Wait a few seconds, then look in **`10-Notes`**. A new file has appeared:
-   a real title (not "Testing Nous"), a short summary, 1-4 tags, and your
-   original text preserved underneath.
+1. Right-click `00-Inbox` in the file explorer. Click New note.
+2. Type a sentence or two. For example: "Testing Nous - this should become
+   a real note in a few seconds."
+3. Wait a few seconds. Open `10-Notes`. A new file is there: a real title
+   (not "Testing Nous"), a short summary, one to four tags, and your
+   original text underneath.
 
-If that worked, everything's connected correctly and the rest of this page
-is just "here are the other ways to feed it."
+If that worked, Nous is set up correctly. The rest of this page shows other
+ways to capture.
 
 ## Step 3: what just happened
 
-Worth understanding once, so it stops feeling like magic:
+This is worth understanding once. Then it stops feeling like magic.
 
 1. Your text landed in `00-Inbox`.
-2. Nous noticed the new file (it watches that folder the whole time Obsidian
-   is open) and sent it off to be enriched — read, summarized, tagged from
-   your existing tag list where possible (it's deliberately reluctant to
-   invent brand new tags), and checked against your recent notes for
-   anything related worth linking.
-3. The finished note got written into `10-Notes` — your original text is
-   never discarded, only added to underneath the generated summary.
+2. Nous watches that folder while Obsidian is open. It found your new file
+   and read it.
+3. Nous summarized your text and added tags from your existing tag list.
+   Nous rarely invents a new tag.
+4. Nous checked your recent notes for anything related, and linked to it.
+5. Nous wrote the finished note into `10-Notes`. Your original text stays,
+   added under the summary.
 
-Once a tag accumulates 4+ notes, Nous also writes a **wiki page** in
-`30-Wikis` pulling them all together — you'll see this happen naturally as
-you use it more, nothing to trigger yourself.
+Once a tag has four or more notes, Nous writes a wiki page for it in
+`30-Wikis`. This happens on its own. You never trigger it.
 
 <p align="center">
   <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="../assets/pipeline.svg">
@@ -87,75 +84,70 @@ you use it more, nothing to trigger yourself.
 
 ## Step 4: your first voice note
 
-Voice notes need speech-to-text first. On macOS, click **Download model** in
-Settings → Nous → Voice capture (one download, fully private - it also
-needs `brew install whisper-cpp`). Or add a Gemini/OpenAI key instead:
-nothing to install. If neither is set up, Nous shows a setup message and
-does not start recording.
+Voice notes need speech-to-text first. On macOS, open the command palette
+and run "Nous: Open setup wizard." Click Install on the voice notes step.
+This needs two clicks and no Terminal command. Or add a Gemini or OpenAI
+key instead - this needs no install. If neither is ready, Nous shows a
+setup message and does not start recording.
 
-1. Click the **🎙️ mic icon** in Obsidian's left sidebar.
+1. Click the mic icon in Obsidian's left sidebar.
 2. Talk for a few seconds.
 3. Click the mic icon again to stop.
-4. Same as before — check `10-Notes` in a few seconds. The note now also has
-   your original recording embedded and playable inside it.
+4. Open `10-Notes` in a few seconds, same as before. The note now has your
+   recording inside it, and you can play it back.
 
 <p align="center">
   <img alt="Click the mic or phone icon to start recording, talk, click it again to stop — a tagged note with the audio or transcript inside lands in your inbox." src="../assets/demo.svg">
 </p>
 
-The same click-to-start, click-to-stop gesture is used for meeting capture
-in Step 6 below — just the phone icon instead of the mic.
+Step 6 below uses the same click-to-start, click-to-stop pattern for
+meetings. Use the phone icon instead of the mic icon.
 
-Prefer to see the words appear *while* you're still talking, Siri-style,
-rather than only after you stop? Settings → Nous → turn on **Advanced
-settings** → add an OpenAI API key → turn on **Live voice transcription
-(beta)**. It's optional and off by default (OpenAI-only for now, desktop
-only) — the plain version above works everywhere with no extra setup, using
-a free local transcription engine (whisper.cpp) if you have it installed, or
-falling back to a Gemini/OpenAI key otherwise.
+Want to see the words appear while you talk, instead of only after you
+stop? Go to Settings → Nous. Turn on Advanced settings. Add an OpenAI API
+key. Turn on Live voice transcription (beta). This feature is optional and
+off by default. It needs an OpenAI key and a desktop computer. The plain
+version above works everywhere, with no extra setup.
 
 ## Step 5: photos, PDFs, and pasted meeting transcripts
 
-- **Photo or screenshot**: drop a `.png`/`.jpg`/`.webp`/`.heic` file straight
+- **Photo or screenshot.** Drop a `.png`, `.jpg`, `.webp`, or `.heic` file
   into `00-Inbox`.
-- **PDF**: same — drop it into `00-Inbox` directly.
-- **A transcript you already have** (copied from Teams/Zoom/Granola/etc.):
-  paste it into a new note in `00-Inbox`, same as Step 2. Nous treats it the
-  same as a recorded meeting.
+- **PDF.** Same - drop it into `00-Inbox`.
+- **A transcript you already have**, for example from Teams, Zoom, or
+  Granola. Paste it into a new note in `00-Inbox`, same as Step 2. Nous
+  treats it the same as a recorded meeting.
 
 ## Step 6: recording an actual meeting (macOS)
 
-This one needs a tiny bit of one-time setup, because capturing *both sides*
-of a call (not just your own mic) needs a real macOS recording permission
-that Obsidian's browser mic recorder cannot provide by itself. Nous uses a
-small native helper for this.
+This needs a small one-time setup. Capturing both sides of a call needs a
+real macOS recording permission. Obsidian's own mic recorder cannot do
+this alone, so Nous uses a small helper program instead.
 
-1. If the setup wizard says the native recorder is missing, click
-   **Install**. Nous downloads the recorder, checks it, and stores it in this
-   vault's plugin folder.
-2. After that: click the **📞 phone icon** when a call starts, click it again
-   when it ends.
+1. If the wizard says the native recorder is missing, click Install. Nous
+   downloads the recorder, checks it, and stores it in this vault.
+2. After that, click the phone icon when a call starts. Click it again
+   when the call ends.
 
-When recording starts, Nous opens a live note with one **Meeting notes**
-section and the cursor ready. Type anything there during the meeting:
-questions, decisions, reminders. Checkboxes (`- [ ]`) work if you want a
-tick-off list.
+When recording starts, Nous opens a live note with a Meeting notes
+section. Type anything there during the meeting - questions, decisions, or
+reminders. Checkboxes (`- [ ]`) work too, if you want a list to check off.
 
-This works on calls and in person. When you stop recording, Nous adds the
-transcript to that same note, and it comes back enriched, same as
-everything else.
+This works for calls and for in-person meetings. When you stop, Nous adds
+the transcript to that same note and enriches it, the same as any other
+capture.
 
-If speech-to-text is not ready yet, Nous still saves the recording. It leaves
-a note in `00-Inbox` that says the meeting needs transcription. Your typed
-questions and notes stay in that note. Later, add local `whisper.cpp` or a
-Gemini/OpenAI key, then run command palette → "Nous: Process inbox now." Nous
-will finish that saved recording.
+If speech-to-text is not ready, Nous still saves the recording. It leaves
+a note in `00-Inbox` that says the meeting needs transcription, with your
+typed notes still inside. Finish voice setup later from the wizard, or add
+a Gemini or OpenAI key. Then run "Nous: Process inbox now" from the
+command palette. Nous finishes that saved recording.
 
 ## Where to go from here
 
 - Something not behaving? [USAGE.md](USAGE.md#if-something-breaks) has
-  actual troubleshooting steps, not just "here's how it should work."
-- Want the full list of settings, hotkeys, and every capture method in
-  depth? [USAGE.md](USAGE.md) is the complete reference.
-- Curious how the pipeline is actually built? [ARCHITECTURE.md](ARCHITECTURE.md)
-  and [TECHNICAL.md](TECHNICAL.md).
+  real troubleshooting steps.
+- Want the full list of settings, hotkeys, and every capture method?
+  [USAGE.md](USAGE.md) is the complete reference.
+- Curious how the pipeline works? Read
+  [ARCHITECTURE.md](ARCHITECTURE.md) and [TECHNICAL.md](TECHNICAL.md).
