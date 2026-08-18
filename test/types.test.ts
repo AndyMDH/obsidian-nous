@@ -18,3 +18,14 @@ test("model options have no duplicate ids within a provider", () => {
 		assert.equal(new Set(ids).size, ids.length, `${provider} has duplicate model ids`);
 	}
 });
+
+// hasWhisperCli() in main.ts falls back to this default command whenever
+// settings.whisperCliPath is blank ("whisper-cli --help"). If this default
+// ever went blank too, the fallback command would become "" and every local
+// voice-transcription readiness check would silently fail closed instead of
+// reporting "whisper-cli missing" - the same class of "installed but not
+// really" bug the model-file-only check used to have.
+test("default settings ship a non-empty whisper-cli command", () => {
+	assert.equal(DEFAULT_SETTINGS.whisperCliPath, "whisper-cli");
+	assert.ok(DEFAULT_SETTINGS.whisperCliPath.trim().length > 0);
+});

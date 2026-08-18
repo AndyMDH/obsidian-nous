@@ -51,6 +51,30 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 	assert.match(items[2].desc, /click Install below/);
 });
 
+// Regression guard for the whisper-cli fix: Settings/onboarding used to call
+// voice notes "ready" (or imply so) once the model file was downloaded, even
+// though whisper-cli ("brew install whisper-cpp") was still missing. The fix
+// made every "not ready" message name *both* pieces so the user never sees a
+// premature "installed" claim. voiceReady itself stays a single boolean here
+// (the two-piece check lives in main.ts's hasAudioTranscriptionBackend(),
+// which isn't unit-testable without spawning a process) - what's testable,
+// and what must never regress, is that the copy shown for "not ready" keeps
+// naming the whisper-cli step and not just the model download.
+test("voice notes not-ready copy names the whisper-cli install step, not just the model download", () => {
+	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "unsupported" });
+	assert.equal(items[1].warning, true);
+	assert.match(items[1].desc, /whisper-cpp/);
+	assert.match(items[1].desc, /Download model/);
+});
+
+test("voice notes not-ready copy is the exact two-piece message (catches silent reverts to a one-piece check)", () => {
+	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "unsupported" });
+	assert.equal(
+		items[1].desc,
+		'Needs speech-to-text: use Download model below plus "brew install whisper-cpp", or add a Gemini/OpenAI key.'
+	);
+});
+
 test("capture prerequisite checklist distinguishes native recorder readiness", () => {
 	const nativeItems = capturePrerequisiteItems({ voiceReady: true, meeting: "ready-native" });
 	assert.equal(nativeItems[2].warning, false);
@@ -60,6 +84,24 @@ test("capture prerequisite checklist distinguishes native recorder readiness", (
 	assert.equal(nativeNoTranscriptionItems[2].warning, false);
 	assert.match(nativeNoTranscriptionItems[2].desc, /Ready to record/);
 	assert.match(nativeNoTranscriptionItems[2].desc, /wait in the inbox/);
+});
+
+// Regression guard: getCapturePrerequisiteStatus() used to report
+// meeting: "ready-native" whenever the recorder's "status" subcommand
+// exited 0, even right after a "start" attempt had just failed on a macOS
+// permission prompt - that failure was tracked separately, so the numbered
+// checklist said "Ready to record" while the detailed recorder row right
+// below it, on the same screen, said the opposite ("last start failed").
+// "needs-permission" exists so both rows agree.
+test("meeting capture checklist reflects a failed permission prompt, not a bare 'ready'", () => {
+	const items = capturePrerequisiteItems({ voiceReady: true, meeting: "needs-permission" });
+	assert.equal(items[2].warning, true);
+	assert.match(items[2].desc, /allow microphone and screen\/audio recording permissions/i);
+
+	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "needs-permission" }), false);
+
+	const actions = onboardingFinishNextActions({ voiceReady: true, meeting: "needs-permission" });
+	assert.ok(actions.some((a) => a.name === "Meeting capture" && a.warning));
 });
 
 test("native recorder install is offered only when the native recorder is missing", () => {

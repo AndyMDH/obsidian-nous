@@ -86,8 +86,8 @@ not, add a Gemini or OpenAI API key; that key is used only for transcription
 when your main enrichment mode is Claude, GLM, Anthropic, or local. If neither
 path is available, Nous shows a setup message and does not start recording.
 
-Prefer a hotkey? **Settings → Hotkeys**, search "Nous: Toggle voice
-capture", give it a key — same command, your choice which trigger you use.
+Prefer a hotkey? **Settings → Hotkeys**, search "Nous: Start/stop voice
+recording", give it a key — same command, your choice which trigger you use.
 Any audio file dropped in `00-Inbox` also works, including recordings made
 in the Obsidian **mobile** app on the go.
 

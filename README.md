@@ -70,7 +70,7 @@ desktop-only.
 - 🎨 **An editorial look, on by default** — notes render with a chip header,
   small-caps sections, and a folded transcript instead of a raw properties
   table. Opt into the full vault-wide theme in Settings → Nous → Appearance —
-  see [`docs/USAGE.md`](docs/USAGE.md#the-nous-look-optional).
+  see [`docs/USAGE.md`](docs/USAGE.md#the-nous-look).
 
 ## Your vault as AI context
 
@@ -96,8 +96,11 @@ Or open [Nous's page on Obsidian's site](https://obsidian.md/plugins?id=nous) di
 ## Quickstart
 
 **1. Enable Nous** — a setup wizard opens automatically. Choose how Nous
-writes notes: a Claude subscription, a free local model, or an API key. Then
-the wizard checks the optional voice and meeting setup.
+writes notes: a Claude subscription, a free local model, or an API key.
+(Migrating notes from Notion? Pick that card instead - it imports your
+export directly into the pipeline.) Then the wizard checks the optional
+voice and meeting setup, and offers a one-click Warm Paper theme install if
+you want Nous's own look for the rest of Obsidian too.
 
 <p align="center">
   <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav.svg">

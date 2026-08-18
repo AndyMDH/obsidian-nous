@@ -115,6 +115,13 @@ const DEFAULT_WHISPER_CLI_BIN = "whisper-cli";
 // exists so a hung one (dropped connection, stuck auth prompt) can't jam
 // cliRunInProgress forever; it should never fire in normal operation.
 const AGENT_CLI_TIMEOUT_MS = 15 * 60 * 1000;
+// Version/capability probes (claude --version, whisper-cli --help, recorder
+// version) should return in under a second - if the binary hangs instead
+// (stuck auth prompt, a first-run update check, a broken install), this cap
+// keeps the screen that's waiting on it (most often onboarding's "Checking
+// the connection...") from spinning forever with no error and no way for
+// the user to tell what went wrong.
+const QUICK_CLI_TIMEOUT_MS = 15 * 1000;
 // afconvert (CoreAudio) can read AIFF/WAV/CAF/M4A/MP3 but not WebM/Opus, so
 // local transcription silently fails if the browser records WebM (Chromium's
 // default with no mimeType hint) - ask for an afconvert-readable container
@@ -289,6 +296,14 @@ export default class NousPlugin extends Plugin {
 	settings: NousSettings;
 	private inFlight = new Set<string>();
 	private cliRunInProgress = false;
+	// A trigger that arrives while a run is already in progress used to just
+	// no-op (main.ts's `if (this.cliRunInProgress) return;`) with nothing to
+	// pick the file back up except some later, unrelated trigger - if the
+	// dropped file was the last activity before Obsidian closed, it could
+	// sit unprocessed indefinitely with no notice explaining why. This flags
+	// that a rerun is owed, so the run that's already in flight schedules
+	// exactly one more pass right after it finishes.
+	private cliRerunQueued = false;
 	// Suppresses the auto-process-on-create listener while importFromNotion()
 	// is bulk-writing files, so a large import doesn't fire one enrichment
 	// run per file. processInbox() runs once, after the whole batch lands.
@@ -961,7 +976,11 @@ export default class NousPlugin extends Plugin {
 		if (!Platform.isMacOS) return false;
 		const { os } = await loadNodeModules();
 		const whisperCli = this.settings.whisperCliPath.trim() || DEFAULT_WHISPER_CLI_BIN;
-		const result = await this.cliExec(whisperCli, ["--help"], { cwd: os.tmpdir(), env: this.cliEnv() });
+		const result = await this.cliExec(whisperCli, ["--help"], {
+			cwd: os.tmpdir(),
+			env: this.cliEnv(),
+			timeoutMs: QUICK_CLI_TIMEOUT_MS,
+		});
 		return result.code === 0;
 	}
 
@@ -980,7 +999,17 @@ export default class NousPlugin extends Plugin {
 		let meeting: CapturePrerequisiteStatus["meeting"] = "unsupported";
 		if (Platform.isMacOS) {
 			const nativeStatus = await this.nativeRecorderStatus();
-			meeting = nativeStatus.available ? "ready-native" : "needs-recorder";
+			// The "status" subcommand can exit 0 (recorder is installed and
+			// idle) even right after a "start" attempt failed on a macOS
+			// permission prompt - nativeRecorderLastProblem is the only place
+			// that failure is recorded, so it has to be checked here too, or
+			// this screen's numbered checklist says "Ready to record" while
+			// the detailed row right below it says the opposite.
+			meeting = !nativeStatus.available
+				? "needs-recorder"
+				: this.nativeRecorderLastProblem
+					? "needs-permission"
+					: "ready-native";
 		}
 		return { voiceReady, meeting };
 	}
@@ -997,7 +1026,11 @@ export default class NousPlugin extends Plugin {
 
 		const { os } = await loadNodeModules();
 		const command = await this.nativeRecorderCommand();
-		const versionResult = await this.cliExec(command, ["version"], { cwd: os.homedir(), env: this.cliEnv() });
+		const versionResult = await this.cliExec(command, ["version"], {
+			cwd: os.homedir(),
+			env: this.cliEnv(),
+			timeoutMs: QUICK_CLI_TIMEOUT_MS,
+		});
 		const statusResult = await this.runNativeRecorder("status");
 		const version = versionResult.code === 0 ? versionResult.stdout.trim().slice(0, 80) : null;
 		const failedOutput = (statusResult.stderr || statusResult.stdout || versionResult.stderr || versionResult.stdout)
@@ -1059,6 +1092,7 @@ export default class NousPlugin extends Plugin {
 			const result = await this.cliExec(this.settings.claudeCliPath, ["--version"], {
 				cwd: basePath,
 				env: this.cliEnv(),
+				timeoutMs: QUICK_CLI_TIMEOUT_MS,
 			});
 			if (result.code !== 0) {
 				throw new Error(
@@ -1668,6 +1702,7 @@ export default class NousPlugin extends Plugin {
 		return this.cliExec(recorder, nativeRecorderArgs(command, recordingsDir), {
 			cwd: os.homedir(),
 			env: this.cliEnv(),
+			timeoutMs: QUICK_CLI_TIMEOUT_MS,
 		});
 	}
 
@@ -2234,7 +2269,10 @@ export default class NousPlugin extends Plugin {
 			nousNotice("CLI mode only works on desktop, sorry.", 10000);
 			return;
 		}
-		if (this.cliRunInProgress) return;
+		if (this.cliRunInProgress) {
+			this.cliRerunQueued = true;
+			return;
+		}
 		const basePath = this.getVaultBasePath();
 		if (!basePath) {
 			nousNotice("Couldn't find your vault's file path.", 10000);
@@ -2250,6 +2288,10 @@ export default class NousPlugin extends Plugin {
 			await this.runInboxCli(basePath);
 		} finally {
 			this.cliRunInProgress = false;
+		}
+		if (this.cliRerunQueued) {
+			this.cliRerunQueued = false;
+			void this.processInboxViaCli();
 		}
 	}
 
@@ -3680,17 +3722,20 @@ function buildTranscriptDecorations(view: EditorView): DecorationSet {
 }
 
 // Clip-n badge (docs/NOUS-REDESIGN.md §2): an n whose right leg bends back
-// up like paperclip wire, light wire on a moss squircle. Sized by CSS at
-// each call site (56px wizard hero, 26px settings header) - width/height
-// below are just the SVG's own default before CSS overrides them.
-const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" width="56" height="56" aria-hidden="true"><rect x="4" y="4" width="104" height="104" rx="30" fill="#4C5138"/><path d="M36 86 V46 C36 33 45 24 56 24 C68 24 78 33 78 46 V70 A10 10 0 0 1 58 70 V52" stroke="#F5F2ED" stroke-width="10" fill="none" stroke-linecap="round"/></svg>`;
+// up like paperclip wire, on a squircle filled with the user's own theme
+// accent color (--interactive-accent), not a fixed brand color - matches
+// the theme-adaptive pivot the rest of the plugin already follows. Sized by
+// CSS at each call site (56px wizard hero, 26px settings header) -
+// width/height below are just the SVG's own default before CSS overrides
+// them.
+const NOUS_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" width="56" height="56" aria-hidden="true"><rect x="4" y="4" width="104" height="104" rx="30" fill="var(--interactive-accent, #4c5138)"/><path d="M36 86 V46 C36 33 45 24 56 24 C68 24 78 33 78 46 V70 A10 10 0 0 1 58 70 V52" stroke="var(--text-on-accent, #f5f2ed)" stroke-width="10" fill="none" stroke-linecap="round"/></svg>`;
 
 // docs/NOUS-REDESIGN.md §2 / warm-paper theme spec §3: clip-n-derived
 // icons, registered once at startup so setIcon()/addRibbonIcon() can use
 // them by name like any Lucide icon. nous-badge duplicates NOUS_LOGO_SVG's
-// artwork (fixed moss fill, used via the raw-embed path above already) -
-// registered anyway so it's available anywhere an Icon-by-name is needed
-// instead of a raw SVG embed.
+// artwork (already used via the raw-embed path above) - registered anyway
+// so it's available anywhere an Icon-by-name is needed instead of a raw SVG
+// embed.
 function registerNousIcons(): void {
 	// Full <svg viewBox> wrapper on each, not just the inner paths - the
 	// source art uses a 96 or 112 grid, not Obsidian's addIcon() default of
@@ -3702,7 +3747,7 @@ function registerNousIcons(): void {
 	);
 	addIcon(
 		"nous-badge",
-		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" fill="none"><rect x="4" y="4" width="104" height="104" rx="30" fill="#4C5138"/><path d="M36 86 V46 C36 33 45 24 56 24 C68 24 78 33 78 46 V70 A10 10 0 0 1 58 70 V52" stroke="#F5F2ED" stroke-width="10" stroke-linecap="round"/></svg>'
+		'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 112 112" fill="none"><rect x="4" y="4" width="104" height="104" rx="30" fill="var(--interactive-accent, #4c5138)"/><path d="M36 86 V46 C36 33 45 24 56 24 C68 24 78 33 78 46 V70 A10 10 0 0 1 58 70 V52" stroke="var(--text-on-accent, #f5f2ed)" stroke-width="10" stroke-linecap="round"/></svg>'
 	);
 	addIcon(
 		"nous-enrich",

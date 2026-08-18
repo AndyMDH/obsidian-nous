@@ -38,8 +38,8 @@ rest runs itself.
    - **An API key** — Anthropic, OpenAI, Gemini, or Z.ai. Billed separately,
      but works on mobile too.
 3. The wizard tests that choice, checks optional voice and meeting recording
-   setup, then offers to drop a sample note in your inbox so you can watch the
-   whole thing happen once, live.
+   setup, then drops a sample note in your inbox so you can watch the whole
+   thing happen once, live.
 
 <p align="center">
   <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="../assets/settings-nav.svg">

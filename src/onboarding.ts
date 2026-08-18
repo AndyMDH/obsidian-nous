@@ -10,7 +10,7 @@ export const ONBOARDING_PREREQUISITES_TEXT =
 export const NATIVE_RECORDER_INSTALL_DESC =
 	"Nous downloads its recorder, checks it, and uses it automatically.";
 
-export type MeetingCapturePrerequisite = "ready-native" | "needs-recorder" | "unsupported";
+export type MeetingCapturePrerequisite = "ready-native" | "needs-recorder" | "needs-permission" | "unsupported";
 
 export interface CapturePrerequisiteStatus {
 	voiceReady: boolean;
@@ -63,10 +63,12 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 					? status.voiceReady
 						? "Ready."
 						: "Ready to record - transcripts wait in the inbox until speech-to-text is set up."
-					: status.meeting === "unsupported"
-						? "macOS only."
-						: "Needs the native recorder - click Install below.",
-			warning: status.meeting === "needs-recorder",
+					: status.meeting === "needs-permission"
+						? "Installed, but the last recording attempt failed - allow microphone and screen/audio recording permissions, then try again."
+						: status.meeting === "unsupported"
+							? "macOS only."
+							: "Needs the native recorder - click Install below.",
+			warning: status.meeting === "needs-recorder" || status.meeting === "needs-permission",
 		},
 	];
 }
@@ -101,6 +103,12 @@ export function onboardingFinishNextActions(status: CapturePrerequisiteStatus): 
 		actions.push({
 			name: "Meeting capture",
 			desc: "Install it from Settings -> Meeting capture.",
+			warning: true,
+		});
+	} else if (status.meeting === "needs-permission") {
+		actions.push({
+			name: "Meeting capture",
+			desc: "Allow microphone and screen/audio recording permissions, then try the phone button again.",
 			warning: true,
 		});
 	} else if (status.meeting === "unsupported") {
