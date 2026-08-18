@@ -65,6 +65,10 @@ obsidian-nous/
 | `toggle-meeting-capture` | Starts/stops the native `nous-recorder` helper (macOS only). |
 | `setup-wizard` | Opens `OnboardingModal`, starting at the welcome screen. |
 | `show-tour` | Opens `OnboardingModal` straight at the tour, skipping setup. |
+| `import-from-notion` | Opens `OnboardingModal` straight at the Notion import screen. |
+| `open-settings` | Jumps to the Nous tab in Obsidian's own Settings. |
+| `log-a-win` | `logWin()` — drops a pre-tagged `#win` capture skeleton in the inbox and opens it. |
+| `convert-transcripts-to-collapsed-sections` | `convertLegacyTranscripts()` — one-time migration for notes written before the collapsed-transcript callout format. |
 
 ### Auto-processing
 
@@ -302,7 +306,7 @@ Settings are persisted by Obsidian via `this.loadData()` / `this.saveData()` int
 
 The settings UI in `NousSettingTab` is built dynamically: it shows/hides fields
 based on execution mode and provider, includes a **Test connection** button,
-and hides rarely-touched fields (CLI/recorder/whisper paths, folder names, thresholds)
+and hides rarely-touched fields (CLI/whisper paths, folder names, thresholds)
 behind an **Advanced settings** toggle - only the essentials show by default.
 
 ## Testing strategy
