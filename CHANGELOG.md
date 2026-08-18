@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.6.3
+
+Addressed the plugin health scorecard's biggest finding: `:has()`
+usage in `styles.css` went from 123 uses down to 0, all replaced with
+plain classes set from JS instead of computed live by the selector
+engine (Obsidian's scanner flags `:has()` as a real performance risk
+- broad selector invalidation, re-evaluated on every DOM change).
+Also fixed the `text-decoration` compatibility warning on underlined
+links. No visible change - properties panel, note headings, and the
+transcript callout all verified rendering identically to before.
+
 ## 2.6.2
 
 Status bar recording/transcribing indicators use real icons and a
