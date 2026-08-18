@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
-  Most similar tools make you trigger tagging, linking, or wiki-building by
-  hand, one step at a time. Nous runs the whole pipeline live in the
-  background as you capture — tagging, linking, and synthesizing a
-  self-updating wiki page once a topic earns one, no command to run.
+  Other tools make you trigger tagging, linking, or wiki-building by hand,
+  one step at a time. Nous runs the whole pipeline in the background as you
+  capture. It tags, links, and builds a self-updating wiki page once a topic
+  earns one. You run no command.
 </p>
 
 <p align="center">
@@ -41,11 +41,11 @@
 </p>
 
 Nous turns each capture — a typed thought, a voice memo, a call, a photo, a
-PDF — into a summarized note, tagged from a controlled vocabulary and linked
-to related notes. When a topic has enough notes, Nous writes a self-updating
-wiki page that collects them. It is local-first: Claude Code CLI, local
-speech-to-text, and Ollama send nothing off your machine — direct API keys
-are opt-in.
+PDF — into a summarized note. It tags the note from a fixed list and links
+it to related notes. Once a topic has enough notes, Nous writes a wiki page
+for it and keeps that page current. Nous is local-first: Claude Code CLI,
+local speech-to-text, and Ollama keep your data on your machine. A direct
+API key is optional.
 
 **Works on:** Desktop only (macOS, Windows, Linux). Meeting capture is
 macOS-only. Live voice transcription (beta) needs an OpenAI key.
@@ -65,26 +65,24 @@ macOS-only. Live voice transcription (beta) needs an OpenAI key.
 
 | | | |
 |---|---|---|
-| 🎙️ | **Capture anything** | Type, paste, drop a file, record a voice note, or record a meeting on macOS. |
-| 🏷️ | **Automatic tags** | Every capture gets tags from a controlled vocabulary — no manual sorting. |
-| 🔗 | **Automatic links** | Related notes connect to each other without manual work. |
-| 📖 | **Self-updating wikis** | Once a topic has enough notes, Nous writes and maintains a wiki page for it. |
-| 🔒 | **Local-first** | Claude Code CLI, local speech-to-text, and Ollama keep data on your machine — API keys are optional. |
-| 🎨 | **An editorial look, on by default** | Notes render with a chip header, small-caps sections, and a folded transcript instead of a raw properties table. Add the matching Warm Paper theme from the setup wizard's welcome screen - see [the Nous look](docs/USAGE.md#the-nous-look). |
+| 🎙️ | **Capture anything** | Type, paste, drop a file, or record a voice note or a meeting on macOS. |
+| 🏷️ | **Automatic tags** | Every capture gets tags from a fixed list. You sort nothing by hand. |
+| 🔗 | **Automatic links** | Related notes connect to each other on their own. |
+| 📖 | **Self-updating wikis** | Once a topic has enough notes, Nous writes and keeps a wiki page for it. |
+| 🔒 | **Local-first** | Claude Code CLI, local speech-to-text, and Ollama keep data on your machine. API keys are optional. |
+| 🎨 | **An editorial look, on by default** | Notes show a clean header and a folded transcript instead of a raw properties table. Add the matching Warm Paper theme from the setup wizard's welcome screen - see [the Nous look](docs/USAGE.md#the-nous-look). |
 
 ## Your vault as AI context
 
-A Nous vault is not only for reading back. Real tags and linked wikis are
-great context for AI coding assistants - much better than a pile of raw
-notes. Add one line to Claude Code's global `~/.claude/CLAUDE.md`, for
-example "My notes live in `~/path/to/vault` - check
-`10-Notes`/`20-Tags`/`30-Wikis` for background". Then every project gets
-that context automatically, with no extra setup.
+A Nous vault is not only for reading back. Tags and linked wikis give an AI
+coding assistant real context, better than a pile of raw notes. Add one line
+to Claude Code's global `~/.claude/CLAUDE.md` - for example, "My notes live
+in `~/path/to/vault`, check `10-Notes`/`20-Tags`/`30-Wikis` for background."
+Every project then gets that context, with no extra setup.
 
-The reasoning behind this vault structure is in
-[Personal RAG Without the Drag](https://xebia.com/blog/personal-rag-without-the-drag/) -
-why agentic search over an organized vault beats embedding pipelines for
-personal notes.
+[Personal RAG Without the Drag](https://xebia.com/blog/personal-rag-without-the-drag/)
+explains why this vault structure works: agentic search over an organized
+vault beats an embedding pipeline for personal notes.
 
 ## Install
 
@@ -95,27 +93,27 @@ Or open [Nous's page on Obsidian's site](https://obsidian.md/plugins?id=nous) di
 
 ## Quickstart
 
-**1. Enable Nous** — a setup wizard opens by itself. Pick how Nous writes
-notes: a Claude subscription, an API key, or a free local model. (Migrating
-notes from Notion? Pick that card instead - it imports your export directly
-into the pipeline.)
+**1. Enable Nous.** A setup wizard opens on its own. Pick how Nous writes
+notes: a Claude subscription, an API key, or a free local model. Migrating
+notes from Notion? Pick that card instead - it imports your export straight
+into the pipeline.
 
-The wizard then checks two optional things: voice notes and meeting capture.
+The wizard then offers two optional setups: voice notes and meeting capture.
 Both need local speech-to-text - two one-click installs in the wizard (a
-~466MB model, then the engine that runs it), no Terminal involved. Text,
-images, and PDFs work right away, with no setup. Skip voice and meeting setup
-for now if you want - finish it later in Settings → Nous. The wizard also
-offers a one-click Warm Paper theme install, for Nous's own look across the
-rest of Obsidian.
+~466MB model, then the engine that runs it). Neither step needs Terminal.
+Text, images, and PDFs work right away, with no setup. Skip voice and
+meeting setup for now if you want - finish them later in Settings → Nous.
+The wizard also offers a one-click Warm Paper theme, for the Nous look
+across the rest of Obsidian.
 
 <p align="center">
   <img alt="Obsidian's settings window: Nous in the left sidebar under Community plugins, with Execution mode, Provider, and Model settings in the main pane." src="assets/settings-nav.svg">
 </p>
 
-**2. Capture something.** There are three ways in, all in the left sidebar.
-The 🎙️ and 📞 buttons toggle: click to start, talk, then click again to stop.
-Each action is also a real Obsidian command - open **Settings → Hotkeys**,
-search for "Nous", and bind the ones that you use often.
+**2. Capture something.** Three ways in, all in the left sidebar. Click 🎙️
+or 📞 to start, talk, then click again to stop. Each action is also an
+Obsidian command - open **Settings → Hotkeys**, search for "Nous", and bind
+the ones you use often.
 
 | | | |
 |---|---|---|
@@ -123,20 +121,20 @@ search for "Nous", and bind the ones that you use often.
 | 📞 | Meeting (macOS) | click the phone - on a call or in person. A live note opens for your questions |
 | 📥 | Anything else | drop it straight into `00-Inbox` |
 
-*Dictate from anywhere (optional)*: a system-wide dictation app such as
-[Handy](https://github.com/cjpais/Handy) can drop transcripts into the inbox
-when Obsidian is closed - see the [usage docs](docs/USAGE.md) for the
+*Dictate from anywhere (optional).* A system-wide dictation app, such as
+[Handy](https://github.com/cjpais/Handy), can drop transcripts into the
+inbox while Obsidian is closed - see the [usage docs](docs/USAGE.md) for the
 one-line capture script.
 
 **3. That is all.** Within seconds, Nous tags, summarizes, and links your
 capture in **`10-Notes`**. The original text, image, or recording stays
-inside the note. When a topic has 4 or more notes, Nous writes a wiki page
-for it in **`30-Wikis`**. Obsidian must be open for this to run - new
+inside the note. Once a topic has 4 or more notes, Nous writes a wiki page
+for it in **`30-Wikis`**. Obsidian must stay open for this to run - new
 captures wait in `00-Inbox` until you open it.
 
 *Do you already have a vault structure?* The folder names
-(`00-Inbox`/`10-Notes`/`20-Tags`/`30-Wikis`) are only defaults. You can
-change each one in Settings → Nous.
+(`00-Inbox`/`10-Notes`/`20-Tags`/`30-Wikis`) are only defaults. Change each
+one in Settings → Nous.
 
 ## How it works, briefly
 
@@ -144,18 +142,18 @@ change each one in Settings → Nous.
   <img alt="Capture anything into 00-Inbox; Nous turns it into a tagged, linked note in 10-Notes; topics with 4+ notes get a wiki page in 30-Wikis." src="assets/pipeline.svg">
 </p>
 
-- **Voice transcription has two paths.** With a Gemini or OpenAI key, there
-  is nothing to install - the key is used only for speech-to-text. For the
-  fully private path, [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
-  runs on your Mac and your voice never leaves it - setup installs it in two
-  clicks (model, then engine), no Terminal needed.
-- **The native `nous-recorder` helper records meetings on macOS** (setup
-  installs it). When the recording starts, Nous opens a live note for your
-  questions. When you stop, an online call becomes a `Me:`/`Them:`
-  dialogue; an in-person meeting becomes one unlabeled room transcript.
-  Details are in the [usage docs](docs/USAGE.md).
+- **Voice transcription has two paths.** With a Gemini or OpenAI key, you
+  install nothing - Nous uses the key only for speech-to-text. For the fully
+  private path, [whisper.cpp](https://github.com/ggml-org/whisper.cpp) runs
+  on your Mac, and your voice never leaves it. Setup installs it in two
+  clicks: model, then engine. No Terminal needed.
+- **The native `nous-recorder` helper records meetings on macOS.** Setup
+  installs it. When the recording starts, Nous opens a live note for your
+  questions. When you stop, an online call becomes a `Me:`/`Them:` dialogue.
+  An in-person meeting becomes one unlabeled room transcript. See the
+  [usage docs](docs/USAGE.md) for detail.
 - **Privacy**: Nous sends only your captured notes and tag names to the
-  provider that you chose. Local mode sends nothing anywhere. There is no
+  provider you chose. Local mode sends nothing anywhere. There is no
   telemetry.
 - **Limitations**: a group call shows all other participants as one
   `Them:` speaker. Mic capture needs macOS 15 or later. Live voice
@@ -173,7 +171,7 @@ Full pipeline detail → [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 | [`docs/TECHNICAL.md`](docs/TECHNICAL.md) | Code map and implementation detail, for contributors. |
 
 [Obsidian LLM Wiki](https://github.com/green-dalii/obsidian-llm-wiki) lists
-Nous as a companion plugin for local voice and meeting capture - the two
+Nous as a companion plugin for local voice and meeting capture. The two
 plugins are independent and can share a vault.
 
 ## For developers

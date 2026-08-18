@@ -3329,7 +3329,19 @@ class NousSettingTab extends PluginSettingTab {
 			// groups (per Obsidian's own type), so one level of unwrapping is
 			// enough.
 			if ("type" in item && (item.type === "group" || item.type === "list")) {
-				if (item.heading) new Setting(this.containerEl).setName(item.heading).setHeading();
+				// Marked so the small-caps CSS below can target this hand-built
+				// heading without also matching Obsidian's native 1.13.0+ group
+				// heading - it reuses the identical setting-item/setting-item
+				// -heading class names, and our selector previously outranked
+				// Obsidian's own (more specific ancestor chain), silently
+				// overriding native headings with 11px faint text instead of
+				// leaving them at Obsidian's normal, full-contrast styling.
+				if (item.heading) {
+					new Setting(this.containerEl)
+						.setName(item.heading)
+						.setHeading()
+						.settingEl.addClass("nous-legacy-heading");
+				}
 				for (const nested of item.items ?? []) {
 					renderInto(nested, this.containerEl);
 				}

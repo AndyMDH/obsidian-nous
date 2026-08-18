@@ -743,20 +743,19 @@
 	margin-bottom: 20px;
 }
 
-/* Small-caps section labels. Only reachable on the pre-1.13.0
-   renderLegacySettings() fallback in main.ts, which still builds each
-   section's heading via Setting.setHeading() the same way this whole tab
-   used to - Obsidian 1.13.0+ renders getSettingDefinitions()'s "group"
-   items (Provider/Meeting capture/Appearance/Voice capture/Vault) as real
-   boxed sections through its own native markup instead, which this
-   selector doesn't reach and isn't meant to: that native styling is
-   Obsidian's own, not ours to reproduce here without a way to see it
-   rendered and check what we'd even be targeting. */
-.nous-settings .setting-item.setting-item-heading {
+/* Small-caps section labels, pre-1.13.0 renderLegacySettings() fallback
+   only (main.ts marks its hand-built heading with nous-legacy-heading).
+   Obsidian 1.13.0+ renders getSettingDefinitions()'s "group" items as
+   real boxed sections through native markup that reuses the identical
+   setting-item/setting-item-heading class names - without this marker,
+   this rule's higher specificity silently overrode Obsidian's own
+   full-contrast native heading with 11px faint text on every 1.13.0+
+   install (confirmed: this is what read as "washed out" labels there). */
+.nous-settings .setting-item.setting-item-heading.nous-legacy-heading {
 	border: none;
 	padding: 22px 0 4px;
 }
-.nous-settings .setting-item.setting-item-heading .setting-item-name {
+.nous-settings .setting-item.setting-item-heading.nous-legacy-heading .setting-item-name {
 	font-size: 11px;
 	font-weight: 600;
 	letter-spacing: 0.14em;
