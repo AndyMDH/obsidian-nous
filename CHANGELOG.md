@@ -1,5 +1,102 @@
 # Changelog
 
+## 2.8.3
+
+- Fixed a real bug behind the "washed out" Settings tab headings some
+  users saw: a style meant only for older Obsidian versions was
+  overriding Obsidian's own native heading style on newer ones.
+  Section headings (Provider, Meeting capture, etc.) now render at
+  full size and contrast everywhere.
+- README tightened to shorter sentences and simpler words throughout.
+
+## 2.8.2
+
+- Local speech-to-text (whisper-cli) now installs with one click, no
+  Terminal command needed - same as the model download already did,
+  including a Cancel button.
+- Cleaned up duplicated code found in a codebase-wide audit: shared
+  helpers replace several copy-pasted blocks, two dead settings are
+  gone, and a couple of stale mismatches between screens are fixed.
+
+## 2.8.1
+
+- Default local speech model dropped from ~1.6GB to ~466MB - much
+  less to download. Anyone who already has the old model keeps using
+  it; nothing breaks.
+- The wizard's "What works now" screen is now "Setting up" and only
+  lists what still needs attention.
+- Dropped the "whisper-cli"/"whisper.cpp" jargon from every screen a
+  user sees - one tool, two confusing names. Kept only in the
+  deep-dive docs.
+- Fixed two bugs in the dictation capture script: same-second
+  captures no longer overwrite each other, and a broken vault path
+  now saves a clear error to the Desktop instead of losing the
+  capture.
+- Fixed dropdown text contrast in dark mode.
+
+## 2.8.0
+
+- Mobile support removed - Nous is desktop only (macOS, Windows,
+  Linux) now. Cleaning out the dead mobile-only code caught one real
+  bug: a Windows or Linux user could hit a raw error instead of a
+  clear message when converting a HEIC image.
+- Reviewed the whole setup wizard as a brand-new user and fixed
+  several rough spots: a back button that jumped two steps at once, a
+  checklist that repeated itself, a "give up meeting capture for
+  good" message that was really just "do it later," and a vault
+  warning that wrapped badly.
+- README restyled with a link row and a Features table.
+
+## 2.7.6
+
+- Fixed onboarding states that could disagree with themselves - for
+  example, meeting capture could say "ready" and "just failed" on the
+  same screen after a permission prompt failed.
+- Capability checks (Claude Code, whisper-cli, the recorder) had no
+  timeout and could leave the wizard spinning forever. Capped at 15
+  seconds.
+- A file dropped into the inbox mid-run could be silently skipped -
+  now retried.
+- Fixed several stale doc references and a few small visual
+  mismatches between the wizard and Settings.
+
+## 2.7.5
+
+- Fixed several data-loss and race-condition bugs found in a full
+  codebase sweep: same-day duplicate captures could overwrite each
+  other, a colon in a note's title could corrupt that note's whole
+  frontmatter, and a voice recording could become permanently
+  unstoppable under rare timing.
+- API mode now has the same protection against overlapping runs that
+  CLI mode already had.
+
+## 2.7.4
+
+- Fixed notice-bubble spam: "waiting on speech-to-text" no longer
+  repeats on every scan.
+- Simplified notice text that repeated the same instruction twice.
+- The pipeline log is now capped at 5,000 lines instead of growing
+  forever.
+
+## 2.7.3
+
+- Fixed the quick tour's first step having no back button.
+
+## 2.7.2
+
+- Fixed voice setup showing "installed" when whisper-cli was actually
+  still missing.
+- Onboarding now warns before writing into a vault that already has
+  content.
+- Onboarding now explains that the native recorder and the speech
+  model are two separate installs.
+
+## 2.7.1
+
+- Fixed folders dropped into the inbox only being scanned one level
+  deep - files nested inside a dropped folder were silently never
+  processed.
+
 ## 2.7.0
 
 Import notes from Notion:
