@@ -3,9 +3,6 @@
 // redundant on top of that link (two ways to say "go here" in one bubble).
 export const MEETING_RECORDER_MISSING_NOTICE = "Meeting recorder isn't installed yet.";
 
-export const ONBOARDING_PREREQUISITES_TEXT =
-	"Text, images, and PDFs work after that choice. Voice notes also need speech-to-text: local whisper.cpp on macOS, or a Gemini/OpenAI key used only for transcription. For meetings on macOS, install the native Nous recorder. If speech-to-text is not ready yet, Nous still saves the recording and finishes it later.";
-
 export const NATIVE_RECORDER_INSTALL_DESC =
 	"Nous downloads its recorder, checks it, and uses it automatically.";
 
@@ -63,7 +60,7 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 						? "Ready."
 						: "Ready to record - transcripts wait in the inbox until speech-to-text is set up."
 					: status.meeting === "needs-permission"
-						? "Installed, but the last recording attempt failed - allow microphone and screen/audio recording permissions, then try again."
+						? "Installed, but the last attempt failed - check mic/screen recording permissions, then try again."
 						: status.meeting === "unsupported"
 							? "macOS only."
 							: "Needs the native recorder - click Install below.",
@@ -77,7 +74,10 @@ export function shouldOfferNativeRecorderInstall(status: CapturePrerequisiteStat
 }
 
 export function capturePrerequisitesContinueText(status: CapturePrerequisiteStatus): string {
-	if (status.meeting === "needs-recorder") return "Continue without meeting capture";
+	// "...without meeting capture" used to read like giving it up for good
+	// to a first-time user, rather than "set it up later" - it's just
+	// deferred, reachable any time from Settings -> Nous.
+	if (status.meeting === "needs-recorder") return "Continue - set up meeting capture later";
 	return "Continue";
 }
 
@@ -87,43 +87,6 @@ export function onboardingFinishTitle(status: CapturePrerequisiteStatus): string
 		return "Text and voice capture are ready";
 	}
 	return "Text capture is ready";
-}
-
-export function onboardingFinishNextActions(status: CapturePrerequisiteStatus): CapturePrerequisiteItem[] {
-	const actions: CapturePrerequisiteItem[] = [];
-	if (!status.voiceReady) {
-		actions.push({
-			name: "Voice notes",
-			desc: "Use Download model in Settings -> Voice capture, or add a Gemini/OpenAI key.",
-			warning: true,
-		});
-	}
-	if (status.meeting === "needs-recorder") {
-		actions.push({
-			name: "Meeting capture",
-			desc: "Install it from Settings -> Meeting capture.",
-			warning: true,
-		});
-	} else if (status.meeting === "needs-permission") {
-		actions.push({
-			name: "Meeting capture",
-			desc: "Allow microphone and screen/audio recording permissions, then try the phone button again.",
-			warning: true,
-		});
-	} else if (status.meeting === "unsupported") {
-		actions.push({
-			name: "Meeting capture",
-			desc: "macOS-only. This device still captures text, images, PDFs, and voice notes.",
-			warning: false,
-		});
-	} else if (!status.voiceReady) {
-		actions.push({
-			name: "Meeting transcripts",
-			desc: "Recordings save now - transcripts wait in the inbox until speech-to-text is set up.",
-			warning: false,
-		});
-	}
-	return actions;
 }
 
 export function nativeRecorderReadinessText(status: NativeRecorderReadiness): string {
@@ -137,7 +100,7 @@ export function nativeRecorderReadinessText(status: NativeRecorderReadiness): st
 		case "recording":
 			return `Recording now.${command}${version}`;
 		case "needs-permission":
-			return `Installed, but the last start failed. Try the phone button again after allowing microphone and screen/audio recording permissions.${command}${version} ${status.detail}`.trim();
+			return `Installed, but the last start failed - check mic/screen recording permissions, then try again.${command}${version} ${status.detail}`.trim();
 		case "error":
 			return `Could not check the recorder.${command}${version} ${status.detail}`.trim();
 		case "installed":

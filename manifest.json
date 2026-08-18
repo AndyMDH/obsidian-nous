@@ -6,5 +6,5 @@
   "description": "Turns meetings, voice notes, photos, and PDFs into a tagged, linked knowledge base - built as context your AI assistant can use.",
   "author": "Andy Ho",
   "authorUrl": "https://github.com/AndyMDH",
-  "isDesktopOnly": false
+  "isDesktopOnly": true
 }

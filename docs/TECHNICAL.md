@@ -116,7 +116,7 @@ Important functions:
 - `clusterByTag(notes)` — groups notes by tag, excluding `fragment` notes.
 - `extractEnrichedSections(noteContent)` — strips transcript/related sections so wiki synthesis only sees structured content.
 - `extractTranscriptSnippet(noteContent)` — used for duplicate detection in API mode.
-- `arrayBufferToBase64(buffer)` — chunked btoa encoder that works on mobile.
+- `arrayBufferToBase64(buffer)` — chunked btoa encoder; `src/logic.ts` has no Obsidian/Node dependency, so this uses the browser-standard `btoa` rather than `Buffer.from`.
 
 ### `prompts.ts`
 
@@ -177,7 +177,7 @@ Kept DOM-free and network-free at this level (no `WebSocket` import) so it's uni
 - `parseRealtimeEvent()` - discriminated union over server events (`delta` / `completed` / `error` / `unknown`); unrecognized event types (e.g. `session.created`) are `unknown`, not errors.
 - `class RealtimeTranscriber` - owns one WebSocket connection: sends session config on open (model `gpt-4o-mini-transcribe`, `turn_detection: server_vad` with a widened `silence_duration_ms` so ordinary dictation pauses don't prematurely finalize a segment), forwards audio chunks, and dispatches `onPartial`/`onSegmentDone`/`onError`. Holds no transcript state itself - the modal accumulates segments.
 
-This is strictly a safety-net-backed addition: `LiveVoiceCaptureModal` always starts the existing, unmodified `MediaRecorder` first, and only layers the Realtime connection on top of it. Any live-transcription failure (connect timeout, mid-stream drop, no key, mobile) tears down just the WS/AudioWorklet/AudioContext side; the recording itself is untouched and falls through to the unchanged batch `transcribeAudio()` path below on stop.
+This is strictly a safety-net-backed addition: `LiveVoiceCaptureModal` always starts the existing, unmodified `MediaRecorder` first, and only layers the Realtime connection on top of it. Any live-transcription failure (connect timeout, mid-stream drop, no key) tears down just the WS/AudioWorklet/AudioContext side; the recording itself is untouched and falls through to the unchanged batch `transcribeAudio()` path below on stop.
 
 ### `nativeRecorder.ts` and `native/nous-recorder`
 
@@ -365,7 +365,7 @@ If you want to change how Nous behaves, these are the typical seams:
 
 ## Important implementation notes
 
-- **Mobile compatibility**: `Buffer.from` is not available on mobile, so `arrayBufferToBase64()` uses chunked `btoa`. HEIC conversion and CLI mode are desktop-only.
+- **Desktop-only** (`isDesktopOnly: true` in `manifest.json`): HEIC conversion, CLI mode, and the native meeting recorder all shell out to local binaries, which need a real filesystem and process access.
 - **Audio always needs Gemini/OpenAI**: Anthropic does not offer an audio transcription API, so even CLI mode falls back to a direct API key for speech-to-text.
 - **No agentic loop**: each enrichment and wiki call is a single tool-call request. The model does not iterate.
 - **Case-insensitive filesystem safety**: wiki files use a ` Wiki` suffix to avoid filename collisions with tag notes.

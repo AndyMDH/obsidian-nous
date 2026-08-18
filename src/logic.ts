@@ -52,7 +52,8 @@ export function meetingAttachmentFilename(date: string, title: string, extension
 	return `${date} ${sanitizeFilename(title)}.${extension}`;
 }
 
-// Buffer.from doesn't exist on mobile - chunked btoa works everywhere.
+// This file has no Obsidian/Node dependency (see README's "For developers"),
+// so browser-standard btoa, not Buffer.from.
 export function arrayBufferToBase64(buffer: ArrayBuffer): string {
 	const bytes = new Uint8Array(buffer);
 	let binary = "";

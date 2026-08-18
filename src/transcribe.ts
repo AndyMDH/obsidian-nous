@@ -66,7 +66,7 @@ export async function transcribeWithGemini(
 }
 
 // Minimal multipart encoder - Obsidian's requestUrl can't serialize
-// FormData, and this stays portable across Electron/mobile/Node.
+// FormData.
 export function buildMultipartBody(
 	boundary: string,
 	fields: Record<string, string>,

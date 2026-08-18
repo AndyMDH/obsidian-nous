@@ -151,7 +151,7 @@ The plugin calls a remote or local LLM API directly.
 
 - **Providers**: Anthropic, OpenAI, Gemini, GLM (Z.ai), or any OpenAI-compatible local server.
 - **Model invocation**: one tool-call request per file or wiki topic.
-- **Pros**: works on mobile (except Local), no external CLI dependency, deterministic prompts.
+- **Pros**: no external CLI dependency, deterministic prompts.
 - **Cons**: requires an API key; audio transcription falls back to Gemini or OpenAI (even if enrichment uses another provider) whenever local whisper.cpp isn't installed.
 
 ### CLI mode
@@ -161,7 +161,7 @@ The plugin shells out to the `claude` CLI (Claude Code) and provides instruction
 - **Skills**: `meeting-enricher`, `wiki-builder`, `vault-query`.
 - **Model invocation**: Claude Code uses its own tools (`Read`, `Write`, `Edit`, `Glob`, `Grep`, `Bash`) to act on the vault.
 - **Pros**: reuses an existing Claude subscription, richer reasoning for complex tasks, no separate API billing.
-- **Cons**: desktop-only; requires Claude Code installed and reachable from Obsidian's PATH.
+- **Cons**: requires Claude Code installed and reachable from Obsidian's PATH.
 
 Both modes produce the same folder structure and the same Markdown shape. The execution mode is a hidden implementation detail from the vault's perspective.
 

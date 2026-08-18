@@ -2,12 +2,10 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import {
 	MEETING_RECORDER_MISSING_NOTICE,
-	ONBOARDING_PREREQUISITES_TEXT,
 	capturePrerequisitesContinueText,
 	capturePrerequisiteItems,
 	hasGeminiOrOpenAiTranscriptionKey,
 	nativeRecorderReadinessText,
-	onboardingFinishNextActions,
 	onboardingFinishTitle,
 	shouldOfferNativeRecorderInstall,
 } from "../src/onboarding.ts";
@@ -17,15 +15,6 @@ test("voice transcription fallback accepts only Gemini or OpenAI keys", () => {
 	assert.equal(hasGeminiOrOpenAiTranscriptionKey({ gemini: "   ", openai: "" }), false);
 	assert.equal(hasGeminiOrOpenAiTranscriptionKey({ gemini: "gemini-key", openai: "" }), true);
 	assert.equal(hasGeminiOrOpenAiTranscriptionKey({ gemini: "", openai: "openai-key" }), true);
-});
-
-test("new-user copy says voice notes need speech-to-text setup", () => {
-	assert.match(ONBOARDING_PREREQUISITES_TEXT, /speech-to-text|whisper\.cpp|Gemini\/OpenAI|Gemini or OpenAI/i);
-});
-
-test("new-user copy sends meeting capture to the native recorder first", () => {
-	assert.match(ONBOARDING_PREREQUISITES_TEXT, /native/);
-	assert.match(ONBOARDING_PREREQUISITES_TEXT, /saves the recording|finishes it later/);
 });
 
 // Regression guard: this notice is shown via settingsNotice(), which already
@@ -95,12 +84,9 @@ test("capture prerequisite checklist distinguishes native recorder readiness", (
 test("meeting capture checklist reflects a failed permission prompt, not a bare 'ready'", () => {
 	const items = capturePrerequisiteItems({ voiceReady: true, meeting: "needs-permission" });
 	assert.equal(items[2].warning, true);
-	assert.match(items[2].desc, /allow microphone and screen\/audio recording permissions/i);
+	assert.match(items[2].desc, /mic\/screen recording permissions/i);
 
 	assert.equal(shouldOfferNativeRecorderInstall({ voiceReady: true, meeting: "needs-permission" }), false);
-
-	const actions = onboardingFinishNextActions({ voiceReady: true, meeting: "needs-permission" });
-	assert.ok(actions.some((a) => a.name === "Meeting capture" && a.warning));
 });
 
 test("native recorder install is offered only when the native recorder is missing", () => {
@@ -110,7 +96,7 @@ test("native recorder install is offered only when the native recorder is missin
 
 	assert.equal(
 		capturePrerequisitesContinueText({ voiceReady: true, meeting: "needs-recorder" }),
-		"Continue without meeting capture"
+		"Continue - set up meeting capture later"
 	);
 	assert.equal(capturePrerequisitesContinueText({ voiceReady: true, meeting: "ready-native" }), "Continue");
 });
@@ -123,21 +109,12 @@ test("capture prerequisite checklist treats non-macOS meeting capture as unavail
 	assert.match(items[2].desc, /macOS only/);
 });
 
-test("finish screen stays truthful when optional capture setup is missing", () => {
+test("finish screen title stays truthful when optional capture setup is missing", () => {
 	const missingBoth = { voiceReady: false, meeting: "needs-recorder" } as const;
 	assert.equal(onboardingFinishTitle(missingBoth), "Text capture is ready");
-	assert.deepEqual(
-		onboardingFinishNextActions(missingBoth).map((item) => [item.name, item.warning]),
-		[
-			["Voice notes", true],
-			["Meeting capture", true],
-		]
-	);
 
 	const ready = { voiceReady: true, meeting: "ready-native" } as const;
 	assert.equal(onboardingFinishTitle(ready), "Nous is ready");
-	// A fully-ready setup has nothing left to warn about.
-	assert.deepEqual(onboardingFinishNextActions(ready), []);
 });
 
 test("native recorder readiness text exposes status and next action", () => {
@@ -157,6 +134,6 @@ test("native recorder readiness text exposes status and next action", () => {
 			version: "nous-recorder 0.1.0",
 			detail: "Allow microphone and screen/audio recording permissions.",
 		}),
-		/last start failed.*Try the phone button again/
+		/last start failed.*check mic\/screen recording permissions/
 	);
 });

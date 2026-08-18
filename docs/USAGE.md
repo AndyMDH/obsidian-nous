@@ -16,7 +16,8 @@ and use is identical.
 
 ## What you need
 
-- [Obsidian](https://obsidian.md) (free)
+- [Obsidian](https://obsidian.md) on desktop (macOS, Windows, or Linux) —
+  Nous is a desktop-only plugin
 - One of these:
   - A **Claude subscription** (Pro or Max), plus
     [Claude Code](https://docs.claude.com/claude-code) installed once
@@ -24,9 +25,6 @@ and use is identical.
     (GLM-5.2 and other GLM models)
   - A **local model** (e.g. [Ollama](https://ollama.com)) — free, nothing
     ever leaves your machine
-
-> **Desktop vs mobile:** Claude Code CLI mode only works on desktop. Use a
-> direct API key on mobile.
 
 ## Set up
 
@@ -88,8 +86,7 @@ path is available, Nous shows a setup message and does not start recording.
 
 Prefer a hotkey? **Settings → Hotkeys**, search "Nous: Start/stop voice
 recording", give it a key — same command, your choice which trigger you use.
-Any audio file dropped in `00-Inbox` also works, including recordings made
-in the Obsidian **mobile** app on the go.
+Any audio file dropped in `00-Inbox` also works, from any recorder.
 
 **Live voice transcription (beta)** — **Settings → Nous → Live voice
 transcription (beta)**, off by default. Turn it on (with an OpenAI API key
@@ -236,7 +233,6 @@ Every step is logged to `.nous/pipeline.log` in the vault.
 
 - **Obsidian must be open** — captures wait in `00-Inbox` until it is, then
   get processed.
-- **CLI mode is desktop-only**; use Direct API key mode on mobile.
 - **One image, PDF, or recording per note.** HEIC photos need macOS to
   convert; PDFs need Anthropic, Gemini, or CLI mode; audio needs either local
   `whisper.cpp` (macOS) or a Gemini/OpenAI key for transcription.

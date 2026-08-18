@@ -349,6 +349,12 @@
 	margin-left: auto;
 	margin-right: auto;
 }
+/* The 240px default column suits a single short tagline - a second,
+   longer aside (the "this vault already has files" warning) wrapped into a
+   tall, ragged stack of short lines at that width. */
+.nous-wizard-body.is-wide {
+	max-width: 340px;
+}
 .nous-modal.is-form .nous-wizard-body,
 .nous-modal.is-list .nous-wizard-body {
 	max-width: none;
@@ -548,13 +554,16 @@
 .nous-numbered-row.is-warning .nous-numbered-name {
 	color: var(--nous-accent);
 }
-/* Extra actionable rows below the checklist (recorder status, model
-   download, recorder install) keep Setting's normal row layout, just
-   quieter than the wizard's default 16px padding. */
-.nous-capture-checklist .setting-item {
-	padding: 10px 0;
-	border-top: 1px solid var(--nous-hairline-2);
-	border-bottom: none;
+/* The one-click fix (download the speech model, install the recorder) sits
+   on its own row instead of a separate block repeating the same status
+   text below the checklist. */
+.nous-numbered-actions {
+	flex-shrink: 0;
+	align-self: center;
+}
+.nous-numbered-hint {
+	font-size: 12px;
+	color: var(--nous-muted);
 }
 
 /* Every other setting row in the wizard (mode cards' skip row spacing,

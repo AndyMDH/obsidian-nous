@@ -92,7 +92,6 @@ import {
 	capturePrerequisiteItems,
 	hasGeminiOrOpenAiTranscriptionKey,
 	nativeRecorderReadinessText,
-	onboardingFinishNextActions,
 	onboardingFinishTitle,
 	shouldOfferNativeRecorderInstall,
 } from "./src/onboarding";
@@ -212,10 +211,9 @@ declare global {
 	}
 }
 
-// child_process/crypto/fs/os/path aren't available on mobile, so they can't be
-// static imports (that would break the plugin bundle on load, everywhere,
-// not just where these are used) - loaded on demand instead, only from the
-// desktop/macOS-gated code paths that actually need them.
+// Loaded on demand rather than as static imports, kept lazy from before this
+// plugin went desktop-only (isDesktopOnly: true) - only the macOS-gated code
+// paths that actually need them ever call this.
 type NodeModules = {
 	crypto: typeof import("crypto");
 	execFile: typeof import("child_process").execFile;
@@ -229,13 +227,6 @@ type NodeModules = {
 let nodeModulesPromise: Promise<NodeModules> | null = null;
 function loadNodeModules(): Promise<NodeModules> {
 	if (!nodeModulesPromise) {
-		// obsidianmd/no-nodejs-modules fires here and can't be suppressed
-		// (eslint-comments/no-restricted-disable blocks it) - it only turns
-		// off when manifest.json sets isDesktopOnly: true, which would be
-		// false advertising: Nous genuinely runs in API-key mode on mobile,
-		// it just can't offer local whisper/CLI/HEIC features there. Every
-		// caller of loadNodeModules() already checks Platform.isMacOS or
-		// Platform.isDesktopApp before awaiting it, so this is safe.
 		//
 		// This must be window.require, not a dynamic import("child_process")
 		// - Electron's renderer has no native module loader that resolves
@@ -296,9 +287,8 @@ function loadElectronRemoteDialog(): Promise<ElectronRemoteDialog> {
 // `external` array), so a dynamic import() of it resolves against the
 // bundle's own internal module registry rather than a real specifier - safe
 // even though a dynamic import() of an actual Node builtin like
-// child_process is not (see the comment above). Still loaded lazily and only
-// from the desktop-gated live-transcription path, same spirit as
-// loadNodeModules(): nothing pulls this in on mobile.
+// child_process is not (see the comment above). Still loaded lazily, only
+// from the live-transcription path that actually needs it.
 let wsModulePromise: Promise<typeof import("ws")> | null = null;
 function loadWsModule(): Promise<typeof import("ws")> {
 	if (!wsModulePromise) wsModulePromise = import("ws");
@@ -1170,20 +1160,32 @@ export default class NousPlugin extends Plugin {
 			return `Found Claude Code (${result.stdout.trim().slice(0, 60)}).`;
 		}
 		const provider = this.getLlmProvider();
-		const result = await provider.callTool<{ ok: boolean }>(
-			"You are a connection test. Call the ping tool exactly once with ok=true.",
-			{ text: "ping" },
-			{
-				name: "ping",
-				description: "Confirm the connection works.",
-				input_schema: {
-					type: "object",
-					properties: { ok: { type: "boolean" } },
-					required: ["ok"],
+		// Unlike cliExec (timeoutMs above), Obsidian's requestUrl has no
+		// timeout option at all - a dropped connection (an unreachable local
+		// server, a firewalled remote endpoint) would otherwise leave
+		// "Checking the connection..." spinning forever with no Retry/Skip
+		// ever surfacing. Bounded here, at the call site, rather than inside
+		// httpPost itself - real enrichment calls share that same plumbing
+		// and can legitimately take longer than a quick ping should.
+		const result = await Promise.race([
+			provider.callTool<{ ok: boolean }>(
+				"You are a connection test. Call the ping tool exactly once with ok=true.",
+				{ text: "ping" },
+				{
+					name: "ping",
+					description: "Confirm the connection works.",
+					input_schema: {
+						type: "object",
+						properties: { ok: { type: "boolean" } },
+						required: ["ok"],
+					},
 				},
-			},
-			64
-		);
+				64
+			),
+			new Promise<never>((_, reject) =>
+				window.setTimeout(() => reject(new Error("Timed out waiting for a response.")), QUICK_CLI_TIMEOUT_MS)
+			),
+		]);
 		if (!result || result.ok !== true) {
 			throw new Error("The model responded, but not with the expected tool call - it may not support tool use.");
 		}
@@ -1619,15 +1621,12 @@ export default class NousPlugin extends Plugin {
 		}
 	}
 
-	// Only true when every fallback condition is satisfied: opt-in toggle,
-	// an OpenAI key (Realtime API only, reuses apiKeys.openai), and desktop
-	// (browser WebSocket can't set an Authorization header - see
-	// src/realtimeTranscribe.ts's header comment - so this needs the same
-	// Node "ws" + nodeIntegration trick as CLI mode and local whisper.cpp,
-	// neither of which exist on mobile). Any false here means the ribbon
-	// falls straight through to the unchanged headless path above.
+	// Only true when both fallback conditions are satisfied: opt-in toggle,
+	// and an OpenAI key (Realtime API only, reuses apiKeys.openai). Any
+	// false here means the ribbon falls straight through to the unchanged
+	// headless path above.
 	private canUseLiveTranscription(): boolean {
-		return this.settings.liveTranscriptionEnabled && !!this.settings.apiKeys.openai && Platform.isDesktopApp;
+		return this.settings.liveTranscriptionEnabled && !!this.settings.apiKeys.openai;
 	}
 
 	// Shared by the headless recorder above and LiveVoiceCaptureModal below,
@@ -2392,10 +2391,6 @@ export default class NousPlugin extends Plugin {
 	}
 
 	private async processInboxViaCli() {
-		if (!Platform.isDesktopApp) {
-			nousNotice("CLI mode only works on desktop, sorry.", 10000);
-			return;
-		}
 		if (this.cliRunInProgress) {
 			this.cliRerunQueued = true;
 			return;
@@ -2552,10 +2547,6 @@ export default class NousPlugin extends Plugin {
 	}
 
 	private async runWikiBuilderCli() {
-		if (!Platform.isDesktopApp) {
-			nousNotice("CLI mode only works on desktop, sorry.", 10000);
-			return;
-		}
 		const basePath = this.getVaultBasePath();
 		if (!basePath) {
 			nousNotice("Couldn't find your vault's file path.", 10000);
@@ -2584,10 +2575,6 @@ export default class NousPlugin extends Plugin {
 	async runVaultQuery(question: string) {
 		if (this.settings.executionMode !== "cli") {
 			nousNotice("Vault search needs CLI mode - switch it in settings → Nous.", 10000);
-			return;
-		}
-		if (!Platform.isDesktopApp) {
-			nousNotice("CLI mode only works on desktop, sorry.", 10000);
 			return;
 		}
 		const basePath = this.getVaultBasePath();
@@ -2674,9 +2661,14 @@ export default class NousPlugin extends Plugin {
 				}
 
 				if (isHeic) {
-					if (!Platform.isDesktopApp) {
+					// The real constraint is macOS's own `sips` tool, not just
+					// "desktop" - this used to also gate on mobile, but a
+					// Windows/Linux desktop has neither and would otherwise hit
+					// convertHeicToJpeg() below and fail with a raw subprocess
+					// error instead of this clear notice.
+					if (!Platform.isMacOS) {
 						nousNotice(
-							`HEIC photos need desktop (uses macOS's built-in converter) - left "${file.name}" in your inbox for now.`,
+							`HEIC photos need macOS (uses its built-in converter) - left "${file.name}" in your inbox for now.`,
 							10000
 						);
 						return false;
@@ -3217,9 +3209,7 @@ class NousSettingTab extends PluginSettingTab {
 			render: (setting) => {
 				setting
 					.setDesc(
-						this.plugin.settings.executionMode === "cli"
-							? "No extra billing. Desktop only."
-							: "Works on mobile. Billed separately."
+						this.plugin.settings.executionMode === "cli" ? "No extra billing." : "Billed separately."
 					)
 					.addDropdown((dropdown) => {
 						dropdown
@@ -3234,19 +3224,6 @@ class NousSettingTab extends PluginSettingTab {
 					});
 			},
 		});
-
-		if (!Platform.isDesktopApp && this.plugin.settings.executionMode === "cli") {
-			providerItems.push({
-				name: "",
-				render: (setting) => {
-					setting
-						.setDesc(
-							"CLI mode doesn't work on mobile - switch to direct API key here, or use this device only to browse the vault."
-						)
-						.setClass("mod-warning");
-				},
-			});
-		}
 
 		providerItems.push({
 			name: "Advanced settings",
@@ -3910,6 +3887,12 @@ function registerNousIcons(): void {
 
 class OnboardingModal extends Modal {
 	private lastCaptureStatus: CapturePrerequisiteStatus | null = null;
+	// capturePrerequisiteItems() always claims text/image/PDF capture is
+	// "Ready" - true once the connection test has actually passed, but
+	// renderConnectionError's Skip button reaches the same checklist screen
+	// after a CONFIRMED failure, with no distinction between the two. Set
+	// on skip-after-failure, cleared on an actual successful test.
+	private connectionUnverified = false;
 	// The chevron+dots row (docs/NOUS-REDESIGN.md §3, step 1) sits above
 	// this.titleEl, not inside contentEl - Obsidian renders titleEl as a
 	// fixed sibling before contentEl regardless of when setTitle() is
@@ -3918,6 +3901,18 @@ class OnboardingModal extends Modal {
 	// screen's row before the next screen decides whether to draw its own
 	// (Welcome draws none at all, per spec).
 	private topRowEl: HTMLElement | null = null;
+
+	// Every mode-card/provider/key field on Welcome and the screens after it
+	// saves straight to this.plugin.settings on click/keystroke, with no
+	// draft state - fine for first-run (nothing to lose yet), but "Rerun
+	// setup" opens this same modal on an already-working vault. Abandoning
+	// it partway (closing without Finish, after already picking a new mode
+	// or typing a partial key) would otherwise silently leave that
+	// half-changed, untested config in place instead of the config that was
+	// actually working. Snapshotting only when already onboarded, and only
+	// restoring on an unfinished close, keeps first-run behavior untouched.
+	private settingsSnapshot: NousSettings | null = null;
+	private finished = false;
 
 	// "tour" reopens straight to the 60-second walkthrough, skipping setup -
 	// lets a user who is already connected revisit it later without redoing
@@ -3929,6 +3924,21 @@ class OnboardingModal extends Modal {
 	) {
 		super(app);
 		this.modalEl.addClass("nous-modal");
+		if (plugin.settings.onboarded) {
+			this.settingsSnapshot = {
+				...plugin.settings,
+				apiKeys: { ...plugin.settings.apiKeys },
+				models: { ...plugin.settings.models },
+			};
+		}
+	}
+
+	onClose() {
+		if (this.settingsSnapshot && !this.finished) {
+			this.plugin.settings = this.settingsSnapshot;
+			void this.plugin.saveSettings();
+		}
+		this.contentEl.empty();
 	}
 
 	onOpen() {
@@ -3993,8 +4003,11 @@ class OnboardingModal extends Modal {
 		setIcon(tile, icon);
 	}
 
-	private renderBody(text: string, opts: { center?: boolean } = {}) {
-		this.contentEl.createEl("p", { cls: opts.center ? "nous-wizard-body is-center" : "nous-wizard-body", text });
+	private renderBody(text: string, opts: { center?: boolean; wide?: boolean } = {}) {
+		const cls = ["nous-wizard-body", opts.center && "is-center", opts.wide && "is-wide"]
+			.filter(Boolean)
+			.join(" ");
+		this.contentEl.createEl("p", { cls, text });
 	}
 
 	// The one full-width moss primary button (§3, step 5). Returns the
@@ -4081,15 +4094,15 @@ class OnboardingModal extends Modal {
 
 		if (this.app.vault.getRoot().children.length > 0) {
 			this.renderBody(
-				'This vault already has files in it. Nous adds its own folders (00-Inbox, 10-Notes, 20-Tags, 30-Wikis) here. For a clean space instead, use a new vault (Obsidian\'s "Open another vault" menu) before continuing.',
-				{ center: true }
+				"This vault has other files - Nous adds its own folders here. For a clean space, start a new vault first.",
+				{ center: true, wide: true }
 			);
 		}
 
 		const cards = this.contentEl.createDiv({ cls: "nous-mode-cards" });
 		this.addModeCard(cards, {
 			title: "I have a Claude subscription",
-			sub: "No extra billing · desktop only",
+			sub: "No extra billing",
 			filled: true,
 			onChoose: async () => {
 				this.plugin.settings.executionMode = "cli";
@@ -4099,7 +4112,10 @@ class OnboardingModal extends Modal {
 		});
 		this.addModeCard(cards, {
 			title: "I have an API key or local model",
-			sub: "Anthropic, OpenAI, Gemini, or run local",
+			// Query vault (agentic search over your notes) needs CLI mode - it
+			// is the one capability this path does not have, so it is named
+			// here rather than only discovered later.
+			sub: "Anthropic, OpenAI, Gemini, or run local - no vault search",
 			onChoose: () => this.renderConnectChoice(),
 		});
 		// Not a mode choice like the two above it, so it's shorter and has
@@ -4136,6 +4152,7 @@ class OnboardingModal extends Modal {
 		});
 
 		this.renderSkip("Not now", async () => {
+			this.finished = true;
 			this.plugin.settings.onboarded = true;
 			await this.plugin.saveSettings();
 			// Every other exit from this wizard seeds the vault via
@@ -4155,12 +4172,7 @@ class OnboardingModal extends Modal {
 		this.clear();
 		this.setScreenMode("form");
 		this.setTitle("Import from Notion");
-		this.renderTopRow(0, 4, () => this.renderWelcome());
-
-		if (!Platform.isDesktopApp) {
-			this.renderBody("Notion import needs the desktop app, sorry.");
-			return;
-		}
+		this.renderTopRow(0, 3, () => this.renderWelcome());
 
 		this.renderBody("Export from Notion as Markdown & CSV, then unzip it.");
 
@@ -4232,7 +4244,7 @@ class OnboardingModal extends Modal {
 	private renderConnectChoice() {
 		this.clear();
 		this.setScreenMode("hero");
-		this.renderTopRow(0, 4, () => this.renderWelcome());
+		this.renderTopRow(0, 3, () => this.renderWelcome());
 		this.setTitle("Connect a provider");
 		this.renderBody("Pick whichever works for you.", { center: true });
 
@@ -4265,7 +4277,7 @@ class OnboardingModal extends Modal {
 		this.clear();
 		this.setScreenMode("form");
 		this.setTitle("Connect a provider");
-		this.renderTopRow(0, 4, () => this.renderConnectChoice());
+		this.renderTopRow(0, 3, () => this.renderConnectChoice());
 		this.renderBody("Changeable anytime in settings.");
 
 		const provider = () => this.plugin.settings.apiProvider;
@@ -4339,7 +4351,12 @@ class OnboardingModal extends Modal {
 		this.clear();
 		this.setScreenMode("hero");
 		const isCli = this.plugin.settings.executionMode === "cli";
-		this.renderTopRow(1, 4, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
+		// Shares dot 0 with Welcome/ApiSetup rather than getting its own -
+		// this screen never took a choice of its own, it just runs a check
+		// and either advances on its own or bounces to the error screen
+		// below, so counting it as a separate step made the back chevron
+		// from "What works now" jump two dots at once instead of one.
+		this.renderTopRow(0, 3, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
 		this.setTitle("Checking the connection…");
 		this.renderHeroIcon("plug");
 		this.renderBody(
@@ -4347,12 +4364,25 @@ class OnboardingModal extends Modal {
 			{ center: true }
 		);
 
+		// A fast check (cached CLI auth, a quick local ping) can resolve in
+		// well under a frame - without a floor, this whole screen shows for
+		// a handful of milliseconds and reads as a glitchy flash rather than
+		// a real step, right when a new user is watching most closely.
+		const minDisplayMs = 400;
 		const runCheck = async () => {
+			const shownAt = Date.now();
+			const settle = async () => {
+				const remaining = minDisplayMs - (Date.now() - shownAt);
+				if (remaining > 0) await new Promise((resolve) => window.setTimeout(resolve, remaining));
+			};
 			try {
 				await this.plugin.testConnection();
+				await settle();
+				this.connectionUnverified = false;
 				this.renderCapturePrerequisites();
 			} catch (e) {
 				const msg = e instanceof Error ? e.message : String(e);
+				await settle();
 				this.renderConnectionError(isCli, msg);
 			}
 		};
@@ -4366,13 +4396,19 @@ class OnboardingModal extends Modal {
 	private renderConnectionError(isCli: boolean, message: string) {
 		this.clear();
 		this.setScreenMode("hero");
-		this.renderTopRow(1, 4, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
+		// Same dot as renderTest (see its comment) - this screen is just
+		// that check's failure outcome, not a further step of its own.
+		this.renderTopRow(0, 3, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
 		this.setTitle("Couldn't connect");
 		this.renderHeroIcon("alert-circle");
+		// "Is Ollama running?" used to be the only local-mode message, but a
+		// live server whose model just doesn't support tool calls fails the
+		// exact same way - the real cause is in the error well below either
+		// way, so the headline now covers both instead of guessing one.
 		const line = isCli
 			? "Claude Code didn't respond. Is it installed and logged in?"
 			: this.plugin.settings.apiProvider === "local"
-				? "Nothing answered. Is Ollama running?"
+				? "Nothing answered - check that the server is running and its model supports tool calls."
 				: "Nothing answered. Check your key and connection.";
 		this.renderBody(line, { center: true });
 		this.renderErrorWell(message);
@@ -4387,7 +4423,10 @@ class OnboardingModal extends Modal {
 			});
 		}
 		this.renderPrimary("Retry", () => this.renderTest());
-		this.renderSkip("Skip", () => this.renderCapturePrerequisites());
+		this.renderSkip("Skip", () => {
+			this.connectionUnverified = true;
+			this.renderCapturePrerequisites();
+		});
 	}
 
 	private renderCapturePrerequisites() {
@@ -4399,7 +4438,7 @@ class OnboardingModal extends Modal {
 		// previous interactive step is whichever screen set up the
 		// connection in the first place.
 		const isCli = this.plugin.settings.executionMode === "cli";
-		this.renderTopRow(2, 4, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
+		this.renderTopRow(1, 3, () => (isCli ? this.renderWelcome() : this.renderApiSetup()));
 		this.setTitle("What works now");
 		const statusEl = this.contentEl.createDiv({ cls: "nous-capture-checklist" });
 		statusEl.createEl("p", { cls: "nous-wizard-body", text: "Checking capture setup..." });
@@ -4413,7 +4452,24 @@ class OnboardingModal extends Modal {
 				// Numbered hairline rows (§3 "What works now" spec) - 01/02/03
 				// plus the item name and its one-line status.
 				const list = statusEl.createDiv({ cls: "nous-numbered-list" });
-				capturePrerequisiteItems(status).forEach((item, index) => {
+				const items = capturePrerequisiteItems(status);
+				// capturePrerequisiteItems() always calls text/image/PDF capture
+				// "Ready" - true once the connection test passed, but this
+				// screen is also reachable by clicking Skip after a CONFIRMED
+				// failed test, and nothing distinguished the two.
+				if (this.connectionUnverified) {
+					items[0] = {
+						...items[0],
+						desc: "Skipped - the connection test failed, so this isn't confirmed working yet.",
+						warning: true,
+					};
+				}
+				// Buttons live on their own numbered row now, instead of a
+				// separate block below repeating the same "needs X" story a
+				// second time - a brand-new user with nothing installed used
+				// to see the same two problems named twice each (once in the
+				// checklist, once in its own paragraph+button underneath).
+				items.forEach((item, index) => {
 					const row = list.createDiv({
 						cls: item.warning ? "nous-numbered-row is-warning" : "nous-numbered-row",
 					});
@@ -4421,71 +4477,46 @@ class OnboardingModal extends Modal {
 					const text = row.createDiv({ cls: "nous-numbered-text" });
 					text.createDiv({ cls: "nous-numbered-name", text: item.name });
 					text.createDiv({ cls: "nous-numbered-desc", text: item.desc });
-				});
-				if (Platform.isMacOS) {
-					const recorderStatusSetting = new Setting(statusEl)
-						.setName("Meeting recorder")
-						.setDesc("Checking…");
-					void this.plugin
-						.getNativeRecorderReadiness()
-						.then((readiness) => {
-							// A healthy, idle recorder adds nothing the
-							// "Meeting capture" item above didn't already say
-							// ("Ready.") - two rows both saying "it works" is
-							// noise. Only keep this row when it has something
-							// the generic item can't say: an install/permission
-							// problem, or that it's recording right now.
-							if (readiness.state === "installed") {
-								recorderStatusSetting.settingEl.remove();
-								return;
+
+					if (index === 1 && Platform.isMacOS && !status.voiceReady) {
+						const actions = row.createDiv({ cls: "nous-numbered-actions" });
+						void Promise.all([this.plugin.hasWhisperModel(), this.plugin.hasWhisperCli()]).then(
+							([hasModel, hasCli]) => {
+								if (hasModel && hasCli) return;
+								if (hasModel && !hasCli) {
+									actions.createSpan({
+										cls: "nous-numbered-hint",
+										text: 'Model downloaded - still needs "brew install whisper-cpp".',
+									});
+									return;
+								}
+								const button = actions.createEl("button", {
+									cls: "mod-cta",
+									text: "Download model",
+								});
+								button.addEventListener("click", () => {
+									void (async () => {
+										button.textContent = "Downloading…";
+										button.disabled = true;
+										const ok = await this.plugin.downloadWhisperModelsWithNotice();
+										if (ok) this.renderCapturePrerequisites();
+										else {
+											button.textContent = "Download model";
+											button.disabled = false;
+										}
+									})();
+								});
 							}
-							// State only here - the full path/version detail
-							// stays in the settings tab.
-							recorderStatusSetting.setDesc(nativeRecorderReadinessText(readiness).split(" Path:")[0]);
-							recorderStatusSetting.settingEl.toggleClass(
-								"mod-warning",
-								readiness.state === "missing" ||
-									readiness.state === "needs-permission" ||
-									readiness.state === "error"
-							);
-						})
-						.catch((e) => {
-							const msg = e instanceof Error ? e.message : String(e);
-							recorderStatusSetting.setDesc(`Could not check the native recorder: ${msg}`);
-							recorderStatusSetting.settingEl.toggleClass("mod-warning", true);
-						});
-				}
-				if (Platform.isMacOS && !status.voiceReady && status.meeting === "needs-recorder") {
-					statusEl.createEl("p", {
-						cls: "nous-wizard-body",
-						text: "Two unrelated things below: the recorder captures meeting audio, and the speech model turns any recording into text.",
-					});
-				}
-				if (Platform.isMacOS && !status.voiceReady) {
-					void this.plugin.hasWhisperModel().then((present) => {
-						if (present) return;
-						new Setting(statusEl)
-							.setName("Download speech model")
-							.setDesc(
-								"One download (~1.6 GB) and voice transcription runs fully on this Mac - no API key. Also needs whisper-cli: \"brew install whisper-cpp\"."
-							)
-							.addButton((button) =>
-								button.setButtonText("Download").setCta().onClick(async () => {
-									button.setButtonText("Downloading…").setDisabled(true);
-									const ok = await this.plugin.downloadWhisperModelsWithNotice();
-									if (ok) this.renderCapturePrerequisites();
-									else button.setButtonText("Download").setDisabled(false);
-								})
-							);
-					});
-				}
-				if (Platform.isMacOS && shouldOfferNativeRecorderInstall(status)) {
-					new Setting(statusEl)
-						.setName("Install native recorder")
-						.setDesc(NATIVE_RECORDER_INSTALL_DESC)
-						.addButton((button) =>
-							button.setButtonText("Install").setCta().onClick(async () => {
-								button.setButtonText("Installing...").setDisabled(true);
+						);
+					}
+
+					if (index === 2 && Platform.isMacOS && shouldOfferNativeRecorderInstall(status)) {
+						const actions = row.createDiv({ cls: "nous-numbered-actions" });
+						const button = actions.createEl("button", { cls: "mod-cta", text: "Install recorder" });
+						button.addEventListener("click", () => {
+							void (async () => {
+								button.textContent = "Installing…";
+								button.disabled = true;
 								try {
 									await this.plugin.installNativeRecorderFromRelease();
 									nousNotice("Recorder installed and ready to go.");
@@ -4493,11 +4524,13 @@ class OnboardingModal extends Modal {
 								} catch (e) {
 									const msg = e instanceof Error ? e.message : String(e);
 									nousNotice(`Recorder install didn't work - ${msg}`, 12000);
-									button.setButtonText("Install").setDisabled(false);
+									button.textContent = "Install recorder";
+									button.disabled = false;
 								}
-							})
-						);
-				}
+							})();
+						});
+					}
+				});
 				continueButton.setButtonText(capturePrerequisitesContinueText(status)).setDisabled(false);
 			})
 			.catch((e) => {
@@ -4512,20 +4545,25 @@ class OnboardingModal extends Modal {
 	private renderFinish() {
 		this.clear();
 		this.setScreenMode("hero");
-		this.renderTopRow(3, 4, () => this.renderCapturePrerequisites());
+		this.renderTopRow(2, 3, () => this.renderCapturePrerequisites());
 		const status = this.lastCaptureStatus;
-		this.setTitle(status ? onboardingFinishTitle(status) : "Text capture is ready");
+		// "Nous is ready" must not be shown over a connection that was never
+		// actually confirmed working (Skip after a failed test) - voice/
+		// meeting readiness are unrelated checks and can both be true even
+		// then, which is exactly what onboardingFinishTitle alone can't see.
+		this.setTitle(
+			status && !this.connectionUnverified ? onboardingFinishTitle(status) : "Text capture is ready"
+		);
 		this.renderLogo();
 		const body = this.contentEl.createEl("p", { cls: "nous-wizard-body is-center" });
 		body.appendText("Drop anything in ");
 		body.createEl("code", { text: this.plugin.settings.inboxFolder });
 		body.appendText(". It comes back tagged - your tag list starts empty and grows as you capture.");
-		// Only warnings survive to this screen - tips live in the tour and docs.
-		if (status) {
-			for (const item of onboardingFinishNextActions(status).filter((item) => item.warning)) {
-				new Setting(this.contentEl).setName(item.name).setDesc(item.desc).setClass("mod-warning");
-			}
-		}
+		// What's still missing was already shown on the previous screen
+		// (What works now) one click ago - repeating the same warnings here
+		// was the biggest single contributor to the wizard feeling long for
+		// anyone starting with nothing installed. Settings -> Nous covers
+		// it if they want to finish setup later.
 
 		// The theme snippet is one click away in Nous settings, and so is
 		// plain Finish's destination - keeping both off this screen keeps
@@ -4625,6 +4663,7 @@ class OnboardingModal extends Modal {
 	// both idempotent, so this is a harmless no-op for anyone who already
 	// triggered it manually earlier in the tour.
 	private async finish() {
+		this.finished = true;
 		this.plugin.settings.onboarded = true;
 		await this.plugin.saveSettings();
 		await this.plugin.ensureCoreFolders();

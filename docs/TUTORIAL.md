@@ -35,8 +35,9 @@ rest runs itself.
      free (no separate billing).
    - **A local model** (e.g. [Ollama](https://ollama.com)) — free, ~2 min
      setup, and nothing ever leaves your machine.
-   - **An API key** — Anthropic, OpenAI, Gemini, or Z.ai. Billed separately,
-     but works on mobile too.
+   - **An API key** — Anthropic, OpenAI, Gemini, or Z.ai. Billed separately.
+     Note: "Nous: Query vault" (agentic search over your notes) needs the
+     Claude subscription path above - it is not available in API-key mode.
 3. The wizard tests that choice, checks optional voice and meeting recording
    setup, then drops a sample note in your inbox so you can watch the whole
    thing happen once, live.

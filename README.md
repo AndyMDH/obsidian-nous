@@ -17,6 +17,15 @@
 </p>
 
 <p align="center">
+  <a href="https://obsidian.md/plugins?id=nous">Install</a> ·
+  <a href="docs/TUTORIAL.md">Tutorial</a> ·
+  <a href="docs/USAGE.md">Docs</a> ·
+  <a href="https://github.com/AndyMDH/obsidian-nous/issues">Issues</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+<p align="center">
   <a href="https://obsidian.md/plugins?id=nous"><img alt="Get it from Obsidian" src="https://img.shields.io/badge/Obsidian-Get%20the%20plugin-4C5138?logo=obsidian&logoColor=white"></a>
   <a href="https://obsidian.md/plugins?id=nous"><img alt="Obsidian downloads" src="https://img.shields.io/badge/dynamic/json?logo=obsidian&color=4C5138&label=downloads&query=%24%5B%27nous%27%5D.downloads&url=https%3A%2F%2Fraw.githubusercontent.com%2Fobsidianmd%2Fobsidian-releases%2Fmaster%2Fcommunity-plugin-stats.json"></a>
   <a href="https://github.com/AndyMDH/obsidian-nous/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/AndyMDH/obsidian-nous?color=4C5138&label=stars"></a>
@@ -38,9 +47,8 @@ wiki page that collects them. And it is local-first: Claude Code CLI, local
 whisper.cpp, and Ollama send nothing off your machine — direct API keys are
 opt-in.
 
-**Works on:** Desktop (macOS, Windows, Linux) and Mobile (API-key or local-model
-mode). Meeting capture is macOS-only. Live voice transcription (beta) is
-desktop-only.
+**Works on:** Desktop only (macOS, Windows, Linux). Meeting capture is
+macOS-only. Live voice transcription (beta) needs an OpenAI key.
 
 ## Contents
 
@@ -55,22 +63,14 @@ desktop-only.
 
 ## Features
 
-- 🎙️ **Capture anything** — Type, paste, drop a file, record a voice note, or
-  record a meeting on macOS.
-- 🏷️ **Automatic tags** — Every capture gets tags from a controlled
-  vocabulary. No manual sorting.
-- 🔗 **Automatic links** — Related notes connect to each other without
-  manual work.
-- 📖 **Self-updating wiki pages** — When a topic has enough notes, Nous
-  writes a wiki page for it. The page stays current.
-- 🔒 **Local-first** — Claude Code CLI, local whisper.cpp, and Ollama keep
-  data on your machine. API keys are optional.
-- 📱 **Desktop and mobile** — The full pipeline runs on desktop. Mobile
-  supports API-key or local-model mode.
-- 🎨 **An editorial look, on by default** — notes render with a chip header,
-  small-caps sections, and a folded transcript instead of a raw properties
-  table. Opt into the full vault-wide theme in Settings → Nous → Appearance —
-  see [`docs/USAGE.md`](docs/USAGE.md#the-nous-look).
+| | | |
+|---|---|---|
+| 🎙️ | **Capture anything** | Type, paste, drop a file, record a voice note, or record a meeting on macOS. |
+| 🏷️ | **Automatic tags** | Every capture gets tags from a controlled vocabulary — no manual sorting. |
+| 🔗 | **Automatic links** | Related notes connect to each other without manual work. |
+| 📖 | **Self-updating wikis** | Once a topic has enough notes, Nous writes and maintains a wiki page for it. |
+| 🔒 | **Local-first** | Claude Code CLI, local whisper.cpp, and Ollama keep data on your machine — API keys are optional. |
+| 🎨 | **An editorial look, on by default** | Notes render with a chip header, small-caps sections, and a folded transcript instead of a raw properties table. Opt into the full vault-wide theme in Settings → Nous → Appearance — see [the Nous look](docs/USAGE.md#the-nous-look). |
 
 ## Your vault as AI context
 
