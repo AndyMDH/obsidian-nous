@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.9.0
+
+- The one-click speech model is accurate again. 2.8.1 switched new
+  installs to a smaller, faster model to cut the download size, but it
+  missed real content in meeting transcripts. The default download is
+  now a compressed version of the large model instead - close in size
+  to the old small download, close in accuracy to the full model.
+  Anyone who already has a model installed keeps using it.
+- Added an opt-in "Faster, less accurate model" switch in Settings →
+  Nous → Advanced settings, for anyone who wants the smaller, quicker
+  model back on purpose.
+
 ## 2.8.5
 
 - Removed the "Nous Recorder path" Advanced setting - it configured a

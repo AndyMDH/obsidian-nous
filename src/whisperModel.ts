@@ -14,13 +14,19 @@ export interface WhisperModelSource {
 
 export const WHISPER_MODEL_SOURCES: WhisperModelSource[] = [
 	{
-		// ~466MB vs. the large model's ~1.6GB - a noticeably lighter first
-		// download for a modest accuracy trade-off, which is the right
-		// default for personal notes/meetings. Anyone who wants the larger
-		// model can still point "Whisper model path" at it manually.
-		filename: "ggml-small.bin",
-		pointerUrl: "https://huggingface.co/ggerganov/whisper.cpp/raw/main/ggml-small.bin",
-		downloadUrl: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+		// A 5-bit quantized ggml-large-v3-turbo: ~574MB, close to the size of
+		// the small model this replaced as the default (2.8.1-2.8.5), but
+		// built on the same large-v3-turbo weights the full model uses -
+		// accuracy stays close to the 1.6GB original instead of small's
+		// noticeably worse transcripts. Quantization shrinks memory
+		// bandwidth, not the compute the encoder/decoder does per second of
+		// audio, so this still runs slower than `small` - an accepted
+		// trade-off since meeting transcription runs after the call ends,
+		// not live. Anyone who wants speed over accuracy can still switch to
+		// the small model from Settings → Nous → Advanced settings.
+		filename: "ggml-large-v3-turbo-q5_0.bin",
+		pointerUrl: "https://huggingface.co/ggerganov/whisper.cpp/raw/main/ggml-large-v3-turbo-q5_0.bin",
+		downloadUrl: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
 		required: true,
 	},
 	{
@@ -32,6 +38,17 @@ export const WHISPER_MODEL_SOURCES: WhisperModelSource[] = [
 		required: false,
 	},
 ];
+
+// Opt-in alternative for anyone who wants faster transcription and accepts
+// less accurate transcripts. Deliberately not part of WHISPER_MODEL_SOURCES,
+// so new users never download it without asking - only Settings → Nous →
+// Advanced settings offers it, next to the manual model-path field.
+export const WHISPER_FAST_MODEL_SOURCE: WhisperModelSource = {
+	filename: "ggml-small.bin",
+	pointerUrl: "https://huggingface.co/ggerganov/whisper.cpp/raw/main/ggml-small.bin",
+	downloadUrl: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin",
+	required: true,
+};
 
 export interface LfsPointer {
 	sha256: string;

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import {
 	WHISPER_MODEL_SOURCES,
+	WHISPER_FAST_MODEL_SOURCE,
 	downloadProgressText,
 	formatBytes,
 	parseLfsPointer,
@@ -41,4 +42,17 @@ test("exactly one whisper model source is required", () => {
 		assert.match(source.pointerUrl, /^https:\/\/huggingface\.co\/.+\/raw\/main\//);
 		assert.match(source.downloadUrl, /^https:\/\/huggingface\.co\/.+\/resolve\/main\//);
 	}
+});
+
+test("the required default is the quantized large-v3-turbo model, not the fast opt-in", () => {
+	const required = WHISPER_MODEL_SOURCES.find((s) => s.required);
+	assert.equal(required?.filename, "ggml-large-v3-turbo-q5_0.bin");
+	assert.notEqual(WHISPER_FAST_MODEL_SOURCE.filename, required?.filename);
+});
+
+test("the fast opt-in model source is well-formed and not auto-downloaded", () => {
+	assert.equal(WHISPER_FAST_MODEL_SOURCE.filename, "ggml-small.bin");
+	assert.match(WHISPER_FAST_MODEL_SOURCE.pointerUrl, /^https:\/\/huggingface\.co\/.+\/raw\/main\//);
+	assert.match(WHISPER_FAST_MODEL_SOURCE.downloadUrl, /^https:\/\/huggingface\.co\/.+\/resolve\/main\//);
+	assert.ok(!WHISPER_MODEL_SOURCES.some((s) => s.filename === WHISPER_FAST_MODEL_SOURCE.filename));
 });

@@ -55,9 +55,11 @@ import {
 import {
 	WHISPER_MODELS_DIR_SEGMENTS,
 	WHISPER_MODEL_SOURCES,
+	WHISPER_FAST_MODEL_SOURCE,
 	downloadProgressText,
 	parseLfsPointer,
 	type LfsPointer,
+	type WhisperModelSource,
 } from "./src/whisperModel";
 import {
 	DEFAULT_NATIVE_RECORDER_BIN,
@@ -380,6 +382,14 @@ export default class NousPlugin extends Plugin {
 	// already explains what to do permanently, so nothing is lost by not
 	// repeating the toast.
 	private notifiedPendingTranscription = new Set<string>();
+	// A finished recording folder normally leaves the watch dir the moment
+	// toggleNativeMeetingCapture() ingests it. If Obsidian quits mid-call (or
+	// crashes) before that stop-and-ingest ever runs, the folder is left
+	// behind with nothing to pick it up - checkOrphanedNativeRecordings()
+	// below is the watchdog for that. One notice per folder per session, same
+	// dedupe pattern as notifiedPendingTranscription above.
+	private notifiedOrphanedRecordings = new Set<string>();
+	private orphanCheckInterval: number | null = null;
 	// Not private: LiveVoiceCaptureModal clears this on its own onClose (all
 	// close paths - Stop, Cancel, Esc/click-outside - route through there).
 	liveCaptureModal: LiveVoiceCaptureModal | null = null;
@@ -546,6 +556,15 @@ export default class NousPlugin extends Plugin {
 			this.register(() => {
 				if (this.meetingPollInterval !== null) window.clearInterval(this.meetingPollInterval);
 			});
+
+			// Staleness only matters on a 20-minute scale, so this runs far
+			// less often than the recording-indicator poll above.
+			this.orphanCheckInterval = window.setInterval(() => {
+				void this.checkOrphanedNativeRecordings();
+			}, 5 * 60 * 1000);
+			this.register(() => {
+				if (this.orphanCheckInterval !== null) window.clearInterval(this.orphanCheckInterval);
+			});
 		}
 
 		this.addCommand({
@@ -572,6 +591,7 @@ export default class NousPlugin extends Plugin {
 				new OnboardingModal(this.app, this).open();
 			} else {
 				void this.processInbox();
+				if (Platform.isMacOS) void this.checkOrphanedNativeRecordings();
 			}
 		});
 	}
@@ -722,19 +742,22 @@ export default class NousPlugin extends Plugin {
 	// Display-only default path (used synchronously by the settings tab), so
 	// this avoids the async node-module loader - macOS-only feature, so a
 	// plain "/" join is safe (no need for the "path" module's platform logic).
-	// Points at the small model (~466MB) - the default download target for
-	// anyone setting up from scratch. See resolveWhisperModelPath() below for
-	// what actually gets used once a model exists on disk.
+	// Points at the quantized large-v3-turbo model (~574MB) - the default
+	// download target for anyone setting up from scratch, chosen for
+	// accuracy close to the full model at a size close to the smaller model
+	// it replaced. See resolveWhisperModelPath() below for what actually
+	// gets used once a model exists on disk.
 	defaultWhisperModelPath(): string {
-		return `${process.env.HOME ?? ""}/.local/share/whisper-models/ggml-small.bin`;
+		return `${process.env.HOME ?? ""}/.local/share/whisper-models/ggml-large-v3-turbo-q5_0.bin`;
 	}
 
-	// The large model (~1.6GB) was the only default before this session -
-	// anyone who already downloaded it keeps working without needing to
-	// notice anything changed, or re-download a smaller model they don't
-	// need. New installs never target this path; it's read-only migration.
-	private legacyWhisperModelPath(): string {
-		return `${process.env.HOME ?? ""}/.local/share/whisper-models/ggml-large-v3-turbo.bin`;
+	// Earlier defaults, most accurate first - anyone who already downloaded
+	// one of these keeps working without needing to notice anything changed,
+	// or re-download a model they don't need. New installs never target
+	// either path; this is read-only migration.
+	private legacyWhisperModelPaths(): string[] {
+		const dir = `${process.env.HOME ?? ""}/.local/share/whisper-models`;
+		return [`${dir}/ggml-large-v3-turbo.bin`, `${dir}/${WHISPER_FAST_MODEL_SOURCE.filename}`];
 	}
 
 	private defaultWhisperVadModelPath(): string {
@@ -750,19 +773,20 @@ export default class NousPlugin extends Plugin {
 	}
 
 	// A configured path is trusted as-is (existence checked by the caller).
-	// With no configured path, prefer whichever default model is actually on
-	// disk - the small one if this is a fresh setup, the legacy large one if
-	// this vault already had it before the smaller default shipped - falling
-	// back to the small path if neither exists yet (nothing to transcribe
-	// with, but the right place for a future download to land).
+	// With no configured path, prefer whichever model is actually on disk -
+	// the current default if this is a fresh setup, otherwise the first
+	// earlier default this vault already had - falling back to the current
+	// default path if none exist yet (nothing to transcribe with, but the
+	// right place for a future download to land).
 	private async resolveWhisperModelPath(): Promise<string> {
 		const configured = this.settings.whisperModelPath.trim();
 		if (configured) return configured;
-		const small = this.defaultWhisperModelPath();
-		if (await NousPlugin.fileExists(small)) return small;
-		const legacy = this.legacyWhisperModelPath();
-		if (await NousPlugin.fileExists(legacy)) return legacy;
-		return small;
+		const preferred = this.defaultWhisperModelPath();
+		if (await NousPlugin.fileExists(preferred)) return preferred;
+		for (const legacy of this.legacyWhisperModelPaths()) {
+			if (await NousPlugin.fileExists(legacy)) return legacy;
+		}
+		return preferred;
 	}
 
 	async hasWhisperModel(): Promise<boolean> {
@@ -771,17 +795,49 @@ export default class NousPlugin extends Plugin {
 
 	// One-click speech-model install: fetch the git-lfs pointer for the
 	// expected sha256/size, stream the model to disk (never buffer the whole
-	// thing in memory - the small model is ~466MB, still sizable), verify,
+	// thing in memory - models here run ~500MB-1.6GB, still sizable), verify,
 	// then rename into place. The VAD model rides along but its failure is
 	// non-fatal.
 	// Set right before a download starts, checked from inside the progress
 	// callback so cancelWhisperDownload() can interrupt an in-flight request
-	// (a ~466MB transfer is not instant, and until this there was no way to
+	// (transfers here are not instant, and until this there was no way to
 	// back out of one once started).
 	private whisperDownloadCancelled = false;
 
 	cancelWhisperDownload(): void {
 		this.whisperDownloadCancelled = true;
+	}
+
+	// Shared single-source fetch, used by the required-model loop below and
+	// by downloadFastWhisperModel(): existence check, git-lfs pointer fetch,
+	// streamed download. Throws for a required source that fails; returns
+	// null for an optional one so the caller's loop can keep going.
+	private async fetchModelSource(
+		source: WhisperModelSource,
+		dir: string,
+		path: typeof import("path"),
+		onProgress: (text: string) => void
+	): Promise<string | null> {
+		const target = path.join(dir, source.filename);
+		if (await NousPlugin.fileExists(target)) return target;
+		if (this.whisperDownloadCancelled) throw new Error("cancelled");
+		try {
+			const pointerResponse = await requestUrl({ url: source.pointerUrl, method: "GET", throw: false });
+			if (pointerResponse.status >= 400) throw new Error(`checksum fetch failed (${pointerResponse.status})`);
+			const pointer = parseLfsPointer(pointerResponse.text);
+			if (!pointer) throw new Error("model checksum file was missing or malformed");
+
+			await this.streamDownloadToFile(source.downloadUrl, target, pointer, (received) =>
+				onProgress(downloadProgressText(source.filename, received, pointer.size))
+			);
+			return target;
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			if (msg === "cancelled") throw e;
+			if (source.required) throw new Error(`could not download ${source.filename}: ${msg}`);
+			await this.appendLog(`WARN: optional ${source.filename} download failed: ${msg}`);
+			return null;
+		}
 	}
 
 	async downloadWhisperModels(onProgress: (text: string) => void): Promise<string> {
@@ -793,28 +849,8 @@ export default class NousPlugin extends Plugin {
 
 		let installedPath = "";
 		for (const source of WHISPER_MODEL_SOURCES) {
-			const target = path.join(dir, source.filename);
-			if (await NousPlugin.fileExists(target)) {
-				if (source.required) installedPath = target;
-				continue;
-			}
-			if (this.whisperDownloadCancelled) throw new Error("cancelled");
-			try {
-				const pointerResponse = await requestUrl({ url: source.pointerUrl, method: "GET", throw: false });
-				if (pointerResponse.status >= 400) throw new Error(`checksum fetch failed (${pointerResponse.status})`);
-				const pointer = parseLfsPointer(pointerResponse.text);
-				if (!pointer) throw new Error("model checksum file was missing or malformed");
-
-				await this.streamDownloadToFile(source.downloadUrl, target, pointer, (received) =>
-					onProgress(downloadProgressText(source.filename, received, pointer.size))
-				);
-				if (source.required) installedPath = target;
-			} catch (e) {
-				const msg = e instanceof Error ? e.message : String(e);
-				if (msg === "cancelled") throw e;
-				if (source.required) throw new Error(`could not download ${source.filename}: ${msg}`);
-				await this.appendLog(`WARN: optional VAD model download failed: ${msg}`);
-			}
+			const target = await this.fetchModelSource(source, dir, path, onProgress);
+			if (target && source.required) installedPath = target;
 		}
 		if (!installedPath) throw new Error("model download produced no file");
 
@@ -823,6 +859,26 @@ export default class NousPlugin extends Plugin {
 		this.settings.whisperModelPath = "";
 		await this.saveSettings();
 		return installedPath;
+	}
+
+	// Opt-in swap to the smaller, faster, less accurate model - offered only
+	// from Settings → Nous → Advanced settings, never during onboarding.
+	// Unlike downloadWhisperModels() this always sets whisperModelPath
+	// explicitly, so the switch takes effect even though the accurate
+	// default may also exist on disk.
+	async downloadFastWhisperModel(onProgress: (text: string) => void): Promise<string> {
+		if (!Platform.isMacOS) throw new Error("Local whisper transcription is macOS-only.");
+		this.whisperDownloadCancelled = false;
+		const { fs, os, path } = await loadNodeModules();
+		const dir = path.join(os.homedir(), ...WHISPER_MODELS_DIR_SEGMENTS);
+		await fs.mkdir(dir, { recursive: true });
+
+		const target = await this.fetchModelSource(WHISPER_FAST_MODEL_SOURCE, dir, path, onProgress);
+		if (!target) throw new Error("model download produced no file");
+
+		this.settings.whisperModelPath = target;
+		await this.saveSettings();
+		return target;
 	}
 
 	// Shared control-flow for "long-running task behind a persistent notice
@@ -867,6 +923,19 @@ export default class NousPlugin extends Plugin {
 				failure: () => "model download failed - more in your Nous log",
 			},
 			"speech-model download failed"
+		);
+	}
+
+	async downloadFastWhisperModelWithNotice(): Promise<boolean> {
+		return this.runCancellableTaskWithNotice(
+			"Fetching the faster speech model…",
+			(onProgress) => this.downloadFastWhisperModel(onProgress),
+			{
+				success: "Faster speech model installed - transcripts run quicker, and less accurately.",
+				cancelled: "Download cancelled.",
+				failure: () => "model download failed - more in your Nous log",
+			},
+			"fast speech-model download failed"
 		);
 	}
 
@@ -1001,10 +1070,10 @@ export default class NousPlugin extends Plugin {
 					let received = 0;
 					let lastReported = 0;
 					response.on("data", (chunk: Buffer) => {
-						// Checked here, not just between files - a single model is
-						// ~466MB, so cancelWhisperDownload() has to be able to
-						// interrupt a transfer already in progress, not just stop
-						// the next one from starting.
+						// Checked here, not just between files - a single model
+						// runs ~500MB-1.6GB, so cancelWhisperDownload() has to be
+						// able to interrupt a transfer already in progress, not
+						// just stop the next one from starting.
 						if (this.whisperDownloadCancelled) {
 							request.destroy();
 							reject(new Error("cancelled"));
@@ -2490,6 +2559,29 @@ export default class NousPlugin extends Plugin {
 		this.setMeetingRecordingIndicator(nativeStatus.available && nativeStatus.recording);
 	}
 
+	private async checkOrphanedNativeRecordings(): Promise<void> {
+		const nativeStatus = await this.nativeRecorderStatus();
+		if (nativeStatus.recording) return; // still being written - not orphaned
+
+		const { fs, path } = await loadNodeModules();
+		const watchDir = await this.nativeRecorderWatchDir();
+		const entries = await fs.readdir(watchDir).catch(() => [] as string[]);
+		const staleCutoffMs = Date.now() - 20 * 60 * 1000;
+
+		for (const entry of entries) {
+			if (!entry.endsWith(".qma")) continue;
+			const entryPath = path.join(watchDir, entry);
+			if (this.notifiedOrphanedRecordings.has(entryPath)) continue;
+
+			const stat = await fs.stat(entryPath).catch(() => null);
+			if (!stat || stat.mtimeMs > staleCutoffMs) continue;
+
+			this.notifiedOrphanedRecordings.add(entryPath);
+			await this.appendLog(`WARN: orphaned recording never ingested: ${entry}`);
+			nousNotice("A recording didn't make it into your notes - more in your Nous log", 10000);
+		}
+	}
+
 	// Empty stubs and detected duplicates both land here, permanently,
 	// unless swept - the "14-day purge" comments elsewhere describing this
 	// folder predate any purge actually existing. Sweeping on every arrival
@@ -3838,6 +3930,32 @@ class NousSettingTab extends PluginSettingTab {
 						);
 				},
 			});
+
+			if (Platform.isMacOS) {
+				voiceItems.push({
+					name: "Faster, less accurate model",
+					render: (setting) => {
+						setting
+							.setDesc("Swaps to a smaller model. Transcripts run quicker and miss more.")
+							.addButton((button) =>
+								button.setButtonText("Switch").onClick(() => {
+									button.setDisabled(true).setButtonText("Downloading…");
+									const cancel = attachCancelButton(button.buttonEl, () =>
+										this.plugin.cancelWhisperDownload()
+									);
+									void this.plugin.downloadFastWhisperModelWithNotice().then((ok) => {
+										cancel.remove();
+										if (ok) {
+											this.update();
+											return;
+										}
+										button.setDisabled(false).setButtonText("Switch");
+									});
+								})
+							);
+					},
+				});
+			}
 		}
 		items.push({ type: "group", heading: "Voice capture", cls: "nous-settings-group", items: voiceItems });
 
@@ -3929,11 +4047,11 @@ class VoiceCaptureSetupModal extends Modal {
 						);
 						return;
 					}
-					setting.setDesc('One download (~466 MB). Fully private. Also installed automatically, in one more step after.');
+					setting.setDesc('One download (~574 MB). Fully private. Also installed automatically, in one more step after.');
 					setting.addButton((button) =>
 						button.setButtonText("Download model").setCta().onClick(() => {
 							// Stays open instead of closing immediately - closing
-							// right away left the only way to cancel a ~466MB
+							// right away left the only way to cancel a ~574MB
 							// transfer already in flight as a floating notice with
 							// no obvious button on it.
 							button.setDisabled(true).setButtonText("Downloading…");
