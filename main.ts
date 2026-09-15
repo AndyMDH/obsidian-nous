@@ -456,6 +456,7 @@ export default class NousPlugin extends Plugin {
 			const afterClass: Record<string, string> = {
 				"## Open questions": "nous-after-open-questions",
 				"## Action items": "nous-after-action-items",
+				"## Watch": "nous-after-watch",
 				"## Related": "nous-after-related",
 				"## Timeline": "nous-after-timeline",
 				"## Sources": "nous-after-sources",
@@ -1546,19 +1547,22 @@ export default class NousPlugin extends Plugin {
 		}
 	}
 
-	private async ensureSkillsInstalled() {
+	// `force` rewrites the skill files even on the same version - used when a
+	// setting they interpolate (the owner's name) changes.
+	async ensureSkillsInstalled(force = false) {
 		const folders: SkillFolders = {
 			inbox: this.settings.inboxFolder,
 			meetings: this.settings.meetingsFolder,
 			wikis: this.settings.wikisFolder,
 			tags: this.settings.tagsFolder,
+			owner: this.settings.ownerName,
 		};
 		// Regenerate on every version bump, not just when a file is missing -
 		// otherwise an installed SKILL.md silently drifts from what the
 		// current plugin source actually produces (e.g. it kept referencing
 		// the old .cortex/pipeline.log path for two weeks after the plugin
 		// itself was renamed to Nous).
-		const stale = this.settings.skillsVersion !== this.manifest.version;
+		const stale = force || this.settings.skillsVersion !== this.manifest.version;
 		await this.writeSkill(".claude/skills/meeting-enricher/SKILL.md", meetingEnricherSkill(folders), stale);
 		await this.writeSkill(".claude/skills/wiki-builder/SKILL.md", wikiBuilderSkill(folders), stale);
 		await this.writeSkill(".claude/skills/vault-query/SKILL.md", vaultQuerySkill(folders), stale);
@@ -3080,7 +3084,7 @@ export default class NousPlugin extends Plugin {
 					: { text: enrichImageUserMessage(dateHint, ctime, existingIndex), attachment };
 
 			const result = await this.getLlmProvider().callTool<EnrichResult>(
-				enrichSystemPrompt(tagRegistry),
+				enrichSystemPrompt(tagRegistry, this.settings.ownerName),
 				message,
 				ENRICH_TOOL
 			);
@@ -3860,6 +3864,27 @@ class NousSettingTab extends PluginSettingTab {
 									nousNotice("Wiki threshold needs a whole number above 0 - not saved.", 6000);
 								}
 							})
+						);
+				},
+			});
+
+			meetingItems.push({
+				name: "Your name",
+				render: (setting) => {
+					setting
+						.setDesc(
+							"Action items keep only your own commitments. Other people's tasks that affect you go under Watch. Leave empty to use the Me: speaker."
+						)
+						.addText((text) =>
+							text
+								.setPlaceholder("Andy")
+								.setValue(this.plugin.settings.ownerName)
+								.onChange(async (value) => {
+									this.plugin.settings.ownerName = value.trim();
+									await this.plugin.saveSettings();
+									// CLI mode reads the name from the skill files, so rewrite them.
+									await this.plugin.ensureSkillsInstalled(true);
+								})
 						);
 				},
 			});

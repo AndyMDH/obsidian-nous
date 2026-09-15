@@ -2,7 +2,15 @@ import type { NoteIndexEntry } from "./types.ts";
 
 // The plugin does all file I/O; the model's only job is to return the
 // enrich_note tool call - no tool loop, one round trip.
-export function enrichSystemPrompt(tagRegistry: string[]): string {
+export function ownerDescription(ownerName: string): string {
+	const name = ownerName.trim();
+	return name
+		? `${name}, the person whose notes these are (on call transcripts the "Me:" lines are theirs)`
+		: `the person whose notes these are (on call transcripts the "Me:" speaker; otherwise infer from context who is taking the notes)`;
+}
+
+export function enrichSystemPrompt(tagRegistry: string[], ownerName = ""): string {
+	const owner = ownerDescription(ownerName);
 	return `You enrich a single raw meeting transcript or personal note into structured, tagged data. You do not have file access - the app that calls you will read your response and write files based on it. Always respond by calling the enrich_note tool exactly once.
 
 ## Classify
@@ -35,7 +43,8 @@ When "win" is in tags, fill the win field: category is one of "client work", "tr
 - summary: 2-4 sentences. For type "note", just summarize the idea - do not force a meeting framing.
 - key_points: bullet strings, the substantive points made.
 - decisions: bullet strings, actual decisions only. Empty array if none - never invent one.
-- action_items: bullet strings, actual commitments only. Empty array if none - never invent one.
+- action_items: only commitments that ${owner} made or was given. This is a personal note, not the team's task board - other people's tasks do not belong here. Write each as a bare command under ten words, no name prefix ("Ask Fuya for the abbreviations list."). Empty array if the owner has none - never invent one.
+- watch_items: at most three commitments other people made that affect the owner's own work, each as "Owner: what, by when" in under twelve words ("Leah: onboarding journey and abbreviations list, this week."). Empty array if none. Never mirror everyone's tasks here.
 - If the raw captured text includes sections named "Questions to ask" or "Live notes", those were typed by the user during the meeting. Use them as context for the summary, key points, open threads, and action items, but do not treat them as spoken transcript lines.
 Do not include the original transcript text in your response - the caller already has it and will attach it verbatim itself.
 
@@ -158,6 +167,7 @@ export const ENRICH_TOOL = {
 			key_points: { type: "array", items: { type: "string" } },
 			decisions: { type: "array", items: { type: "string" } },
 			action_items: { type: "array", items: { type: "string" } },
+			watch_items: { type: "array", items: { type: "string" } },
 			related_notes: { type: "array", items: { type: "string" } },
 			win: {
 				type: ["object", "null"],
@@ -201,6 +211,7 @@ export const ENRICH_TOOL = {
 			"key_points",
 			"decisions",
 			"action_items",
+			"watch_items",
 			"related_notes",
 			"win",
 		],

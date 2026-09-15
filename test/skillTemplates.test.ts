@@ -7,7 +7,18 @@ const folders = {
 	meetings: "10-Notes",
 	wikis: "30-Wikis",
 	tags: "20-Tags",
+	owner: "",
 };
+
+test("meeting enricher skill scopes action items to the owner and adds Watch", () => {
+	const anonymous = meetingEnricherSkill(folders);
+	assert.match(anonymous, /## Watch/);
+	assert.match(anonymous, /not the team's task board/);
+	assert.match(anonymous, /`Me:` speaker/);
+	const named = meetingEnricherSkill({ ...folders, owner: "Andy" });
+	assert.match(named, /Andy \(the note owner/);
+	assert.match(wikiBuilderSkill(folders), /`## Watch`/);
+});
 
 test("meeting enricher skill skips pending native recording placeholders", () => {
 	const skill = meetingEnricherSkill(folders);

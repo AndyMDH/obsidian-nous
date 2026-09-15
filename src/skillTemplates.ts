@@ -8,6 +8,15 @@ export interface SkillFolders {
 	meetings: string;
 	wikis: string;
 	tags: string;
+	// The note owner's name; empty means "the Me: speaker / note taker".
+	owner: string;
+}
+
+function ownerPhrase(owner: string): string {
+	const name = owner.trim();
+	return name
+		? `${name} (the note owner; on call transcripts the \`Me:\` lines are theirs)`
+		: `the note owner (on call transcripts the \`Me:\` speaker; otherwise whoever is taking the notes, inferred from context)`;
 }
 
 const IMAGE_EXTENSIONS_MD = IMAGE_EXTENSIONS.map((e) => `\`.${e}\``).join(", ");
@@ -241,6 +250,10 @@ Summary framing — just summarize the idea.
 
 - [ ] ...
 
+## Watch
+
+- ...
+
 ## Notes taken during meeting
 
 - ...
@@ -249,8 +262,18 @@ Summary framing — just summarize the idea.
 > <original raw text, unmodified, one '>' per line, collapsed under this callout>
 \`\`\`
 
-Omit the Decisions section entirely if there were none, and Action items
-entirely if there were none. Omit \`## Notes taken during meeting\` if the
+\`## Action items\` holds only commitments that ${ownerPhrase(f.owner)} made or
+was given. This is a personal note, not the team's task board - other
+people's tasks do not belong here. Write each as a bare command under ten
+words, no name prefix (\`- [ ] Ask Fuya for the abbreviations list.\`).
+\`## Watch\` holds at most three commitments other people made that affect
+the owner's own work, each as \`Owner: what, by when\` in under twelve words
+(\`- Leah: onboarding journey and abbreviations list, this week.\`). Never
+mirror everyone's tasks there.
+
+Omit the Decisions section entirely if there were none, Action items
+entirely if the owner has none, and Watch entirely if there is nothing
+to watch. Omit \`## Notes taken during meeting\` if the
 inbox file did not contain \`## Meeting notes\`, \`## Notes\`, \`## Questions to ask\`,
 \`## Live notes\`, or \`## Notes taken during meeting\` with content. Never
 invent decisions or action items that aren't actually in the transcript.
@@ -466,7 +489,7 @@ carries the \` Wiki\` suffix.
 For each topic crossing the threshold:
 
 1. Read all source meeting notes for that topic in full (Summary, Key points,
-   Decisions, Action items — not the raw Transcript, unless something is
+   Decisions, Action items, Watch — not the raw Transcript, unless something is
    ambiguous and you need to check it).
 2. Write \`${f.wikis}/<Topic> Wiki.md\` (see filename convention above):
 
@@ -579,7 +602,7 @@ count: <total wins across all categories>
 ## Rules of engagement
 
 - Never modify a meeting note's Transcript callout, \`## Summary\`, \`## Key points\`,
-  \`## Decisions\`, or \`## Action items\` sections — the only meeting-note edit
+  \`## Decisions\`, \`## Action items\`, or \`## Watch\` sections — the only meeting-note edit
   this skill is allowed to make is adding a missing wikilink to \`## Related\`.
 - Never drop existing content from a wiki (\`## Sources\`, \`## Timeline\` entries)
   when updating it.

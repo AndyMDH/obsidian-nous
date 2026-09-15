@@ -34,6 +34,9 @@ export interface NousSettings {
 	// No red indicators, elapsed timer, or "Recording" popup while a meeting
 	// records, and a bare live note - for recording with other people around.
 	discreetRecording: boolean;
+	// The person whose notes these are. Action items are filtered to their
+	// own commitments; empty means "the Me: speaker / whoever takes notes".
+	ownerName: string;
 	// First-run onboarding wizard has been completed or dismissed.
 	onboarded: boolean;
 	// Plugin version that last (re)wrote .claude/skills/*/SKILL.md. Compared
@@ -95,6 +98,7 @@ export const DEFAULT_SETTINGS: NousSettings = {
 	autoProcessOnCreate: true,
 	dedupLookback: 50,
 	discreetRecording: false,
+	ownerName: "",
 	onboarded: false,
 	skillsVersion: "",
 };
@@ -148,7 +152,10 @@ export interface EnrichResult {
 	summary: string;
 	key_points: string[];
 	decisions: string[];
+	// The note owner's own commitments only - see enrichSystemPrompt.
 	action_items: string[];
+	// Up to three other people's commitments that affect the owner's work.
+	watch_items: string[];
 	related_notes: string[];
 	win: WinDetails | null;
 }

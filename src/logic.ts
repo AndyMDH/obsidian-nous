@@ -258,6 +258,12 @@ export function buildMeetingMarkdown(
 			`## Action items\n\n${result.action_items.map((a) => `- [ ] ${a}`).join("\n")}`
 		);
 	}
+	// Other people's commitments the owner wants to keep an eye on. Plain
+	// bullets, not checkboxes - they are not the owner's to tick off.
+	const watchItems = result.watch_items ?? [];
+	if (watchItems.length > 0) {
+		bodyParts.push(`## Watch\n\n${watchItems.map((w) => `- ${w}`).join("\n")}`);
+	}
 
 	if (!capturedAttachment && manualNotes?.trim()) {
 		bodyParts.push(`## Notes taken during meeting\n\n${demoteSecondLevelHeadings(manualNotes.trim())}`);

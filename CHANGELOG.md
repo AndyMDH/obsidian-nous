@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.11.0
+
+- Action items are now yours only. A meeting note used to mirror the
+  whole team's task list, fifteen long lines nobody in the note would
+  act on. `## Action items` now holds only the commitments you made or
+  were given, as bare commands under ten words. Other people's
+  commitments that affect your work go under a new `## Watch` section,
+  at most three, as plain bullets with owner and date. Both sections
+  are omitted when empty. Older notes keep their existing lists.
+- New "Your name" field in Settings → Nous → Meeting capture, so the
+  enricher knows who "you" are in an in-person transcript. Leave it
+  empty to use the `Me:` speaker. In CLI mode the skill files are
+  rewritten when you change it.
+
 ## 2.10.0
 
 - Meeting transcripts no longer double every sentence when you listen to

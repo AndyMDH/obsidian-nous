@@ -133,6 +133,7 @@ function baseResult(overrides: Partial<EnrichResult> = {}): EnrichResult {
 		key_points: ["Point one", "Point two"],
 		decisions: ["Decision one"],
 		action_items: ["Do the thing"],
+		watch_items: [],
 		related_notes: ["Some Other Meeting"],
 		win: null,
 		...overrides,
@@ -264,6 +265,21 @@ test("buildMeetingMarkdown omits attendees for type: note", () => {
 		null
 	);
 	assert.ok(!md.includes("attendees:"));
+});
+
+test("buildMeetingMarkdown renders Watch as plain bullets after Action items", () => {
+	const md = buildMeetingMarkdown(
+		baseResult({ action_items: ["Ask Fuya for the abbreviations list."], watch_items: ["Leah: onboarding journey, this week."] }),
+		"raw",
+		"2026-09-15T14:00:00Z",
+		null
+	);
+	assert.ok(md.indexOf("## Action items") < md.indexOf("## Watch"));
+	assert.match(md, /## Watch\n\n- Leah: onboarding journey, this week\./);
+	assert.ok(!md.includes("- [ ] Leah"));
+	// Older results without the field still render.
+	const legacy = buildMeetingMarkdown(baseResult({ watch_items: undefined as unknown as string[] }), "raw", "2026-09-15T14:00:00Z", null);
+	assert.ok(!legacy.includes("## Watch"));
 });
 
 test("buildMeetingMarkdown omits empty Decisions/Action items sections", () => {
