@@ -17,6 +17,7 @@ import {
 	parsePendingNativeRecordingNote,
 	parseNativeRecorderChecksum,
 	parseNativeRecorderStatus,
+	removeMicEcho,
 	shiftTrackSegments,
 	trackStartDeltasMs,
 } from "../src/nativeRecorder.ts";
@@ -156,6 +157,69 @@ test("interleaveMeetingTracks joins consecutive same-speaker segments into one l
 	assert.equal(transcript, "Them: First point. Second point.\n\nMe: Understood.");
 });
 
+test("removeMicEcho drops a whole mic track that only echoes the speakers", () => {
+	// Remote call without headphones: every sentence reaches the mic a beat
+	// after the system track. Whisper splits the two tracks differently, so
+	// one mic segment can span two system segments.
+	const sys = {
+		text: "The ground truth wouldn't be at the same granularity. Can you say a bit more?",
+		segments: [
+			{ from: 0, text: "The ground truth wouldn't be at the same granularity." },
+			{ from: 4000, text: "Can you say a bit more?" },
+		],
+	};
+	const mic = {
+		text: "ground truth won't be at the same granularity. Can you say a bit more? Okay.",
+		segments: [
+			{ from: 900, text: "ground truth won't be at the same granularity." },
+			{ from: 4600, text: "Can you say a bit more?" },
+			{ from: 7000, text: "Okay." },
+		],
+	};
+	assert.equal(removeMicEcho(sys, mic), null);
+	assert.equal(interleaveMeetingTracks(sys, mic), sys.text);
+});
+
+test("removeMicEcho keeps a real two-speaker call untouched", () => {
+	const sys = {
+		text: "How are you? Good to hear.",
+		segments: [
+			{ from: 0, text: "How are you?" },
+			{ from: 5000, text: "Good to hear." },
+		],
+	};
+	const mic = { text: "Doing well, thanks for asking.", segments: [{ from: 2000, text: "Doing well, thanks for asking." }] };
+	assert.deepEqual(removeMicEcho(sys, mic), mic);
+	assert.equal(interleaveMeetingTracks(sys, mic), "Them: How are you?\n\nMe: Doing well, thanks for asking.\n\nThem: Good to hear.");
+});
+
+test("removeMicEcho drops only the echoed lines when the user also spoke", () => {
+	const sys = {
+		text: "Let us look at the numbers first. Please share your screen.",
+		segments: [
+			{ from: 0, text: "Let us look at the numbers first." },
+			{ from: 20000, text: "Please share your screen." },
+		],
+	};
+	const mic = {
+		text: "Let us look at the numbers first. I have a question about the address matching node. Another point about the living space total. One more remark on the parcel size.",
+		segments: [
+			{ from: 800, text: "Let us look at the numbers first." },
+			{ from: 6000, text: "I have a question about the address matching node." },
+			{ from: 10000, text: "Another point about the living space total." },
+			{ from: 14000, text: "One more remark on the parcel size." },
+		],
+	};
+	const cleaned = removeMicEcho(sys, mic);
+	assert.equal(cleaned?.segments?.length, 3);
+	assert.ok(!cleaned?.text.includes("numbers first"));
+	// Short fillers never count as echo: too generic to match on.
+	assert.equal(
+		removeMicEcho({ text: "Okay.", segments: [{ from: 0, text: "Okay." }] }, { text: "Okay.", segments: [{ from: 500, text: "Okay." }] })?.text,
+		"Okay."
+	);
+});
+
 test("interleaveMeetingTracks falls back to labeled blocks without segment timing", () => {
 	const transcript = interleaveMeetingTracks(
 		{ text: "Everything they said.", segments: null },
@@ -247,6 +311,16 @@ test("live and pending notes carry the styling class; completed notes do not", (
 	assert.ok(!buildCompletedNativeRecordingNote("2026-08-15 12.00", "Them: hi").includes("cssclasses"));
 });
 
+
+test("a discreet live note carries no recording wording but keeps its machinery", () => {
+	const note = buildLiveNativeRecordingNote("/tmp/r.qma", "2026-09-15 14.13", { discreet: true });
+	assert.ok(!/recording - the transcript/i.test(note));
+	assert.ok(!note.includes("## Transcript"));
+	assert.ok(!note.includes("during the call"));
+	assert.match(note, /## Meeting notes/);
+	assert.ok(parseLiveNativeRecordingNote(note) !== null);
+	assert.equal(extractNativeRecordingManualNotes(note.replace("## Meeting notes\n", "## Meeting notes\nask about BDB\n")), "## Meeting notes\nask about BDB");
+});
 
 test("the Me/Them legend appears only on labeled transcripts", () => {
 	assert.match(buildCompletedNativeRecordingNote("2026-08-15 15.00", "Them: hi\n\nMe: hello"), /Me = my mic/);

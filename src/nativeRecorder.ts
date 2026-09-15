@@ -105,14 +105,77 @@ export function shiftTrackSegments(track: TrackTranscript | null, deltaMs: numbe
 	return { ...track, segments: track.segments.map((segment) => ({ ...segment, from: segment.from + deltaMs })) };
 }
 
+// How far apart (ms) a mic segment and a system segment may start and still
+// count as the same words heard twice. Whisper timestamps drift by a second
+// or two between two separately transcribed tracks.
+const MIC_ECHO_WINDOW_MS = 3000;
+// Segments shorter than this (after normalization) are too generic to match
+// on - "okay", "yeah", "thanks" appear on both sides of any real call.
+const MIC_ECHO_MIN_CHARS = 12;
+// Above this share of matched mic segments the whole mic track is treated as
+// speaker bleed and dropped: the user listened through laptop speakers and
+// the mic heard the call a second time.
+const MIC_ECHO_TRACK_SHARE = 0.5;
+
+function normalizeForEcho(text: string): string {
+	return text
+		.toLowerCase()
+		.replace(/[^\p{L}\p{N}\s]/gu, " ")
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+// Share of the shorter segment's words that also occur in the longer one.
+// The two tracks are transcribed separately, so the same sentence comes
+// back with small differences ("won't" vs "wouldn't") - exact matching
+// would miss most echoes.
+const MIC_ECHO_WORD_SHARE = 0.75;
+
+function isEchoOf(micNorm: string, sysNorm: string): boolean {
+	if (micNorm.length < MIC_ECHO_MIN_CHARS || sysNorm.length < MIC_ECHO_MIN_CHARS) return false;
+	if (micNorm === sysNorm || micNorm.includes(sysNorm) || sysNorm.includes(micNorm)) return true;
+	const micWords = micNorm.split(" ");
+	const sysWords = sysNorm.split(" ");
+	const [shorter, longer] = micWords.length <= sysWords.length ? [micWords, sysWords] : [sysWords, micWords];
+	const longerSet = new Set(longer);
+	const shared = shorter.filter((word) => longerSet.has(word)).length;
+	return shared / shorter.length >= MIC_ECHO_WORD_SHARE;
+}
+
+// Remove mic segments that are just the system audio heard again through
+// the laptop speakers. On a remote call without headphones every sentence
+// arrives twice - once on the system track, once through the mic - and the
+// merged transcript doubles. Returns the mic track without those echoes, or
+// null when the mic track was echo throughout (one voice in the room).
+export function removeMicEcho(sys: TrackTranscript | null, mic: TrackTranscript | null): TrackTranscript | null {
+	if (!sys?.segments?.length || !mic?.segments?.length) return mic;
+	const sysNorm = sys.segments.map((segment) => ({ from: segment.from, norm: normalizeForEcho(segment.text) }));
+	let matchable = 0;
+	let matched = 0;
+	const kept = mic.segments.filter((segment) => {
+		const micNorm = normalizeForEcho(segment.text);
+		if (micNorm.length < MIC_ECHO_MIN_CHARS) return true;
+		matchable++;
+		const echo = sysNorm.some(
+			(candidate) => Math.abs(candidate.from - segment.from) <= MIC_ECHO_WINDOW_MS && isEchoOf(micNorm, candidate.norm)
+		);
+		if (echo) matched++;
+		return !echo;
+	});
+	if (matched === 0) return mic;
+	if (matchable > 0 && matched / matchable > MIC_ECHO_TRACK_SHARE) return null;
+	return { ...mic, text: kept.map((segment) => segment.text.trim()).join(" "), segments: kept };
+}
+
 // Merge the two meeting tracks into one dialogue, ordered by when each
 // segment was spoken, with consecutive same-speaker segments joined into a
 // single line. Falls back to two labeled blocks when either track has no
 // segment timing (cloud transcription returns plain text only).
 export function interleaveMeetingTracks(
 	sys: TrackTranscript | null,
-	mic: TrackTranscript | null
+	micTrack: TrackTranscript | null
 ): string {
+	const mic = removeMicEcho(sys, micTrack);
 	const sysText = sys?.text.trim() ?? "";
 	const micText = mic?.text.trim() ?? "";
 
@@ -164,16 +227,19 @@ export const LIVE_NOTE_NOTES_HEADING = "## Meeting notes";
 // moment the cursor touches them, right where the user types) - a
 // self-explanatory heading with the cursor placed under it, and the
 // transcript placeholder out of the way below.
-export function buildLiveNativeRecordingNote(recordingDir: string | null, recordedAt: string): string {
-	return `---
-${LIVE_NATIVE_RECORDING_FLAG}: true
-recording_dir: ${JSON.stringify(recordingDir ?? "")}
-recorded_at: ${JSON.stringify(recordedAt)}
-status: recording
-cssclasses:
-  - nous-live-note
----
-${LIVE_NOTE_NOTES_HEADING}
+// Discreet mode drops everything on the page that says "recording": the
+// typing hint (it mentions "the call") and the Transcript placeholder. The
+// frontmatter stays - stop/transcribe need it - and CSS already hides it.
+export function buildLiveNativeRecordingNote(
+	recordingDir: string | null,
+	recordedAt: string,
+	options: { discreet?: boolean } = {}
+): string {
+	const body = options.discreet
+		? `${LIVE_NOTE_NOTES_HEADING}
+
+`
+		: `${LIVE_NOTE_NOTES_HEADING}
 
 ${LIVE_NOTE_TYPING_HINT}
 
@@ -184,6 +250,15 @@ ${LIVE_NOTE_TYPING_HINT}
 
 *Recording - the transcript appears here when you stop.*
 `;
+	return `---
+${LIVE_NATIVE_RECORDING_FLAG}: true
+recording_dir: ${JSON.stringify(recordingDir ?? "")}
+recorded_at: ${JSON.stringify(recordedAt)}
+status: recording
+cssclasses:
+  - nous-live-note
+---
+${body}`;
 }
 
 function stripLiveNoteHint(text: string): string {

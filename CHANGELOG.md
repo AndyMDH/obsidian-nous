@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.10.0
+
+- Meeting transcripts no longer double every sentence when you listen to
+  a remote call through the laptop speakers. The mic used to hear the
+  call a second time, so each line came back once as `Them:` and once as
+  `Me:`. Nous now drops mic segments that match the system track within a
+  few seconds, and when the whole mic track is such an echo the transcript
+  comes back as one unlabeled conversation. Real two-speaker calls are
+  untouched.
+- The recorder keeps the Mac awake while it records. Before, an idle Mac
+  slept mid-meeting and the transcript ended mid-sentence. The display can
+  still dim. A closed lid still stops the recording - macOS forces sleep
+  there and no app can prevent it.
+- New "Discreet recording" toggle in Settings → Nous → Voice capture
+  (macOS). While on, a meeting records with no red icon, no timer, no
+  status bar entry, and no popup. The live note is named "Notes" and
+  shows only your notes heading. The transcript still arrives when you
+  stop.
+
 ## 2.9.0
 
 - The one-click speech model is accurate again. 2.8.1 switched new

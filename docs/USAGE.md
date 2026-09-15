@@ -160,6 +160,20 @@ separate tracks.
 chronological dialogue. Mic capture needs macOS 15+ — on macOS 14 the
 transcript is `Them:`-only.
 
+If you listen through the laptop speakers instead of headphones, your mic
+hears the call a second time. Nous drops those echoed mic lines, and when
+the whole mic track is an echo the transcript comes back unlabeled, like an
+in-person meeting. Headphones still give the cleanest `Me:` / `Them:` split.
+
+The recorder keeps your Mac awake while it records, so an idle Mac does not
+sleep mid-meeting. A closed lid still stops the recording.
+
+**Discreet recording** (Settings → Nous → Voice capture, macOS) hides every
+on-screen sign of a recording: no red ribbon icon, no timer, no status bar
+entry, no popup. The live note is named "Notes" and shows only your notes
+heading. The ribbon icon still turns into a stop symbol so you can end the
+recording, and the transcript arrives as usual when you stop.
+
 If speech-to-text is not ready yet, Nous still records the meeting. When you
 stop, the live note stays in the inbox and says it needs transcription. Your
 typed questions and notes stay there too. Add local `whisper.cpp` or a

@@ -31,6 +31,9 @@ export interface NousSettings {
 	wikiThreshold: number;
 	autoProcessOnCreate: boolean;
 	dedupLookback: number;
+	// No red indicators, elapsed timer, or "Recording" popup while a meeting
+	// records, and a bare live note - for recording with other people around.
+	discreetRecording: boolean;
 	// First-run onboarding wizard has been completed or dismissed.
 	onboarded: boolean;
 	// Plugin version that last (re)wrote .claude/skills/*/SKILL.md. Compared
@@ -91,6 +94,7 @@ export const DEFAULT_SETTINGS: NousSettings = {
 	wikiThreshold: 4,
 	autoProcessOnCreate: true,
 	dedupLookback: 50,
+	discreetRecording: false,
 	onboarded: false,
 	skillsVersion: "",
 };

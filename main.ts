@@ -2052,7 +2052,9 @@ export default class NousPlugin extends Plugin {
 		}
 		this.nativeRecorderLastProblem = null;
 		this.setMeetingRecordingIndicator(true);
-		nousNotice("🔴 Recording this meeting - tap again when you're done.", 4000);
+		if (!this.settings.discreetRecording) {
+			nousNotice("🔴 Recording this meeting - tap again when you're done.", 4000);
+		}
 		try {
 			this.activeNativeMeetingNotePath = await this.createLiveNativeMeetingNote(next.output);
 		} catch (e) {
@@ -2441,15 +2443,31 @@ export default class NousPlugin extends Plugin {
 	private async createLiveNativeMeetingNote(recordingDir: string | null): Promise<string> {
 		await this.ensureFolderExists(this.settings.inboxFolder);
 		const stamp = recordingDir ? this.meetingStampFromRecordingDir(recordingDir) : window.moment().format("YYYY-MM-DD HH.mm");
-		const notePath = await this.uniqueVaultPath(`${this.settings.inboxFolder}/${stamp} Meeting live note.md`);
-		await this.app.vault.create(notePath, buildLiveNativeRecordingNote(recordingDir, stamp));
+		const discreet = this.settings.discreetRecording;
+		const notePath = await this.uniqueVaultPath(
+			`${this.settings.inboxFolder}/${stamp} ${discreet ? "Notes" : "Meeting live note"}.md`
+		);
+		await this.app.vault.create(notePath, buildLiveNativeRecordingNote(recordingDir, stamp, { discreet }));
 		const file = this.app.vault.getFileByPath(notePath);
 		if (file) {
-			await this.app.workspace.getLeaf(true).openFile(file);
-			window.setTimeout(() => this.placeCursorInLiveNoteNotes(), 120);
+			const leaf = this.app.workspace.getLeaf(true);
+			await leaf.openFile(file);
+			window.setTimeout(() => {
+				this.placeCursorInLiveNoteNotes();
+				this.hideLiveNoteProperties(leaf.view);
+			}, 120);
 		}
 		await this.appendLog(`LIVE NOTE: native meeting recording -> ${notePath}`);
 		return notePath;
+	}
+
+	// Obsidian applies a note's `cssclasses` from its metadata cache, and a
+	// note created milliseconds ago is not indexed yet - so on the freshly
+	// opened live note the Properties panel (recording flags, folder path,
+	// "status: recording") stays visible until the note is reopened. Put the
+	// class on the view directly so the existing hide rule applies at once.
+	private hideLiveNoteProperties(view: unknown): void {
+		if (view instanceof MarkdownView) view.contentEl.addClass("nous-live-note");
 	}
 
 	// Land the cursor on the blank line after the Notes hint, ready to type.
@@ -2515,12 +2533,16 @@ export default class NousPlugin extends Plugin {
 	}
 
 	private setMeetingRecordingIndicator(recording: boolean) {
+		// Discreet mode: the ribbon icon still flips to the stop symbol so the
+		// user can find the off switch, but with no red pulse, no timer, and
+		// no status bar entry - nothing on screen reads "recording".
+		const discreet = this.settings.discreetRecording;
 		if (this.meetingRibbonEl) {
 			setIcon(this.meetingRibbonEl, recording ? "circle-stop" : "audio-lines");
-			this.meetingRibbonEl.toggleClass("nous-recording", recording);
+			this.meetingRibbonEl.toggleClass("nous-recording", recording && !discreet);
 			this.meetingRibbonEl.setAttribute(
 				"aria-label",
-				recording ? "meeting recording - click to stop" : "toggle meeting capture"
+				recording ? (discreet ? "click to stop" : "meeting recording - click to stop") : "toggle meeting capture"
 			);
 		}
 		if (this.meetingRecordingTimer !== null) {
@@ -2528,7 +2550,10 @@ export default class NousPlugin extends Plugin {
 			this.meetingRecordingTimer = null;
 		}
 		if (this.meetingStatusBarEl) {
-			if (recording) {
+			if (recording && discreet) {
+				this.meetingTranscribing = false;
+				this.meetingStatusBarEl.hide();
+			} else if (recording) {
 				this.meetingTranscribing = false;
 				this.startRecordingElapsedTimer(this.meetingStatusBarEl, (id) => {
 					this.meetingRecordingTimer = id;
@@ -3932,6 +3957,21 @@ class NousSettingTab extends PluginSettingTab {
 			});
 
 			if (Platform.isMacOS) {
+				voiceItems.push({
+					name: "Discreet recording",
+					render: (setting) => {
+						setting
+							.setDesc(
+								"No red icon, timer, or popup while a meeting records. The live note shows only your notes, and the transcript still arrives when you stop."
+							)
+							.addToggle((toggle) =>
+								toggle.setValue(this.plugin.settings.discreetRecording).onChange(async (value) => {
+									this.plugin.settings.discreetRecording = value;
+									await this.plugin.saveSettings();
+								})
+							);
+					},
+				});
 				voiceItems.push({
 					name: "Faster, less accurate model",
 					render: (setting) => {

@@ -1,6 +1,7 @@
 import AVFoundation
 import CoreMedia
 import Foundation
+import IOKit.pwr_mgt
 import MachO
 import ScreenCaptureKit
 
@@ -311,6 +312,11 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 	// the two tracks before interleaving them into a dialogue.
 	private var firstSystemPTS: Double?
 	private var firstMicPTS: Double?
+	// Power assertion held for the life of the capture. Without it an idle
+	// Mac sleeps mid-meeting, ScreenCaptureKit stops delivering buffers,
+	// and the transcript ends mid-sentence. Idle *display* sleep is still
+	// allowed; only system sleep is blocked. A closed lid still sleeps.
+	private var sleepAssertion: IOPMAssertionID = 0
 
 	init(outputFolder: URL) throws {
 		self.outputFolder = outputFolder
@@ -351,14 +357,36 @@ final class MeetingRecorder: NSObject, SCStreamOutput {
 		}
 		try await stream.startCapture()
 		self.stream = stream
-
+		preventIdleSleep()
 	}
 
 	func stop() async {
 		try? await stream?.stopCapture()
+		allowIdleSleep()
 		await systemWriter.finish()
 		await micWriter.finish()
 		writeTrackTiming()
+	}
+
+	private func preventIdleSleep() {
+		var assertionID: IOPMAssertionID = 0
+		let result = IOPMAssertionCreateWithName(
+			kIOPMAssertionTypePreventUserIdleSystemSleep as CFString,
+			IOPMAssertionLevel(kIOPMAssertionLevelOn),
+			"Nous is recording a meeting" as CFString,
+			&assertionID
+		)
+		if result == kIOReturnSuccess {
+			sleepAssertion = assertionID
+		} else {
+			fputs("nous-recorder: could not prevent idle sleep (IOKit \(result)); recording continues\n", stderr)
+		}
+	}
+
+	private func allowIdleSleep() {
+		guard sleepAssertion != 0 else { return }
+		IOPMAssertionRelease(sleepAssertion)
+		sleepAssertion = 0
 	}
 
 	func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of outputType: SCStreamOutputType) {
