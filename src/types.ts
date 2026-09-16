@@ -154,6 +154,8 @@ export interface EnrichResult {
 	summary: string;
 	key_points: string[];
 	decisions: string[];
+	// Questions the meeting raised and left open. Feeds the wiki's list.
+	open_questions?: string[];
 	// The note owner's own commitments only - see enrichSystemPrompt.
 	action_items: string[];
 	// Up to three other people's commitments that affect the owner's work.

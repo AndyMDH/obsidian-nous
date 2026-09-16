@@ -20,6 +20,14 @@ test("meeting enricher skill scopes action items to the owner and adds Watch", (
 	assert.match(wikiBuilderSkill(folders), /`## Watch`/);
 });
 
+test("enricher writes Open questions and the skip rule names the prompt", () => {
+	const enricher = meetingEnricherSkill(folders);
+	assert.match(enricher, /## Open questions/);
+	assert.match(enricher, /phrased as a question/);
+	assert.match(enricher, /file that the prompt names as a live recording note/);
+	assert.match(wikiBuilderSkill(folders), /source notes' own Open questions sections/);
+});
+
 test("both skills carry the glossary contract", () => {
 	const enricher = meetingEnricherSkill(folders);
 	assert.match(enricher, /## New terms/);

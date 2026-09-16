@@ -52,10 +52,11 @@ Skip a file if its frontmatter already contains \`status: enriched\` — it's
 already been processed. Also skip a file whose frontmatter contains
 \`nous_pending_native_recording: true\`; the plugin itself must transcribe
 that native recorder placeholder before this skill can enrich it. Also skip a
-file whose first lines contain \`%% nous-live-recording %%\` or whose
-frontmatter contains \`nous_live_native_recording: true\`; the recording is
-still active and the plugin will replace that live note with normal text
-when the user stops recording. These are the idempotency guards;
+file that the prompt names as a live recording note, a file whose first
+lines contain \`%% nous-live-recording %%\`, or a file whose frontmatter
+contains \`nous_live_native_recording: true\`; the recording is still active
+and the plugin will replace that live note with normal text when the user
+stops recording. These are the idempotency guards;
 they mean it's always safe to re-run this skill over an inbox that partially
 succeeded before.
 (Image and PDF files never have frontmatter of their own, so this guard only
@@ -247,6 +248,10 @@ Summary framing — just summarize the idea.
 
 - ...
 
+## Open questions
+
+- ...
+
 ## Action items
 
 - [ ] ...
@@ -267,6 +272,12 @@ Summary framing — just summarize the idea.
 > <original raw text, unmodified, one '>' per line, collapsed under this callout>
 \`\`\`
 
+\`## Open questions\` holds the questions this meeting raised and did not
+answer - decisions still to make, facts nobody in the room knew, things
+someone promised to find out. One line each, phrased as a question. Not a
+restatement of the action items. The wiki-builder carries them forward and
+drops the ones later meetings answer.
+
 \`## Action items\` holds only commitments that ${ownerPhrase(f.owner)} made or
 was given. This is a personal note, not the team's task board - other
 people's tasks do not belong here. Write each as a bare command under ten
@@ -286,8 +297,8 @@ eight, each with a best guess from context in a few words, or \`unknown\`.
 Never list ordinary words or well-known terms (API, CEO, PDF). The
 wiki-builder folds these into the topic's glossary later.
 
-Omit the Decisions section entirely if there were none, Action items
-entirely if the owner has none, Watch entirely if there is nothing to
+Omit the Decisions section entirely if there were none, Open questions
+entirely if nothing stayed open, Action items entirely if the owner has none, Watch entirely if there is nothing to
 watch, and New terms entirely if every term is already known. Omit \`## Notes taken during meeting\` if the
 inbox file did not contain \`## Meeting notes\`, \`## Notes\`, \`## Questions to ask\`,
 \`## Live notes\`, or \`## Notes taken during meeting\` with content. Never
@@ -504,7 +515,7 @@ carries the \` Wiki\` suffix.
 For each topic crossing the threshold:
 
 1. Read all source meeting notes for that topic in full (Summary, Key points,
-   Decisions, Action items, Watch, New terms — not the raw Transcript, unless something is
+   Decisions, Open questions, Action items, Watch, New terms — not the raw Transcript, unless something is
    ambiguous and you need to check it).
 2. Write \`${f.wikis}/<Topic> Wiki.md\` (see filename convention above):
 
@@ -528,7 +539,8 @@ meetings into connected prose.
 
 ## Open questions
 
-- ...
+- ... (start from the source notes' own Open questions sections; drop a
+  question once a later note answers it, and say so in Current state)
 
 ## Glossary
 

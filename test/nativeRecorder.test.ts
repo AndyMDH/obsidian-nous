@@ -81,9 +81,15 @@ test("live native recording notes expose the in-meeting writing surface and carr
 	// by its invisible %% marker instead.
 	assert.ok(!note.startsWith("---"));
 	assert.ok(!note.includes("recording_dir"));
-	assert.equal(note.split("\n")[0], LIVE_NOTE_MARKER);
-	assert.ok(isLiveNativeRecordingNote(note));
+	// No marker either: the 2.12 %% comment showed up in Live Preview.
+	assert.ok(!note.includes("%%"));
+	assert.equal(note.split("\n")[0], "## Meeting notes");
 	assert.equal(parseLiveNativeRecordingNote(note), null);
+	// Old 2.12 notes with the marker are still recognized, and the line is
+	// stripped from manual notes.
+	const withMarker = `${LIVE_NOTE_MARKER}\n${note}`;
+	assert.ok(isLiveNativeRecordingNote(withMarker));
+	assert.ok(!extractNativeRecordingManualNotes(withMarker.replace("## Meeting notes\n", "## Meeting notes\nask X\n")).includes("%%"));
 	assert.match(note, /## Meeting notes/);
 	assert.match(note, /## Transcript/);
 	// Minimal by design: no title header, no pre-made checkboxes, no callout
@@ -331,7 +337,7 @@ test("a discreet live note carries no recording wording but keeps its machinery"
 	assert.ok(!note.includes("## Transcript"));
 	assert.ok(!note.includes("during the call"));
 	assert.match(note, /## Meeting notes/);
-	assert.ok(isLiveNativeRecordingNote(note));
+	assert.ok(!note.includes("%%"));
 	assert.equal(extractNativeRecordingManualNotes(note.replace("## Meeting notes\n", "## Meeting notes\nask about BDB\n")), "## Meeting notes\nask about BDB");
 });
 

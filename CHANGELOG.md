@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.14.0
+
+- Meeting notes gain an `## Open questions` section: the questions a
+  meeting raised and did not answer, one line each. The wiki-builder now
+  starts its own Open questions from these and drops a question once a
+  later note answers it.
+- The live note is now completely bare: only your notes heading. The
+  `%% nous-live-recording %%` comment line that 2.12 added was meant to be
+  invisible but showed in Live Preview for some setups. The plugin knows
+  the live note from its own settings, and in CLI mode it names the file
+  to skip in the skill's instructions. Notes left behind by 2.12 and 2.13
+  are still recognized.
+
 ## 2.13.0
 
 - Closing the lid now ends the meeting cleanly. The recorder listens for

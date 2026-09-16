@@ -26,6 +26,8 @@ test("buildEnrichArgs interpolates the configured inbox folder into the prompt",
 	assert.ok(args.includes("Use the meeting-enricher skill to process all files in 00-Inbox/."));
 	assert.ok(args.includes("--permission-mode"));
 	assert.ok(args.includes("acceptEdits"));
+	const withLive = buildEnrichArgs("00-Inbox", "00-Inbox/2026-09-16 09.04 Notes.md");
+	assert.match(withLive[1], /Do not read, edit, or move "00-Inbox\/2026-09-16 09.04 Notes.md"/);
 });
 
 test("buildWikiArgs interpolates the configured meetings folder into the prompt", () => {

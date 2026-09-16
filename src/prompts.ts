@@ -52,6 +52,7 @@ When "win" is in tags, fill the win field: category is one of "client work", "tr
 - summary: 2-4 sentences. For type "note", just summarize the idea - do not force a meeting framing.
 - key_points: bullet strings, the substantive points made.
 - decisions: bullet strings, actual decisions only. Empty array if none - never invent one.
+- open_questions: questions this meeting raised and did not answer - decisions still to make, facts nobody knew, things someone promised to find out. One line each, phrased as a question. Not a restatement of action items. Empty array if nothing stayed open.
 - action_items: only commitments that ${owner} made or was given. This is a personal note, not the team's task board - other people's tasks do not belong here. Write each as a bare command under ten words, no name prefix ("Ask Fuya for the abbreviations list."). Empty array if the owner has none - never invent one.
 - watch_items: at most three commitments other people made that affect the owner's own work, each as "Owner: what, by when" in under twelve words ("Leah: onboarding journey and abbreviations list, this week."). Empty array if none. Never mirror everyone's tasks here.
 
@@ -180,6 +181,7 @@ export const ENRICH_TOOL = {
 			summary: { type: "string" },
 			key_points: { type: "array", items: { type: "string" } },
 			decisions: { type: "array", items: { type: "string" } },
+			open_questions: { type: "array", items: { type: "string" } },
 			action_items: { type: "array", items: { type: "string" } },
 			watch_items: { type: "array", items: { type: "string" } },
 			new_terms: {
@@ -232,6 +234,7 @@ export const ENRICH_TOOL = {
 			"summary",
 			"key_points",
 			"decisions",
+			"open_questions",
 			"action_items",
 			"watch_items",
 			"new_terms",
@@ -248,7 +251,7 @@ export function wikiSystemPrompt(topic: string, isUpdate: boolean): string {
 
 Write current_state like a living briefing document a colleague could read to get fully up to speed - not a bullet list of links. Pull together decisions, current direction, and unresolved tension across the source notes into connected prose.
 
-open_questions: bullet strings, genuinely open/unresolved questions. Empty array if none.
+open_questions: bullet strings, genuinely open/unresolved questions. Start from the source notes' own "## Open questions" sections; drop a question once a later note answers it. Empty array if none.
 
 glossary: acronyms, code names, and project jargon that appear in the source notes, each with its meaning in a few words. Draw meanings from the notes' "## New terms" sections and from context; when the notes only guess, keep the guess. Only terms actually used in the sources; skip ordinary words and well-known terms (API, CEO, PDF). Empty array if none. Terms listed under "Known glossary terms" in the user message are already in the table - do not repeat them.`;
 

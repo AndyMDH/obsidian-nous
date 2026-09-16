@@ -239,7 +239,11 @@ and seeing a linked note. (Full detail:
    deterministically from note metadata) — updated, not appended, as new
    notes arrive.
 
-6. **Glossary.** Each wiki carries a `## Glossary` table of the acronyms and
+6. **Open questions.** Each meeting note lists the questions it raised and
+   did not answer. The wiki carries them forward and drops the ones a later
+   meeting settles.
+
+7. **Glossary.** Each wiki carries a `## Glossary` table of the acronyms and
    project jargon found in its notes, one row per term with a meaning and a
    status. Nous writes every row as `guess`. Edit the meaning and set the
    status to `confirmed`; Nous never rewrites a row that is already there.

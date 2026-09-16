@@ -253,6 +253,10 @@ export function buildMeetingMarkdown(
 			`## Decisions\n\n${result.decisions.map((d) => `- ${d}`).join("\n")}`
 		);
 	}
+	const openQuestions = result.open_questions ?? [];
+	if (openQuestions.length > 0) {
+		bodyParts.push(`## Open questions\n\n${openQuestions.map((q) => `- ${q}`).join("\n")}`);
+	}
 	if (result.action_items.length > 0) {
 		bodyParts.push(
 			`## Action items\n\n${result.action_items.map((a) => `- [ ] ${a}`).join("\n")}`

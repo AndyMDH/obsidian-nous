@@ -213,12 +213,12 @@ export function interleaveMeetingTracks(
 export const LIVE_NOTE_TYPING_HINT =
 	"*Type questions and notes here during the call - everything is kept in the finished note.*";
 
-// First line of a live note. An Obsidian %% comment: invisible in Live
-// Preview and Reading view, so nothing on the page says "recording", yet
-// the CLI-mode skill and the recovery paths can still recognize the note.
-// Recording folder and start time live in the plugin's settings instead
-// (ActiveLiveRecording) - frontmatter would surface them in the Properties
-// panel, which is exactly what a live note must not show.
+// 2.12.x wrote this Obsidian comment as the live note's first line, meant
+// to be invisible. It showed in Live Preview for at least one user, so
+// 2.14+ writes no marker at all: the plugin knows the live note from its
+// settings (ActiveLiveRecording) and names it in the CLI skill's prompt.
+// Kept only so notes left behind by 2.12/2.13 are still recognized and
+// the line is stripped from their manual notes.
 export const LIVE_NOTE_MARKER = "%% nous-live-recording %%";
 
 export const LIVE_NOTE_HINT_LINES = [
@@ -231,7 +231,8 @@ export const LIVE_NOTE_HINT_LINES = [
 
 export const LIVE_NOTE_NOTES_HEADING = "## Meeting notes";
 
-// Deliberately minimal: no frontmatter (see LIVE_NOTE_MARKER), no title
+// Deliberately minimal: no frontmatter and no marker (the Properties panel
+// and a stray comment line both told onlookers "recording"), no title
 // header (the filename is the title), no pre-made checkboxes, no rendered
 // hint (Obsidian un-renders callouts the moment the cursor touches them,
 // right where the user types) - a self-explanatory heading with the cursor
@@ -240,13 +241,11 @@ export const LIVE_NOTE_NOTES_HEADING = "## Meeting notes";
 // hint (it mentions "the call") and the Transcript placeholder.
 export function buildLiveNativeRecordingNote(options: { discreet?: boolean } = {}): string {
 	if (options.discreet) {
-		return `${LIVE_NOTE_MARKER}
-${LIVE_NOTE_NOTES_HEADING}
+		return `${LIVE_NOTE_NOTES_HEADING}
 
 `;
 	}
-	return `${LIVE_NOTE_MARKER}
-${LIVE_NOTE_NOTES_HEADING}
+	return `${LIVE_NOTE_NOTES_HEADING}
 
 ${LIVE_NOTE_TYPING_HINT}
 
@@ -259,9 +258,9 @@ ${LIVE_NOTE_TYPING_HINT}
 `;
 }
 
-// True for a live note of either generation: the marker line (2.12+) or the
-// legacy frontmatter flag with status: recording (older notes left behind
-// by a crash mid-recording).
+// True for a live note left behind by an older version: the 2.12/2.13
+// marker line or the pre-2.12 frontmatter flag. Current live notes carry
+// neither - the plugin identifies them by path (settings.activeLiveRecording).
 export function isLiveNativeRecordingNote(content: string): boolean {
 	const head = content.split("\n", 8).map((line) => line.trim());
 	if (head.includes(LIVE_NOTE_MARKER)) return true;

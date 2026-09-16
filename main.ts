@@ -2422,13 +2422,15 @@ export default class NousPlugin extends Plugin {
 		problem: string,
 		knownManualNotes?: string
 	): Promise<void> {
+		// Callers only ever pass a live note they resolved themselves (by
+		// settings path, or the legacy inbox scan), so there is no marker check
+		// here - by the time recovery calls this the settings entry is already
+		// cleared, and a fresh live note has nothing else to recognize it by.
 		const content = await this.app.vault.read(liveFile);
 		const legacy = parseLiveNativeRecordingNote(content);
 		const active = this.settings.activeLiveRecording;
-		const isLive = isLiveNativeRecordingNote(content) || active?.path === liveFile.path;
-		if (!isLive) return;
-		// Start time: settings first (2.12+ live notes carry no frontmatter),
-		// legacy frontmatter next, the filename's stamp as the last resort.
+		// Start time: settings first (live notes carry no frontmatter), legacy
+		// frontmatter next, the filename's stamp as the last resort.
 		const recordedAt =
 			(active?.path === liveFile.path ? active.recordedAt : null) ??
 			legacy?.recordedAt ??
@@ -2568,7 +2570,7 @@ export default class NousPlugin extends Plugin {
 		}
 		if (this.activeNativeMeetingNotePath) {
 			const file = this.app.vault.getFileByPath(this.activeNativeMeetingNotePath);
-			if (file && isLiveNativeRecordingNote(await this.app.vault.read(file))) return file;
+			if (file) return file;
 		}
 
 		// Legacy fallback: live notes written before 2.12 carried their state
@@ -2902,7 +2904,7 @@ export default class NousPlugin extends Plugin {
 
 		const enrichResult = await this.cliExec(
 			this.settings.claudeCliPath,
-			buildEnrichArgs(this.settings.inboxFolder),
+			buildEnrichArgs(this.settings.inboxFolder, this.settings.activeLiveRecording?.path ?? null),
 			{ cwd: basePath, env, timeoutMs: AGENT_CLI_TIMEOUT_MS }
 		);
 		if (enrichResult.code !== 0) {

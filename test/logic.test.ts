@@ -456,6 +456,19 @@ test("glossary rows parse, merge without overwriting, and render sorted", () => 
 	assert.ok(!buildWikiMarkdown("ING", { current_state: "S.", open_questions: [] }, [], [], "2026-09-01", "2026-09-16").includes("## Glossary"));
 });
 
+test("buildMeetingMarkdown renders Open questions between Decisions and Action items", () => {
+	const md = buildMeetingMarkdown(
+		baseResult({ open_questions: ["Does the hill climb close before Lukas leaves?"] }),
+		"raw",
+		"2026-09-16T09:00:00Z",
+		null
+	);
+	assert.ok(md.indexOf("## Decisions") < md.indexOf("## Open questions"));
+	assert.ok(md.indexOf("## Open questions") < md.indexOf("## Action items"));
+	assert.match(md, /- Does the hill climb close before Lukas leaves\?/);
+	assert.ok(!buildMeetingMarkdown(baseResult(), "raw", "2026-09-16T09:00:00Z", null).includes("## Open questions"));
+});
+
 test("buildMeetingMarkdown renders New terms after Watch and skips blank terms", () => {
 	const md = buildMeetingMarkdown(
 		baseResult({ watch_items: ["Leah: abbreviations list, this week."], new_terms: [{ term: "UPPC", guess: "unknown" }, { term: " ", guess: "x" }] }),

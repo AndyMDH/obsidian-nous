@@ -22,10 +22,15 @@ export function augmentedPath(existingPath: string, homeDir: string, extraDir: s
 	return [...extras, existingPath].join(":");
 }
 
-export function buildEnrichArgs(inboxFolder: string): string[] {
+export function buildEnrichArgs(inboxFolder: string, liveNotePath: string | null = null): string[] {
+	// A live meeting note has no frontmatter flag any more, so the skill
+	// cannot recognize it on its own - name it here instead.
+	const skip = liveNotePath
+		? ` Do not read, edit, or move "${liveNotePath}": a meeting recording is still writing into it.`
+		: "";
 	return [
 		"-p",
-		`Use the meeting-enricher skill to process all files in ${inboxFolder}/.`,
+		`Use the meeting-enricher skill to process all files in ${inboxFolder}/.${skip}`,
 		"--allowedTools",
 		"Read,Write,Edit,Glob,Grep,Bash",
 		"--permission-mode",
