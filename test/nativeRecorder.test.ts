@@ -2,6 +2,7 @@ import { test } from "node:test";
 import { strict as assert } from "node:assert";
 import {
 	LIVE_NOTE_HINT_LINES,
+	LIVE_NOTE_MARKER,
 	NATIVE_RECORDER_ASSET,
 	buildCompletedNativeRecordingNote,
 	buildLiveNativeRecordingNote,
@@ -10,6 +11,7 @@ import {
 	extractNativeRecordingManualNotes,
 	hasMeaningfulNativeRecordingManualNotes,
 	interleaveMeetingTracks,
+	isLiveNativeRecordingNote,
 	nativeRecorderArgs,
 	nativeRecorderLatestAssetUrl,
 	nativeRecorderReleaseAssetUrl,
@@ -71,16 +73,17 @@ test("pending native recording notes round-trip recording metadata", () => {
 	assert.match(note, /Process inbox now/);
 });
 
-test("live native recording notes expose the in-meeting writing surface", () => {
-	const note = buildLiveNativeRecordingNote(
-		"/Users/andy/Movies/NousRecordings/2026-08-12 10.00 Meeting recording.qma",
-		"2026-08-12 10.00"
-	);
-	assert.deepEqual(parseLiveNativeRecordingNote(note), {
-		recordingDir: "/Users/andy/Movies/NousRecordings/2026-08-12 10.00 Meeting recording.qma",
-		recordedAt: "2026-08-12 10.00",
-		status: "recording",
-	});
+test("live native recording notes expose the in-meeting writing surface and carry no frontmatter", () => {
+	const note = buildLiveNativeRecordingNote();
+	// No frontmatter at all: Obsidian's Properties panel would otherwise
+	// show "status: recording" and the recording folder to anyone looking
+	// at the screen. State lives in plugin settings; the note is recognized
+	// by its invisible %% marker instead.
+	assert.ok(!note.startsWith("---"));
+	assert.ok(!note.includes("recording_dir"));
+	assert.equal(note.split("\n")[0], LIVE_NOTE_MARKER);
+	assert.ok(isLiveNativeRecordingNote(note));
+	assert.equal(parseLiveNativeRecordingNote(note), null);
 	assert.match(note, /## Meeting notes/);
 	assert.match(note, /## Transcript/);
 	// Minimal by design: no title header, no pre-made checkboxes, no callout
@@ -90,8 +93,19 @@ test("live native recording notes expose the in-meeting writing surface", () => 
 	assert.ok(!note.includes("[!tip]"));
 });
 
+test("legacy frontmatter live notes are still recognized as live", () => {
+	const legacy = `---\nnous_live_native_recording: true\nrecording_dir: "/tmp/r.qma"\nrecorded_at: "2026-08-12 10.00"\nstatus: recording\n---\n## Meeting notes\n`;
+	assert.ok(isLiveNativeRecordingNote(legacy));
+	assert.deepEqual(parseLiveNativeRecordingNote(legacy), {
+		recordingDir: "/tmp/r.qma",
+		recordedAt: "2026-08-12 10.00",
+		status: "recording",
+	});
+	assert.ok(!isLiveNativeRecordingNote("---\ntype: meeting\n---\n## Summary\n"));
+});
+
 test("manual live notes are preserved across pending and completed native recording notes", () => {
-	const liveNote = buildLiveNativeRecordingNote(null, "2026-08-12 10.00").replace(
+	const liveNote = buildLiveNativeRecordingNote().replace(
 		"## Meeting notes\n",
 		"## Meeting notes\n\n- [ ] Ask about budget\n"
 	);
@@ -285,7 +299,7 @@ test("shiftTrackSegments offsets segment timing but leaves text and null tracks 
 
 test("legacy hint callouts are stripped from manual notes; typing survives", () => {
 	// A note created by the briefly-shipped callout variant.
-	const legacy = buildLiveNativeRecordingNote(null, "2026-08-15 11.00").replace(
+	const legacy = buildLiveNativeRecordingNote().replace(
 		"## Meeting notes\n",
 		`## Meeting notes\n\n${LIVE_NOTE_HINT_LINES.join("\n")}\n\n- [ ] Ask about budget\n`
 	);
@@ -294,7 +308,7 @@ test("legacy hint callouts are stripped from manual notes; typing survives", () 
 	assert.ok(!manualNotes.includes("[!tip]"));
 
 	// Untouched minimal note: heading alone is not meaningful content.
-	const untouched = extractNativeRecordingManualNotes(buildLiveNativeRecordingNote(null, "2026-08-15 11.00"));
+	const untouched = extractNativeRecordingManualNotes(buildLiveNativeRecordingNote());
 	assert.equal(hasMeaningfulNativeRecordingManualNotes(untouched), false);
 });
 
@@ -305,20 +319,19 @@ test("nativeRecorderLatestAssetUrl points at the newest release asset", () => {
 	);
 });
 
-test("live and pending notes carry the styling class; completed notes do not", () => {
-	assert.match(buildLiveNativeRecordingNote(null, "2026-08-15 12.00"), /cssclasses:\n {2}- nous-live-note/);
+test("pending notes carry the styling class; completed notes do not", () => {
 	assert.match(buildPendingNativeRecordingNote("/tmp/r.qma", "2026-08-15 12.00"), /cssclasses:\n {2}- nous-live-note/);
 	assert.ok(!buildCompletedNativeRecordingNote("2026-08-15 12.00", "Them: hi").includes("cssclasses"));
 });
 
 
 test("a discreet live note carries no recording wording but keeps its machinery", () => {
-	const note = buildLiveNativeRecordingNote("/tmp/r.qma", "2026-09-15 14.13", { discreet: true });
+	const note = buildLiveNativeRecordingNote({ discreet: true });
 	assert.ok(!/recording - the transcript/i.test(note));
 	assert.ok(!note.includes("## Transcript"));
 	assert.ok(!note.includes("during the call"));
 	assert.match(note, /## Meeting notes/);
-	assert.ok(parseLiveNativeRecordingNote(note) !== null);
+	assert.ok(isLiveNativeRecordingNote(note));
 	assert.equal(extractNativeRecordingManualNotes(note.replace("## Meeting notes\n", "## Meeting notes\nask about BDB\n")), "## Meeting notes\nask about BDB");
 });
 

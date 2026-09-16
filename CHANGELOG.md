@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.12.0
+
+- The live meeting note has no frontmatter any more, so Obsidian's
+  Properties panel can no longer show "status: recording" and the
+  recording folder to anyone looking at your screen. The recording state
+  now lives in the plugin's settings, and the note carries one invisible
+  `%% nous-live-recording %%` line so the CLI skill still skips it. If
+  Obsidian or the Mac shuts down mid-recording, Nous finishes the note
+  from the saved audio on the next start, or keeps your typed notes and
+  says what happened.
+- Wikis gain a `## Glossary` table: term, meaning, status. The
+  wiki-builder fills it from the acronyms and project jargon in the
+  source notes, every row as a `guess`. Edit a meaning and set its status
+  to `confirmed`; Nous never rewrites a row that is already there.
+- The enricher reads every wiki's glossary and expands known terms on
+  first use in a new note, like "LRE (land register extract)". Terms no
+  glossary knows go under a short `## New terms` section with a best
+  guess, and the wiki-builder folds them into the table on its next run.
+
 ## 2.11.0
 
 - Action items are now yours only. A meeting note used to mirror the

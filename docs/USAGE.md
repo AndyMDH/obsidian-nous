@@ -174,6 +174,12 @@ entry, no popup. The live note is named "Notes" and shows only your notes
 heading. The ribbon icon still turns into a stop symbol so you can end the
 recording, and the transcript arrives as usual when you stop.
 
+The live note itself has no frontmatter in any mode, so the Properties panel
+never shows the recording folder or a "recording" status. Nous keeps that
+state in its own settings. If Obsidian or the Mac shuts down while a
+recording runs, the next start finishes the note from the saved audio, or
+keeps your typed notes and says what happened.
+
 If speech-to-text is not ready yet, Nous still records the meeting. When you
 stop, the live note stays in the inbox and says it needs transcription. Your
 typed questions and notes stay there too. Add local `whisper.cpp` or a
@@ -228,6 +234,14 @@ and seeing a linked note. (Full detail:
    structured call writes the narrative; timeline and source lists are built
    deterministically from note metadata) — updated, not appended, as new
    notes arrive.
+
+6. **Glossary.** Each wiki carries a `## Glossary` table of the acronyms and
+   project jargon found in its notes, one row per term with a meaning and a
+   status. Nous writes every row as `guess`. Edit the meaning and set the
+   status to `confirmed`; Nous never rewrites a row that is already there.
+   When a new note arrives, the enricher expands known terms on first use
+   ("LRE (land register extract)") and lists unknown ones under
+   `## New terms` with a best guess, so the table grows as you learn.
 
 Every step is logged to `.nous/pipeline.log` in the vault.
 

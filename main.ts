@@ -77,6 +77,7 @@ import {
 	trackStartDeltasMs,
 	nativeRecorderLatestAssetUrl,
 	nativeRecorderReleaseAssetUrl,
+	isLiveNativeRecordingNote,
 	parseLiveNativeRecordingNote,
 	parsePendingNativeRecordingNote,
 	parseNativeRecorderChecksum,
@@ -457,6 +458,8 @@ export default class NousPlugin extends Plugin {
 				"## Open questions": "nous-after-open-questions",
 				"## Action items": "nous-after-action-items",
 				"## Watch": "nous-after-watch",
+				"## New terms": "nous-after-new-terms",
+				"## Glossary": "nous-after-glossary",
 				"## Related": "nous-after-related",
 				"## Timeline": "nous-after-timeline",
 				"## Sources": "nous-after-sources",
@@ -554,6 +557,7 @@ export default class NousPlugin extends Plugin {
 			this.meetingPollInterval = window.setInterval(() => {
 				void this.updateMeetingRecordingIndicator();
 			}, 5000);
+			this.app.workspace.onLayoutReady(() => void this.recoverOrphanedLiveRecording());
 			this.register(() => {
 				if (this.meetingPollInterval !== null) window.clearInterval(this.meetingPollInterval);
 			});
@@ -2021,6 +2025,7 @@ export default class NousPlugin extends Plugin {
 			const recordingDir = stopped.output ?? status.output;
 			this.setMeetingRecordingIndicator(false);
 			this.activeNativeMeetingNotePath = null;
+			await this.clearActiveLiveRecording();
 			if (recordingDir) {
 				this.setMeetingTranscribingIndicator(true);
 				void this.ingestNativeMeetingRecording(recordingDir, liveNote?.path ?? null);
@@ -2418,10 +2423,18 @@ export default class NousPlugin extends Plugin {
 		knownManualNotes?: string
 	): Promise<void> {
 		const content = await this.app.vault.read(liveFile);
-		const live = parseLiveNativeRecordingNote(content);
-		if (!live) return;
+		const legacy = parseLiveNativeRecordingNote(content);
+		const active = this.settings.activeLiveRecording;
+		const isLive = isLiveNativeRecordingNote(content) || active?.path === liveFile.path;
+		if (!isLive) return;
+		// Start time: settings first (2.12+ live notes carry no frontmatter),
+		// legacy frontmatter next, the filename's stamp as the last resort.
+		const recordedAt =
+			(active?.path === liveFile.path ? active.recordedAt : null) ??
+			legacy?.recordedAt ??
+			this.meetingStampFromRecordingDir(liveFile.basename);
 		const manualNotes = knownManualNotes ?? extractNativeRecordingManualNotes(content);
-		await this.app.vault.modify(liveFile, buildNativeRecordingProblemNote(live.recordedAt, problem, manualNotes));
+		await this.app.vault.modify(liveFile, buildNativeRecordingProblemNote(recordedAt, problem, manualNotes));
 		await this.appendLog(`RECOVERED: live native meeting note kept without transcript -> ${liveFile.path}`);
 		nousNotice("No transcript this time, but your live notes are safe in the inbox.", 10000);
 		if (hasMeaningfulNativeRecordingManualNotes(manualNotes)) void this.processInbox();
@@ -2451,7 +2464,12 @@ export default class NousPlugin extends Plugin {
 		const notePath = await this.uniqueVaultPath(
 			`${this.settings.inboxFolder}/${stamp} ${discreet ? "Notes" : "Meeting live note"}.md`
 		);
-		await this.app.vault.create(notePath, buildLiveNativeRecordingNote(recordingDir, stamp, { discreet }));
+		// Record the live note BEFORE creating it: the on-create auto-process
+		// hook fires immediately, and processFile() must already know this
+		// path is the live note so it does not enrich it mid-meeting.
+		this.settings.activeLiveRecording = { path: notePath, recordingDir, recordedAt: stamp };
+		await this.saveSettings();
+		await this.app.vault.create(notePath, buildLiveNativeRecordingNote({ discreet }));
 		const file = this.app.vault.getFileByPath(notePath);
 		if (file) {
 			const leaf = this.app.workspace.getLeaf(true);
@@ -2492,15 +2510,57 @@ export default class NousPlugin extends Plugin {
 		}
 	}
 
+	private async clearActiveLiveRecording(): Promise<void> {
+		if (!this.settings.activeLiveRecording) return;
+		this.settings.activeLiveRecording = null;
+		await this.saveSettings();
+	}
+
+	// Obsidian was closed (or the Mac died) while a recording ran: settings
+	// still name a live note, but the recorder is no longer running. If the
+	// audio folder survived, finish the note from it; otherwise keep the
+	// typed notes and say what happened. Either way the stale state goes.
+	private async recoverOrphanedLiveRecording(): Promise<void> {
+		const active = this.settings.activeLiveRecording;
+		if (!active) return;
+		const status = await this.nativeRecorderStatus();
+		if (status.available && status.recording) return;
+		const liveFile = this.app.vault.getFileByPath(active.path);
+		await this.clearActiveLiveRecording();
+		if (!liveFile) return;
+		let audioExists = false;
+		if (active.recordingDir) {
+			const { fs } = await loadNodeModules();
+			audioExists = await fs
+				.access(active.recordingDir)
+				.then(() => true)
+				.catch(() => false);
+		}
+		await this.appendLog(`RECOVERY: live note ${active.path} outlived its recording (audio ${audioExists ? "found" : "missing"})`);
+		if (audioExists && active.recordingDir) {
+			this.setMeetingTranscribingIndicator(true);
+			void this.ingestNativeMeetingRecording(active.recordingDir, liveFile.path);
+			return;
+		}
+		await this.markLiveNativeMeetingNoteProblem(
+			liveFile,
+			"The recording ended without a stop - Obsidian or the Mac shut down while it ran - and no audio folder was found."
+		);
+	}
+
 	private async findActiveNativeMeetingNote(recordingDir: string | null = null): Promise<TFile | null> {
+		const active = this.settings.activeLiveRecording;
+		if (active && (!recordingDir || !active.recordingDir || active.recordingDir === recordingDir)) {
+			const file = this.app.vault.getFileByPath(active.path);
+			if (file) return file;
+		}
 		if (this.activeNativeMeetingNotePath) {
 			const file = this.app.vault.getFileByPath(this.activeNativeMeetingNotePath);
-			if (file) {
-				const live = parseLiveNativeRecordingNote(await this.app.vault.read(file));
-				if (live) return file;
-			}
+			if (file && isLiveNativeRecordingNote(await this.app.vault.read(file))) return file;
 		}
 
+		// Legacy fallback: live notes written before 2.12 carried their state
+		// in frontmatter. Scan the inbox for one.
 		const folder = this.app.vault.getFolderByPath(this.settings.inboxFolder);
 		if (!folder) return null;
 		const candidates: { file: TFile; recordingDir: string | null }[] = [];
@@ -3037,8 +3097,7 @@ export default class NousPlugin extends Plugin {
 					await this.appendLog(`SKIPPED: ${file.name} - empty capture stub, moved to duplicates/`);
 					return false;
 				}
-				const liveNativeRecording = parseLiveNativeRecordingNote(raw);
-				if (liveNativeRecording) return false;
+				if (isLiveNativeRecordingNote(raw) || this.settings.activeLiveRecording?.path === file.path) return false;
 				const pendingNativeRecording = parsePendingNativeRecordingNote(raw);
 				if (pendingNativeRecording) {
 					if (!(await this.hasAudioTranscriptionBackend())) {
@@ -3083,8 +3142,9 @@ export default class NousPlugin extends Plugin {
 					? { text: enrichDocumentUserMessage(dateHint, ctime, existingIndex), attachment }
 					: { text: enrichImageUserMessage(dateHint, ctime, existingIndex), attachment };
 
+			const knownTerms = await this.readVaultGlossary();
 			const result = await this.getLlmProvider().callTool<EnrichResult>(
-				enrichSystemPrompt(tagRegistry, this.settings.ownerName),
+				enrichSystemPrompt(tagRegistry, this.settings.ownerName, knownTerms),
 				message,
 				ENRICH_TOOL
 			);
@@ -3303,7 +3363,8 @@ export default class NousPlugin extends Plugin {
 			timeline,
 			notes.map((n) => n.title),
 			today,
-			today
+			today,
+			logic.mergeGlossary([], result.glossary)
 		);
 		const path = `${this.settings.wikisFolder}/${logic.wikiFilename(topic)}`;
 		await this.app.vault.create(path, markdown);
@@ -3325,10 +3386,17 @@ export default class NousPlugin extends Plugin {
 		const { sources: newSources } = await this.readSourcesForWiki(newNotes, noteFiles);
 		const { timeline: allTimeline } = await this.readSourcesForWiki(allNotes, noteFiles);
 		const existingCurrentState = this.extractCurrentState(existingContent);
+		const existingGlossary = logic.parseGlossary(existingContent);
 
 		const result = await this.getLlmProvider().callTool<WikiSynthesisResult>(
 			wikiSystemPrompt(topic, true),
-			{ text: wikiUserMessage(newSources, existingCurrentState) },
+			{
+				text: wikiUserMessage(
+					newSources,
+					existingCurrentState,
+					existingGlossary.map((g) => g.term)
+				),
+			},
 			WIKI_TOOL
 		);
 
@@ -3340,13 +3408,38 @@ export default class NousPlugin extends Plugin {
 			allTimeline,
 			allNotes.map((n) => n.title),
 			created,
-			today
+			today,
+			logic.mergeGlossary(existingGlossary, result.glossary)
 		);
 		await this.app.vault.modify(existingWiki, markdown);
 		// Pass every source, not just new ones - idempotent, and it repairs
 		// older notes that missed the backlink.
 		await this.linkWikiIntoSources(topic, allNotes, noteFiles);
 		await this.appendLog(`UPDATED WIKI: ${topic} - sources: ${allNotes.length}`);
+	}
+
+	// Every wiki's "## Glossary" rows, flattened, so the enricher can expand
+	// known jargon on first use in a new note. A handful of small tables -
+	// cheap to re-read on each enrichment.
+	private async readVaultGlossary(): Promise<{ term: string; meaning: string }[]> {
+		const folder = this.app.vault.getFolderByPath(this.settings.wikisFolder);
+		if (!folder) return [];
+		const terms: { term: string; meaning: string }[] = [];
+		const seen = new Set<string>();
+		for (const child of folder.children) {
+			if (!(child instanceof TFile) || child.extension !== "md") continue;
+			try {
+				for (const row of logic.parseGlossary(await this.app.vault.read(child))) {
+					const key = row.term.toLowerCase();
+					if (seen.has(key)) continue;
+					seen.add(key);
+					terms.push({ term: row.term, meaning: row.meaning });
+				}
+			} catch {
+				// An unreadable wiki just contributes no terms.
+			}
+		}
+		return terms;
 	}
 
 	private extractCurrentState(wikiContent: string): string {

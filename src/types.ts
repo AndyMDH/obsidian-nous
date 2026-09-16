@@ -37,6 +37,7 @@ export interface NousSettings {
 	// The person whose notes these are. Action items are filtered to their
 	// own commitments; empty means "the Me: speaker / whoever takes notes".
 	ownerName: string;
+	activeLiveRecording: ActiveLiveRecording | null;
 	// First-run onboarding wizard has been completed or dismissed.
 	onboarded: boolean;
 	// Plugin version that last (re)wrote .claude/skills/*/SKILL.md. Compared
@@ -99,6 +100,7 @@ export const DEFAULT_SETTINGS: NousSettings = {
 	dedupLookback: 50,
 	discreetRecording: false,
 	ownerName: "",
+	activeLiveRecording: null,
 	onboarded: false,
 	skillsVersion: "",
 };
@@ -156,11 +158,41 @@ export interface EnrichResult {
 	action_items: string[];
 	// Up to three other people's commitments that affect the owner's work.
 	watch_items: string[];
+	// Acronyms and project jargon in the transcript that no wiki glossary
+	// knows yet, with a best guess from context. Rendered as "## New terms";
+	// the wiki-builder later folds them into the topic's glossary.
+	new_terms?: NewTerm[];
 	related_notes: string[];
 	win: WinDetails | null;
+}
+
+export interface NewTerm {
+	term: string;
+	guess: string;
+}
+
+// One row of a wiki's "## Glossary" table. "guess" rows come from the
+// model; a person flips status to "confirmed" by editing the wiki, and the
+// builder never rewrites an existing row.
+export interface GlossaryEntry {
+	term: string;
+	meaning: string;
+	status: "guess" | "confirmed";
+}
+
+// The one live meeting note a recording is writing into. Kept in settings
+// (data.json) rather than in the note's frontmatter so that a restart can
+// still find the note, and so the note shows no Properties panel.
+export interface ActiveLiveRecording {
+	path: string;
+	recordingDir: string | null;
+	recordedAt: string;
 }
 
 export interface WikiSynthesisResult {
 	current_state: string;
 	open_questions: string[];
+	// Proposed glossary rows (term + meaning). Merged into the existing
+	// table by logic.mergeGlossary - never replaces what is already there.
+	glossary?: { term: string; meaning: string }[];
 }

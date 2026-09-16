@@ -52,9 +52,10 @@ Skip a file if its frontmatter already contains \`status: enriched\` — it's
 already been processed. Also skip a file whose frontmatter contains
 \`nous_pending_native_recording: true\`; the plugin itself must transcribe
 that native recorder placeholder before this skill can enrich it. Also skip a
-file whose frontmatter contains \`nous_live_native_recording: true\`; the
-recording is still active and the plugin will replace that live note with
-normal text when the user stops recording. These are the idempotency guards;
+file whose first lines contain \`%% nous-live-recording %%\` or whose
+frontmatter contains \`nous_live_native_recording: true\`; the recording is
+still active and the plugin will replace that live note with normal text
+when the user stops recording. These are the idempotency guards;
 they mean it's always safe to re-run this skill over an inbox that partially
 succeeded before.
 (Image and PDF files never have frontmatter of their own, so this guard only
@@ -254,6 +255,10 @@ Summary framing — just summarize the idea.
 
 - ...
 
+## New terms
+
+- TERM - best guess from context
+
 ## Notes taken during meeting
 
 - ...
@@ -271,9 +276,19 @@ the owner's own work, each as \`Owner: what, by when\` in under twelve words
 (\`- Leah: onboarding journey and abbreviations list, this week.\`). Never
 mirror everyone's tasks there.
 
+**Glossary.** Before writing, read the \`## Glossary\` table of every wiki in
+\`${f.wikis}/\` (columns Term, Meaning, Status). In Summary and Key points,
+the first time a known term appears, write it as \`TERM (meaning)\`, for
+example \`LRE (land register extract)\`; after that, the bare term.
+\`## New terms\` lists acronyms, code names, and project jargon used in this
+text that no glossary knows and that a newcomer could not decode - at most
+eight, each with a best guess from context in a few words, or \`unknown\`.
+Never list ordinary words or well-known terms (API, CEO, PDF). The
+wiki-builder folds these into the topic's glossary later.
+
 Omit the Decisions section entirely if there were none, Action items
-entirely if the owner has none, and Watch entirely if there is nothing
-to watch. Omit \`## Notes taken during meeting\` if the
+entirely if the owner has none, Watch entirely if there is nothing to
+watch, and New terms entirely if every term is already known. Omit \`## Notes taken during meeting\` if the
 inbox file did not contain \`## Meeting notes\`, \`## Notes\`, \`## Questions to ask\`,
 \`## Live notes\`, or \`## Notes taken during meeting\` with content. Never
 invent decisions or action items that aren't actually in the transcript.
@@ -489,7 +504,7 @@ carries the \` Wiki\` suffix.
 For each topic crossing the threshold:
 
 1. Read all source meeting notes for that topic in full (Summary, Key points,
-   Decisions, Action items, Watch — not the raw Transcript, unless something is
+   Decisions, Action items, Watch, New terms — not the raw Transcript, unless something is
    ambiguous and you need to check it).
 2. Write \`${f.wikis}/<Topic> Wiki.md\` (see filename convention above):
 
@@ -515,6 +530,14 @@ meetings into connected prose.
 
 - ...
 
+## Glossary
+
+Edit a meaning and set its status to \`confirmed\`; Nous never rewrites a row that is already here.
+
+| Term | Meaning | Status |
+| --- | --- | --- |
+| LRE | Land register extract (Grundbuchauszug) | guess |
+
 ## Timeline
 
 - YYYY-MM-DD - [[meeting note]] - one-line what happened
@@ -528,6 +551,13 @@ meetings into connected prose.
 Use the topic's tag name (capitalized/humanized) as \`<Topic>\` unless the
 meeting notes clearly point to a more specific, more human title.
 
+\`## Glossary\` collects the acronyms, code names, and project jargon used
+across the source notes, one row per term, sorted by term. Take candidates
+from each note's \`## New terms\` section and from terms that recur in
+Summary and Key points; take meanings from the notes' guesses and context.
+Every row you write gets status \`guess\`. Skip ordinary words and well-known
+terms (API, CEO, PDF). Omit the whole section when there are no terms.
+
 3. Append to \`.nous/pipeline.log\`:
    \`<ISO timestamp> NEW WIKI: <topic> - sources: <count>\`
 
@@ -538,12 +568,16 @@ If a wiki's topic has gained meeting notes since its \`updated\` date:
 1. Read the existing wiki in full, plus the newly added source meeting notes.
 2. Rewrite \`## Current state\` to incorporate the new information — don't just
    append a paragraph, actually re-synthesize so the narrative stays coherent.
-3. Append new entries to \`## Timeline\` (keep existing entries, keep
+3. Merge \`## Glossary\`: keep every existing row exactly as it is - a person
+   may have corrected the meaning or set status \`confirmed\` - and only add
+   rows for terms the table does not have yet (status \`guess\`), then re-sort
+   by term. Never delete or rewrite an existing row.
+4. Append new entries to \`## Timeline\` (keep existing entries, keep
    chronological order).
-4. Append new notes to \`## Sources\`. **Never drop existing Sources** — only add.
-5. Update \`sources:\` count and \`updated:\` date in frontmatter. Leave \`created:\`
+5. Append new notes to \`## Sources\`. **Never drop existing Sources** — only add.
+6. Update \`sources:\` count and \`updated:\` date in frontmatter. Leave \`created:\`
    untouched.
-6. Append to \`.nous/pipeline.log\`:
+7. Append to \`.nous/pipeline.log\`:
    \`<ISO timestamp> UPDATED WIKI: <topic> - sources: <count>\`
 
 ## Step 5 — Close the loop (hub-and-spoke linking)

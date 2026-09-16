@@ -20,6 +20,17 @@ test("meeting enricher skill scopes action items to the owner and adds Watch", (
 	assert.match(wikiBuilderSkill(folders), /`## Watch`/);
 });
 
+test("both skills carry the glossary contract", () => {
+	const enricher = meetingEnricherSkill(folders);
+	assert.match(enricher, /## New terms/);
+	assert.match(enricher, /`## Glossary` table of every wiki/);
+	assert.match(enricher, /TERM \(meaning\)/);
+	const wiki = wikiBuilderSkill(folders);
+	assert.match(wiki, /\| Term \| Meaning \| Status \|/);
+	assert.match(wiki, /keep every existing row exactly as it is/);
+	assert.match(wiki, /status `guess`/);
+});
+
 test("meeting enricher skill skips pending native recording placeholders", () => {
 	const skill = meetingEnricherSkill(folders);
 	assert.match(skill, /nous_pending_native_recording: true/);

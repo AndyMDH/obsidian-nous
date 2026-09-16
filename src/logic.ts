@@ -1,4 +1,4 @@
-import type { EnrichResult, WikiSynthesisResult } from "./types.ts";
+import type { EnrichResult, WikiSynthesisResult, GlossaryEntry } from "./types.ts";
 
 export function sanitizeFilename(title: string): string {
 	return title.replace(/[\\/:*?"<>|]/g, "-").trim();
@@ -264,6 +264,12 @@ export function buildMeetingMarkdown(
 	if (watchItems.length > 0) {
 		bodyParts.push(`## Watch\n\n${watchItems.map((w) => `- ${w}`).join("\n")}`);
 	}
+	const newTerms = (result.new_terms ?? []).filter((t) => t.term.trim().length > 0);
+	if (newTerms.length > 0) {
+		bodyParts.push(
+			`## New terms\n\n${newTerms.map((t) => `- ${t.term.trim()} - ${t.guess.trim() || "unknown"}`).join("\n")}`
+		);
+	}
 
 	if (!capturedAttachment && manualNotes?.trim()) {
 		bodyParts.push(`## Notes taken during meeting\n\n${demoteSecondLevelHeadings(manualNotes.trim())}`);
@@ -350,13 +356,69 @@ export interface TimelineEntry {
 	oneLine: string;
 }
 
+// "## Glossary" table of a wiki: | Term | Meaning | Status |. Rows are
+// keyed by term, case-insensitive.
+const GLOSSARY_HEADING = "## Glossary";
+
+export function parseGlossary(wikiContent: string): GlossaryEntry[] {
+	const idx = wikiContent.indexOf(GLOSSARY_HEADING);
+	if (idx === -1) return [];
+	const after = wikiContent.slice(idx + GLOSSARY_HEADING.length);
+	const nextIdx = after.indexOf("\n## ");
+	const section = nextIdx === -1 ? after : after.slice(0, nextIdx);
+	const entries: GlossaryEntry[] = [];
+	for (const line of section.split("\n")) {
+		const trimmed = line.trim();
+		if (!trimmed.startsWith("|")) continue;
+		const cells = trimmed
+			.slice(1, trimmed.endsWith("|") ? -1 : undefined)
+			.split("|")
+			.map((c) => c.trim());
+		if (cells.length < 2) continue;
+		const [term, meaning, status = ""] = cells;
+		if (!term || term.toLowerCase() === "term" || /^-+$/.test(term)) continue;
+		entries.push({ term, meaning, status: status.toLowerCase() === "confirmed" ? "confirmed" : "guess" });
+	}
+	return entries;
+}
+
+// Existing rows win, always - a person may have corrected a meaning or
+// marked it confirmed, and a re-synthesis must never undo that. Proposed
+// rows only add terms the table does not know yet, as guesses.
+export function mergeGlossary(
+	existing: GlossaryEntry[],
+	proposed: { term: string; meaning: string }[] | undefined
+): GlossaryEntry[] {
+	const known = new Set(existing.map((e) => e.term.toLowerCase()));
+	const merged = existing.slice();
+	for (const row of proposed ?? []) {
+		const term = row.term.trim();
+		const meaning = row.meaning.trim();
+		if (!term || !meaning || known.has(term.toLowerCase())) continue;
+		known.add(term.toLowerCase());
+		merged.push({ term, meaning, status: "guess" });
+	}
+	return merged.sort((a, b) => a.term.localeCompare(b.term, undefined, { sensitivity: "base" }));
+}
+
+function escapeTableCell(text: string): string {
+	return text.replace(/\|/g, "\\|").replace(/\s+/g, " ").trim();
+}
+
+export function renderGlossary(entries: GlossaryEntry[]): string {
+	if (entries.length === 0) return "";
+	const rows = entries.map((e) => `| ${escapeTableCell(e.term)} | ${escapeTableCell(e.meaning)} | ${e.status} |`);
+	return `${GLOSSARY_HEADING}\n\nEdit a meaning and set its status to \`confirmed\`; Nous never rewrites a row that is already here.\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n${rows.join("\n")}\n\n`;
+}
+
 export function buildWikiMarkdown(
 	topic: string,
 	result: WikiSynthesisResult,
 	timeline: TimelineEntry[],
 	sources: string[],
 	created: string,
-	updated: string
+	updated: string,
+	glossary: GlossaryEntry[] = []
 ): string {
 	const fm = [
 		"---",
@@ -382,7 +444,7 @@ export function buildWikiMarkdown(
 
 	const sourceLines = sources.map((s) => `- [[${s}]]`).join("\n");
 
-	return `${fm}# ${topic}\n\n## Current state\n\n${result.current_state}\n\n## Open questions\n\n${openQuestions}\n\n## Timeline\n\n${timelineLines}\n\n## Sources\n\n${sourceLines}\n`;
+	return `${fm}# ${topic}\n\n## Current state\n\n${result.current_state}\n\n## Open questions\n\n${openQuestions}\n\n${renderGlossary(glossary)}## Timeline\n\n${timelineLines}\n\n## Sources\n\n${sourceLines}\n`;
 }
 
 export interface WinEntry {

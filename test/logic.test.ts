@@ -16,6 +16,8 @@ import {
 	convertLegacyTranscriptToCallout,
 	buildTagFileContent,
 	buildWikiMarkdown,
+	mergeGlossary,
+	parseGlossary,
 	buildWinsMarkdown,
 	formatRecordingElapsed,
 	clusterByTag,
@@ -416,6 +418,54 @@ test("buildWikiMarkdown sorts timeline entries chronologically regardless of inp
 	const firstIdx = md.indexOf("First thing happened");
 	const secondIdx = md.indexOf("Second thing happened");
 	assert.ok(firstIdx < secondIdx, "earlier timeline entry should appear first");
+});
+
+test("glossary rows parse, merge without overwriting, and render sorted", () => {
+	const wiki = `---\ntype: wiki\n---\n# ING\n\n## Open questions\n\n- none\n\n## Glossary\n\nEdit a meaning...\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| LRE | Land register extract | confirmed |\n| TMD | Technical model documentation | guess |\n\n## Timeline\n\n- x\n`;
+	const existing = parseGlossary(wiki);
+	assert.deepEqual(existing, [
+		{ term: "LRE", meaning: "Land register extract", status: "confirmed" },
+		{ term: "TMD", meaning: "Technical model documentation", status: "guess" },
+	]);
+	const merged = mergeGlossary(existing, [
+		{ term: "lre", meaning: "something else" },
+		{ term: "BDB", meaning: "Broker data base" },
+		{ term: "", meaning: "skip me" },
+	]);
+	assert.deepEqual(
+		merged.map((g) => g.term),
+		["BDB", "LRE", "TMD"]
+	);
+	assert.equal(merged.find((g) => g.term === "LRE")?.meaning, "Land register extract");
+	assert.equal(merged.find((g) => g.term === "BDB")?.status, "guess");
+	const md = buildWikiMarkdown(
+		"ING",
+		{ current_state: "State.", open_questions: [] },
+		[],
+		[],
+		"2026-09-01",
+		"2026-09-16",
+		merged
+	);
+	assert.ok(md.indexOf("## Open questions") < md.indexOf("## Glossary"));
+	assert.ok(md.indexOf("## Glossary") < md.indexOf("## Timeline"));
+	assert.match(md, /\| BDB \| Broker data base \| guess \|/);
+	// Round trip: what we render, we can parse back.
+	assert.deepEqual(parseGlossary(md), merged);
+	// No terms, no section.
+	assert.ok(!buildWikiMarkdown("ING", { current_state: "S.", open_questions: [] }, [], [], "2026-09-01", "2026-09-16").includes("## Glossary"));
+});
+
+test("buildMeetingMarkdown renders New terms after Watch and skips blank terms", () => {
+	const md = buildMeetingMarkdown(
+		baseResult({ watch_items: ["Leah: abbreviations list, this week."], new_terms: [{ term: "UPPC", guess: "unknown" }, { term: " ", guess: "x" }] }),
+		"raw",
+		"2026-09-16T09:00:00Z",
+		null
+	);
+	assert.ok(md.indexOf("## Watch") < md.indexOf("## New terms"));
+	assert.match(md, /## New terms\n\n- UPPC - unknown\n/);
+	assert.ok(!md.includes("-  - x"));
 });
 
 test("buildWikiMarkdown shows a placeholder when there are no open questions", () => {

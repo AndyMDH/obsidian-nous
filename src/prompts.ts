@@ -9,8 +9,17 @@ export function ownerDescription(ownerName: string): string {
 		: `the person whose notes these are (on call transcripts the "Me:" speaker; otherwise infer from context who is taking the notes)`;
 }
 
-export function enrichSystemPrompt(tagRegistry: string[], ownerName = ""): string {
+export interface KnownTerm {
+	term: string;
+	meaning: string;
+}
+
+export function enrichSystemPrompt(tagRegistry: string[], ownerName = "", knownTerms: KnownTerm[] = []): string {
 	const owner = ownerDescription(ownerName);
+	const glossaryBlock =
+		knownTerms.length > 0
+			? knownTerms.map((t) => `${t.term} = ${t.meaning}`).join("; ")
+			: "(none yet)";
 	return `You enrich a single raw meeting transcript or personal note into structured, tagged data. You do not have file access - the app that calls you will read your response and write files based on it. Always respond by calling the enrich_note tool exactly once.
 
 ## Classify
@@ -45,6 +54,11 @@ When "win" is in tags, fill the win field: category is one of "client work", "tr
 - decisions: bullet strings, actual decisions only. Empty array if none - never invent one.
 - action_items: only commitments that ${owner} made or was given. This is a personal note, not the team's task board - other people's tasks do not belong here. Write each as a bare command under ten words, no name prefix ("Ask Fuya for the abbreviations list."). Empty array if the owner has none - never invent one.
 - watch_items: at most three commitments other people made that affect the owner's own work, each as "Owner: what, by when" in under twelve words ("Leah: onboarding journey and abbreviations list, this week."). Empty array if none. Never mirror everyone's tasks here.
+
+## Glossary
+Known terms from the vault's wiki glossaries: ${glossaryBlock}
+- In summary and key_points, the first time a known term appears write it as "TERM (meaning)", e.g. "LRE (land register extract)". After that, the bare term.
+- new_terms: acronyms, code names, or project jargon used in this text that are NOT in the known list and that a newcomer could not decode. Give each a best guess from context in a few words, or "unknown" if the text gives no clue. At most eight. Empty array if none. Never list ordinary words or well-known terms (API, CEO, PDF).
 - If the raw captured text includes sections named "Questions to ask" or "Live notes", those were typed by the user during the meeting. Use them as context for the summary, key points, open threads, and action items, but do not treat them as spoken transcript lines.
 Do not include the original transcript text in your response - the caller already has it and will attach it verbatim itself.
 
@@ -168,6 +182,14 @@ export const ENRICH_TOOL = {
 			decisions: { type: "array", items: { type: "string" } },
 			action_items: { type: "array", items: { type: "string" } },
 			watch_items: { type: "array", items: { type: "string" } },
+			new_terms: {
+				type: "array",
+				items: {
+					type: "object",
+					properties: { term: { type: "string" }, guess: { type: "string" } },
+					required: ["term", "guess"],
+				},
+			},
 			related_notes: { type: "array", items: { type: "string" } },
 			win: {
 				type: ["object", "null"],
@@ -212,6 +234,7 @@ export const ENRICH_TOOL = {
 			"decisions",
 			"action_items",
 			"watch_items",
+			"new_terms",
 			"related_notes",
 			"win",
 		],
@@ -225,7 +248,9 @@ export function wikiSystemPrompt(topic: string, isUpdate: boolean): string {
 
 Write current_state like a living briefing document a colleague could read to get fully up to speed - not a bullet list of links. Pull together decisions, current direction, and unresolved tension across the source notes into connected prose.
 
-open_questions: bullet strings, genuinely open/unresolved questions. Empty array if none.`;
+open_questions: bullet strings, genuinely open/unresolved questions. Empty array if none.
+
+glossary: acronyms, code names, and project jargon that appear in the source notes, each with its meaning in a few words. Draw meanings from the notes' "## New terms" sections and from context; when the notes only guess, keep the guess. Only terms actually used in the sources; skip ordinary words and well-known terms (API, CEO, PDF). Empty array if none. Terms listed under "Known glossary terms" in the user message are already in the table - do not repeat them.`;
 
 	if (isUpdate) {
 		return `${base}
@@ -237,16 +262,18 @@ This topic already has a wiki. You are given the EXISTING current_state plus the
 
 export function wikiUserMessage(
 	sources: { title: string; date: string; body: string }[],
-	existingCurrentState: string | null
+	existingCurrentState: string | null,
+	knownTerms: string[] = []
 ): string {
 	const sourceBlock = sources
 		.map((s) => `### ${s.title} (${s.date})\n${s.body}`)
 		.join("\n\n");
+	const knownBlock = knownTerms.length > 0 ? `\n\n## Known glossary terms (already in the table, do not repeat)\n${knownTerms.join(", ")}` : "";
 
 	if (existingCurrentState) {
-		return `## Existing current_state\n${existingCurrentState}\n\n## New source notes since last update\n${sourceBlock}`;
+		return `## Existing current_state\n${existingCurrentState}\n\n## New source notes since last update\n${sourceBlock}${knownBlock}`;
 	}
-	return `## Source notes\n${sourceBlock}`;
+	return `## Source notes\n${sourceBlock}${knownBlock}`;
 }
 
 export const WIKI_TOOL = {
@@ -257,7 +284,15 @@ export const WIKI_TOOL = {
 		properties: {
 			current_state: { type: "string" },
 			open_questions: { type: "array", items: { type: "string" } },
+			glossary: {
+				type: "array",
+				items: {
+					type: "object",
+					properties: { term: { type: "string" }, meaning: { type: "string" } },
+					required: ["term", "meaning"],
+				},
+			},
 		},
-		required: ["current_state", "open_questions"],
+		required: ["current_state", "open_questions", "glossary"],
 	},
 };
