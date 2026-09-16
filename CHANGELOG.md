@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.13.0
+
+- Closing the lid now ends the meeting cleanly. The recorder listens for
+  the macOS sleep notice, finishes both audio tracks, and exits. When the
+  Mac wakes, Nous notices within five seconds that the recorder is gone
+  and finishes the live note from the saved audio - transcript included,
+  no button needed. Before, a forgotten recording died with the machine
+  and the note stayed empty until the next Obsidian start.
+
 ## 2.12.2
 
 - The "Discreet recording" toggle was also hidden behind the Advanced

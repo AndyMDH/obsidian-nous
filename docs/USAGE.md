@@ -166,7 +166,11 @@ the whole mic track is an echo the transcript comes back unlabeled, like an
 in-person meeting. Headphones still give the cleanest `Me:` / `Them:` split.
 
 The recorder keeps your Mac awake while it records, so an idle Mac does not
-sleep mid-meeting. A closed lid still stops the recording.
+sleep mid-meeting. A closed lid ends the recording cleanly: the recorder
+finishes the audio before the Mac sleeps, and on wake Nous completes the
+live note from it within a few seconds. Pressing stop yourself at the end
+of the meeting still gives the tidiest note, but forgetting is no longer
+a lost recording.
 
 **Discreet recording** (Settings → Nous → Voice capture, macOS) hides every
 on-screen sign of a recording: no red ribbon icon, no timer, no status bar
@@ -176,9 +180,9 @@ recording, and the transcript arrives as usual when you stop.
 
 The live note itself has no frontmatter in any mode, so the Properties panel
 never shows the recording folder or a "recording" status. Nous keeps that
-state in its own settings. If Obsidian or the Mac shuts down while a
-recording runs, the next start finishes the note from the saved audio, or
-keeps your typed notes and says what happened.
+state in its own settings. If Obsidian shuts down while a recording runs,
+the next start finishes the note from the saved audio, or keeps your typed
+notes and says what happened.
 
 If speech-to-text is not ready yet, Nous still records the meeting. When you
 stop, the live note stays in the inbox and says it needs transcription. Your

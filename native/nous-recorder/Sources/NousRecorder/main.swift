@@ -102,7 +102,7 @@ struct NousRecorderCLI {
 	private static func run(_ options: Options) async throws {
 		switch options.command {
 		case "version":
-			print("nous-recorder 0.2.3")
+			print("nous-recorder 0.3.0")
 		case "status":
 			let dir = try requiredRecordingsDir(options)
 			let state = readState(in: dir)
@@ -255,9 +255,20 @@ struct NousRecorderCLI {
 				"Could not start meeting capture. Allow microphone and screen/audio recording permissions in macOS Privacy & Security for Obsidian and the Nous recorder helper, then try again. Underlying error: \(error)"
 			)
 		}
-		let trap = SignalTrap()
-		await trap.wait()
+		// Stop on SIGTERM/SIGINT (the "stop" command) or when macOS is about to
+		// sleep (lid closed, idle timeout). Without the sleep hook the process
+		// dies with the machine, the m4a writers never finish, and the user
+		// who forgot to press stop finds a note with no transcript.
+		let stopFlag = StopFlag()
+		let trap = SignalTrap(flag: stopFlag)
+		trap.arm()
+		let sleepWatch = SleepWatch(flag: stopFlag)
+		sleepWatch.arm()
+		while !stopFlag.isSet {
+			try await Task.sleep(nanoseconds: 200_000_000)
+		}
 		await recorder.stop()
+		sleepWatch.disarm()
 	}
 
 	private static func recordingStamp() -> String {
@@ -273,27 +284,103 @@ struct NousRecorderCLI {
 	}
 }
 
+// One thread-safe "please stop" bit shared by the signal trap and the
+// sleep watcher.
+final class StopFlag: @unchecked Sendable {
+	private let lock = NSLock()
+	private var value = false
+	var isSet: Bool {
+		lock.lock()
+		defer { lock.unlock() }
+		return value
+	}
+	func set() {
+		lock.lock()
+		value = true
+		lock.unlock()
+	}
+}
+
 final class SignalTrap {
 	private var sources: [DispatchSourceSignal] = []
+	private let flag: StopFlag
 
-	func wait() async {
-		await withCheckedContinuation { continuation in
-			let queue = DispatchQueue(label: "nous-recorder.signals")
-			var resumed = false
-			let resumeOnce = {
-				guard !resumed else { return }
-				resumed = true
-				continuation.resume()
-			}
+	init(flag: StopFlag) {
+		self.flag = flag
+	}
 
-			for signalNumber in [SIGTERM, SIGINT] {
-				signal(signalNumber, SIG_IGN)
-				let source = DispatchSource.makeSignalSource(signal: signalNumber, queue: queue)
-				source.setEventHandler(handler: resumeOnce)
-				source.resume()
-				sources.append(source)
+	func arm() {
+		let queue = DispatchQueue(label: "nous-recorder.signals")
+		for signalNumber in [SIGTERM, SIGINT] {
+			signal(signalNumber, SIG_IGN)
+			let source = DispatchSource.makeSignalSource(signal: signalNumber, queue: queue)
+			let flag = self.flag
+			source.setEventHandler { flag.set() }
+			source.resume()
+			sources.append(source)
+		}
+	}
+}
+
+// IOMessage.h defines these as nested C macros (iokit_common_msg(0x280)),
+// which Swift cannot import - so the resolved values, from the header:
+// sys_iokit (0xE0000000) | sub_iokit_common (0) | message.
+private let kIOMessageCanSystemSleepValue: UInt32 = 0xE000_0270
+private let kIOMessageSystemWillSleepValue: UInt32 = 0xE000_0280
+
+// Registers for IOKit system-power notifications. On "system will sleep"
+// it raises the stop flag so the recording finishes cleanly, then tells
+// macOS the sleep may proceed (it would proceed after 30 s anyway; saying
+// so at once keeps the lid-close snappy). The port delivers on a private
+// dispatch queue, so no run loop is needed.
+final class SleepWatch {
+	nonisolated(unsafe) private static var shared: SleepWatch?
+	private let flag: StopFlag
+	private var rootPort: io_connect_t = 0
+	private var notifyPort: IONotificationPortRef?
+	private var notifier: io_object_t = 0
+
+	init(flag: StopFlag) {
+		self.flag = flag
+	}
+
+	func arm() {
+		SleepWatch.shared = self
+		let callback: IOServiceInterestCallback = { _, _, messageType, messageArgument in
+			guard let watch = SleepWatch.shared else { return }
+			switch messageType {
+			case kIOMessageSystemWillSleepValue, kIOMessageCanSystemSleepValue:
+				if messageType == kIOMessageSystemWillSleepValue {
+					fputs("nous-recorder: system is going to sleep - stopping the recording\n", stderr)
+					watch.flag.set()
+				}
+				IOAllowPowerChange(watch.rootPort, Int(bitPattern: messageArgument))
+			default:
+				break
 			}
 		}
+		rootPort = IORegisterForSystemPower(nil, &notifyPort, callback, &notifier)
+		guard rootPort != 0, let notifyPort else {
+			fputs("nous-recorder: could not register for sleep notifications; a closed lid will not stop the recording cleanly\n", stderr)
+			return
+		}
+		IONotificationPortSetDispatchQueue(notifyPort, DispatchQueue(label: "nous-recorder.power"))
+	}
+
+	func disarm() {
+		if notifier != 0 {
+			IODeregisterForSystemPower(&notifier)
+			notifier = 0
+		}
+		if let notifyPort {
+			IONotificationPortDestroy(notifyPort)
+			self.notifyPort = nil
+		}
+		if rootPort != 0 {
+			IOServiceClose(rootPort)
+			rootPort = 0
+		}
+		SleepWatch.shared = nil
 	}
 }
 

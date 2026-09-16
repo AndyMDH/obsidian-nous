@@ -2520,7 +2520,19 @@ export default class NousPlugin extends Plugin {
 	// still name a live note, but the recorder is no longer running. If the
 	// audio folder survived, finish the note from it; otherwise keep the
 	// typed notes and say what happened. Either way the stale state goes.
+	private liveRecoveryInProgress = false;
+
 	private async recoverOrphanedLiveRecording(): Promise<void> {
+		if (this.liveRecoveryInProgress) return;
+		this.liveRecoveryInProgress = true;
+		try {
+			await this.recoverOrphanedLiveRecordingInner();
+		} finally {
+			this.liveRecoveryInProgress = false;
+		}
+	}
+
+	private async recoverOrphanedLiveRecordingInner(): Promise<void> {
 		const active = this.settings.activeLiveRecording;
 		if (!active) return;
 		const status = await this.nativeRecorderStatus();
@@ -2646,6 +2658,21 @@ export default class NousPlugin extends Plugin {
 	private async updateMeetingRecordingIndicator(): Promise<void> {
 		const nativeStatus = await this.nativeRecorderStatus();
 		this.setMeetingRecordingIndicator(nativeStatus.available && nativeStatus.recording);
+		// The recorder stops itself when the Mac goes to sleep (lid closed).
+		// A live note is still waiting for that audio, so finish it as soon as
+		// the poll sees the recorder gone - not only on the next Obsidian
+		// start. The toggle flag keeps this out of a stop the user is doing
+		// by hand right now.
+		if (
+			nativeStatus.available &&
+			!nativeStatus.recording &&
+			this.settings.activeLiveRecording &&
+			!this.meetingToggleInProgress &&
+			!this.liveRecoveryInProgress
+		) {
+			await this.appendLog("RECOVERY: recorder stopped on its own (sleep?) - finishing the live note");
+			void this.recoverOrphanedLiveRecording();
+		}
 	}
 
 	private async checkOrphanedNativeRecordings(): Promise<void> {
