@@ -243,9 +243,11 @@ and seeing a linked note. (Full detail:
    did not answer. The wiki carries them forward and drops the ones a later
    meeting settles.
 
-7. **Glossary.** Each wiki carries a `## Glossary` table of the acronyms and
-   project jargon found in its notes, one row per term with a meaning and a
-   status. Nous writes every row as `guess`. Edit the meaning and set the
+7. **Glossary.** Each wiki opens with a `## Glossary` of the acronyms and
+   project jargon found in its notes, grouped into Document types, Way of
+   working, Systems and tools, Data and vendors, Governance and risk, Roles,
+   and Other, alphabetical inside each group, one row per term with a
+   meaning and a status. Nous writes every row as `guess`. Edit the meaning and set the
    status to `confirmed`; Nous never rewrites a row that is already there.
    When a new note arrives, the enricher expands known terms on first use
    ("LRE (land register extract)") and lists unknown ones under

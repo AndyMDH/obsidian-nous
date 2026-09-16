@@ -253,7 +253,7 @@ Write current_state like a living briefing document a colleague could read to ge
 
 open_questions: bullet strings, genuinely open/unresolved questions, most important first, at most eight. Start from the source notes' own "## Open questions" sections; drop a question once a later note answers it, and merge near-duplicates. Empty array if none.
 
-glossary: acronyms, code names, and project jargon that appear in the source notes, each with its meaning in a few words. Draw meanings from the notes' "## New terms" sections and from context; when the notes only guess, keep the guess. Only terms actually used in the sources; skip ordinary words and well-known terms (API, CEO, PDF). Empty array if none. Terms listed under "Known glossary terms" in the user message are already in the table - do not repeat them.`;
+glossary: acronyms, code names, and project jargon that appear in the source notes, each with its meaning in a few words and a category from exactly this list: "Document types" (a kind of document the work handles), "Way of working" (methods, phases, rituals, node and tree vocabulary), "Systems and tools" (software, platforms, UIs, APIs), "Data and vendors" (data objects, datasets, suppliers), "Governance and risk" (assessments, controls, committees), "Roles" (kinds of people), "Other". Draw meanings from the notes' "## New terms" sections and from context; when the notes only guess, keep the guess. Only terms actually used in the sources; skip ordinary words and well-known terms (API, CEO, PDF). Empty array if none. Terms listed under "Known glossary terms" in the user message are already in the table - do not repeat them.`;
 
 	if (isUpdate) {
 		return `${base}
@@ -291,8 +291,8 @@ export const WIKI_TOOL = {
 				type: "array",
 				items: {
 					type: "object",
-					properties: { term: { type: "string" }, meaning: { type: "string" } },
-					required: ["term", "meaning"],
+					properties: { term: { type: "string" }, meaning: { type: "string" }, category: { type: "string" } },
+					required: ["term", "meaning", "category"],
 				},
 			},
 		},

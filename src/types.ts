@@ -176,9 +176,21 @@ export interface NewTerm {
 // One row of a wiki's "## Glossary" table. "guess" rows come from the
 // model; a person flips status to "confirmed" by editing the wiki, and the
 // builder never rewrites an existing row.
+export const GLOSSARY_CATEGORIES = [
+	"Document types",
+	"Way of working",
+	"Systems and tools",
+	"Data and vendors",
+	"Governance and risk",
+	"Roles",
+	"Other",
+] as const;
+export type GlossaryCategory = (typeof GLOSSARY_CATEGORIES)[number];
+
 export interface GlossaryEntry {
 	term: string;
 	meaning: string;
+	category: GlossaryCategory;
 	status: "guess" | "confirmed";
 }
 
@@ -196,5 +208,5 @@ export interface WikiSynthesisResult {
 	open_questions: string[];
 	// Proposed glossary rows (term + meaning). Merged into the existing
 	// table by logic.mergeGlossary - never replaces what is already there.
-	glossary?: { term: string; meaning: string }[];
+	glossary?: { term: string; meaning: string; category?: string }[];
 }

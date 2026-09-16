@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.16.0
+
+- The wiki Glossary is now grouped: Document types, Way of working,
+  Systems and tools, Data and vendors, Governance and risk, Roles, Other.
+  Each group is its own small table, alphabetical inside. A person can
+  move a term to another group by hand; Nous keeps it there. Old flat
+  tables are read as "Other" and regrouped on the next update.
+
 ## 2.15.0
 
 - Fixed: a meeting note dated the same day as a wiki's last update never

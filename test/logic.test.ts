@@ -421,21 +421,23 @@ test("buildWikiMarkdown sorts timeline entries chronologically regardless of inp
 	assert.ok(firstIdx < secondIdx, "earlier timeline entry should appear first");
 });
 
-test("glossary rows parse, merge without overwriting, and render sorted", () => {
-	const wiki = `---\ntype: wiki\n---\n# ING\n\n## Open questions\n\n- none\n\n## Glossary\n\nEdit a meaning...\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| LRE | Land register extract | confirmed |\n| TMD | Technical model documentation | guess |\n\n## Timeline\n\n- x\n`;
+test("glossary rows parse, merge without overwriting, and render grouped and sorted", () => {
+	const wiki = `---\ntype: wiki\n---\n# ING\n\n## Glossary\n\nEdit a meaning...\n\n### Document types\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| LRE | Land register extract | confirmed |\n\n### Governance and risk\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| TMD | Technical model documentation | guess |\n\n## Timeline\n\n- x\n`;
 	const existing = parseGlossary(wiki);
 	assert.deepEqual(existing, [
-		{ term: "LRE", meaning: "Land register extract", status: "confirmed" },
-		{ term: "TMD", meaning: "Technical model documentation", status: "guess" },
+		{ term: "LRE", meaning: "Land register extract", category: "Document types", status: "confirmed" },
+		{ term: "TMD", meaning: "Technical model documentation", category: "Governance and risk", status: "guess" },
 	]);
 	const merged = mergeGlossary(existing, [
-		{ term: "lre", meaning: "something else" },
-		{ term: "BDB", meaning: "Broker data base" },
+		{ term: "lre", meaning: "something else", category: "Other" },
+		{ term: "BDB", meaning: "Broker data base", category: "data & vendors" },
+		{ term: "Hill climb", meaning: "Accuracy loop", category: "method" },
 		{ term: "", meaning: "skip me" },
 	]);
+	// Group order first (Document types, Way of working, Data and vendors, Governance and risk), then A-Z.
 	assert.deepEqual(
-		merged.map((g) => g.term),
-		["BDB", "LRE", "TMD"]
+		merged.map((g) => `${g.category}:${g.term}`),
+		["Document types:LRE", "Way of working:Hill climb", "Data and vendors:BDB", "Governance and risk:TMD"]
 	);
 	assert.equal(merged.find((g) => g.term === "LRE")?.meaning, "Land register extract");
 	assert.equal(merged.find((g) => g.term === "BDB")?.status, "guess");
@@ -448,12 +450,19 @@ test("glossary rows parse, merge without overwriting, and render sorted", () => 
 		"2026-09-16",
 		merged
 	);
-	// Glossary sits right under the title, before the narrative.
+	// Glossary sits right under the title, before the narrative, with one
+	// sub-heading per group in fixed order.
 	assert.ok(md.indexOf("# ING\n") < md.indexOf("## Glossary"));
 	assert.ok(md.indexOf("## Glossary") < md.indexOf("## Current state"));
+	assert.ok(md.indexOf("### Document types") < md.indexOf("### Way of working"));
+	assert.ok(md.indexOf("### Way of working") < md.indexOf("### Data and vendors"));
+	assert.ok(!md.includes("### Roles"));
 	assert.match(md, /\| BDB \| Broker data base \| guess \|/);
 	// Round trip: what we render, we can parse back.
 	assert.deepEqual(parseGlossary(md), merged);
+	// A 2.12 flat table (no sub-headings) lands in Other.
+	const flat = "## Glossary\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| X | Old style | guess |\n\n## Timeline\n";
+	assert.deepEqual(parseGlossary(flat), [{ term: "X", meaning: "Old style", category: "Other", status: "guess" }]);
 	// No terms, no section.
 	assert.ok(!buildWikiMarkdown("ING", { current_state: "S.", open_questions: [] }, [], [], "2026-09-01", "2026-09-16").includes("## Glossary"));
 });

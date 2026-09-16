@@ -1,4 +1,5 @@
-import type { EnrichResult, WikiSynthesisResult, GlossaryEntry } from "./types.ts";
+import type { EnrichResult, WikiSynthesisResult, GlossaryEntry, GlossaryCategory } from "./types.ts";
+import { GLOSSARY_CATEGORIES } from "./types.ts";
 
 export function sanitizeFilename(title: string): string {
 	return title.replace(/[\\/:*?"<>|]/g, "-").trim();
@@ -360,9 +361,27 @@ export interface TimelineEntry {
 	oneLine: string;
 }
 
-// "## Glossary" table of a wiki: | Term | Meaning | Status |. Rows are
-// keyed by term, case-insensitive.
+// "## Glossary" of a wiki: one "### <category>" sub-heading per group, each
+// with a | Term | Meaning | Status | table, groups in GLOSSARY_CATEGORIES
+// order and terms alphabetical inside a group. Rows are keyed by term,
+// case-insensitive. A table with no sub-heading (the 2.12 layout) parses
+// into "Other".
 const GLOSSARY_HEADING = "## Glossary";
+
+export function normalizeGlossaryCategory(raw: string | undefined): GlossaryCategory {
+	const wanted = (raw ?? "").trim().toLowerCase().replace(/&/g, "and").replace(/\s+/g, " ");
+	for (const category of GLOSSARY_CATEGORIES) {
+		if (category.toLowerCase() === wanted) return category;
+	}
+	// Forgiving aliases for what a model is likely to write.
+	if (/document|doc type|documents/.test(wanted)) return "Document types";
+	if (/method|process|working|practice|approach/.test(wanted)) return "Way of working";
+	if (/system|tool|platform|ui|api|component/.test(wanted)) return "Systems and tools";
+	if (/data|vendor|dataset|schema/.test(wanted)) return "Data and vendors";
+	if (/risk|governance|compliance|regulat|control|assessment/.test(wanted)) return "Governance and risk";
+	if (/role|people|person|team/.test(wanted)) return "Roles";
+	return "Other";
+}
 
 export function parseGlossary(wikiContent: string): GlossaryEntry[] {
 	const idx = wikiContent.indexOf(GLOSSARY_HEADING);
@@ -371,8 +390,14 @@ export function parseGlossary(wikiContent: string): GlossaryEntry[] {
 	const nextIdx = after.indexOf("\n## ");
 	const section = nextIdx === -1 ? after : after.slice(0, nextIdx);
 	const entries: GlossaryEntry[] = [];
+	let category: GlossaryCategory = "Other";
 	for (const line of section.split("\n")) {
 		const trimmed = line.trim();
+		const sub = trimmed.match(/^###\s+(.+)$/);
+		if (sub) {
+			category = normalizeGlossaryCategory(sub[1]);
+			continue;
+		}
 		if (!trimmed.startsWith("|")) continue;
 		const cells = trimmed
 			.slice(1, trimmed.endsWith("|") ? -1 : undefined)
@@ -381,17 +406,22 @@ export function parseGlossary(wikiContent: string): GlossaryEntry[] {
 		if (cells.length < 2) continue;
 		const [term, meaning, status = ""] = cells;
 		if (!term || term.toLowerCase() === "term" || /^-+$/.test(term)) continue;
-		entries.push({ term, meaning, status: status.toLowerCase() === "confirmed" ? "confirmed" : "guess" });
+		entries.push({ term, meaning, category, status: status.toLowerCase() === "confirmed" ? "confirmed" : "guess" });
 	}
 	return entries;
 }
 
-// Existing rows win, always - a person may have corrected a meaning or
-// marked it confirmed, and a re-synthesis must never undo that. Proposed
-// rows only add terms the table does not know yet, as guesses.
+function compareTerms(a: string, b: string): number {
+	return a.localeCompare(b, undefined, { sensitivity: "base" });
+}
+
+// Existing rows win, always - a person may have corrected a meaning, moved
+// a term to another group, or marked it confirmed, and a re-synthesis must
+// never undo that. Proposed rows only add terms the table does not know
+// yet, as guesses.
 export function mergeGlossary(
 	existing: GlossaryEntry[],
-	proposed: { term: string; meaning: string }[] | undefined
+	proposed: { term: string; meaning: string; category?: string }[] | undefined
 ): GlossaryEntry[] {
 	const known = new Set(existing.map((e) => e.term.toLowerCase()));
 	const merged = existing.slice();
@@ -400,9 +430,12 @@ export function mergeGlossary(
 		const meaning = row.meaning.trim();
 		if (!term || !meaning || known.has(term.toLowerCase())) continue;
 		known.add(term.toLowerCase());
-		merged.push({ term, meaning, status: "guess" });
+		merged.push({ term, meaning, category: normalizeGlossaryCategory(row.category), status: "guess" });
 	}
-	return merged.sort((a, b) => a.term.localeCompare(b.term, undefined, { sensitivity: "base" }));
+	return merged.sort((a, b) => {
+		const byCategory = GLOSSARY_CATEGORIES.indexOf(a.category) - GLOSSARY_CATEGORIES.indexOf(b.category);
+		return byCategory !== 0 ? byCategory : compareTerms(a.term, b.term);
+	});
 }
 
 function escapeTableCell(text: string): string {
@@ -411,8 +444,16 @@ function escapeTableCell(text: string): string {
 
 export function renderGlossary(entries: GlossaryEntry[]): string {
 	if (entries.length === 0) return "";
-	const rows = entries.map((e) => `| ${escapeTableCell(e.term)} | ${escapeTableCell(e.meaning)} | ${e.status} |`);
-	return `${GLOSSARY_HEADING}\n\nEdit a meaning and set its status to \`confirmed\`; Nous never rewrites a row that is already here.\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n${rows.join("\n")}\n\n`;
+	const parts: string[] = [
+		`${GLOSSARY_HEADING}\n\nEdit a meaning, move a term to another group, or set its status to \`confirmed\`; Nous never rewrites a row that is already here.\n`,
+	];
+	for (const category of GLOSSARY_CATEGORIES) {
+		const rows = entries.filter((e) => e.category === category).sort((a, b) => compareTerms(a.term, b.term));
+		if (rows.length === 0) continue;
+		const table = rows.map((e) => `| ${escapeTableCell(e.term)} | ${escapeTableCell(e.meaning)} | ${e.status} |`);
+		parts.push(`\n### ${category}\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n${table.join("\n")}\n`);
+	}
+	return `${parts.join("")}\n`;
 }
 
 // Titles already listed under a wiki's "## Sources" - the durable record of

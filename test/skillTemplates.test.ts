@@ -42,6 +42,9 @@ test("both skills carry the glossary contract", () => {
 	assert.match(wiki, /\| Term \| Meaning \| Status \|/);
 	assert.match(wiki, /keep every existing row exactly as it is/);
 	assert.match(wiki, /status `guess`/);
+	assert.match(wiki, /### Document types/);
+	assert.match(wiki, /`Way of working`/);
+	assert.match(wiki, /Sort terms alphabetically inside a group/);
 });
 
 test("meeting enricher skill skips pending native recording placeholders", () => {

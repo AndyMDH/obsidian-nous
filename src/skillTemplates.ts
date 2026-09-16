@@ -533,11 +533,19 @@ sources: <count>
 
 ## Glossary
 
-Edit a meaning and set its status to \`confirmed\`; Nous never rewrites a row that is already here.
+Edit a meaning, move a term to another group, or set its status to \`confirmed\`; Nous never rewrites a row that is already here.
+
+### Document types
 
 | Term | Meaning | Status |
 | --- | --- | --- |
 | LRE | Land register extract (Grundbuchauszug) | guess |
+
+### Way of working
+
+| Term | Meaning | Status |
+| --- | --- | --- |
+| Hill climb | Iterative accuracy improvement per node against a holdout set | guess |
 
 ## Current state
 
@@ -567,11 +575,18 @@ Use the topic's tag name (capitalized/humanized) as \`<Topic>\` unless the
 meeting notes clearly point to a more specific, more human title.
 
 \`## Glossary\` collects the acronyms, code names, and project jargon used
-across the source notes, one row per term, sorted by term. Take candidates
-from each note's \`## New terms\` section and from terms that recur in
-Summary and Key points; take meanings from the notes' guesses and context.
-Every row you write gets status \`guess\`. Skip ordinary words and well-known
-terms (API, CEO, PDF). Omit the whole section when there are no terms.
+across the source notes, one row per term. Group the rows under \`###\`
+sub-headings, in this fixed order and with exactly these names, and skip a
+group that has no terms: \`Document types\` (kinds of documents the work
+handles), \`Way of working\` (methods, phases, rituals, node and tree
+vocabulary), \`Systems and tools\` (software, platforms, UIs, APIs), \`Data and
+vendors\` (data objects, datasets, suppliers), \`Governance and risk\`
+(assessments, controls, committees), \`Roles\` (kinds of people), \`Other\`.
+Sort terms alphabetically inside a group. Take candidates from each note's
+\`## New terms\` section and from terms that recur in Summary and Key points;
+take meanings from the notes' guesses and context. Every row you write gets
+status \`guess\`. Skip ordinary words and well-known terms (API, CEO, PDF).
+Omit the whole section when there are no terms.
 
 3. Append to \`.nous/pipeline.log\`:
    \`<ISO timestamp> NEW WIKI: <topic> - sources: <count>\`
@@ -584,10 +599,12 @@ If a wiki's topic has meeting notes that are not yet listed under its
 1. Read the existing wiki in full, plus those not-yet-listed source notes.
 2. Rewrite \`## Current state\` to incorporate the new information — don't just
    append a paragraph, actually re-synthesize so the narrative stays coherent.
-3. Merge \`## Glossary\`: keep every existing row exactly as it is - a person
-   may have corrected the meaning or set status \`confirmed\` - and only add
-   rows for terms the table does not have yet (status \`guess\`), then re-sort
-   by term. Never delete or rewrite an existing row.
+3. Merge \`## Glossary\`: keep every existing row exactly as it is and in
+   its group - a person may have corrected the meaning, moved the term, or
+   set status \`confirmed\` - and only add rows for terms the tables do not
+   have yet (status \`guess\`, in the fitting group), then re-sort each group
+   alphabetically. Never delete or rewrite an existing row. If an old wiki
+   still has one flat table, keep its rows and file them under \`### Other\`.
 4. Append new entries to \`## Timeline\` (keep existing entries, keep
    chronological order).
 5. Append new notes to \`## Sources\`. **Never drop existing Sources** — only add.
