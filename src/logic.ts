@@ -415,6 +415,27 @@ export function renderGlossary(entries: GlossaryEntry[]): string {
 	return `${GLOSSARY_HEADING}\n\nEdit a meaning and set its status to \`confirmed\`; Nous never rewrites a row that is already here.\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n${rows.join("\n")}\n\n`;
 }
 
+// Titles already listed under a wiki's "## Sources" - the durable record of
+// which notes the wiki has absorbed. Comparing note dates against the
+// wiki's `updated` day missed every note from the same day as the last
+// update, so those notes never reached Current state.
+export function parseWikiSources(wikiContent: string): string[] {
+	const idx = wikiContent.indexOf("## Sources");
+	if (idx === -1) return [];
+	const after = wikiContent.slice(idx + "## Sources".length);
+	const nextIdx = after.indexOf("\n## ");
+	const section = nextIdx === -1 ? after : after.slice(0, nextIdx);
+	const titles: string[] = [];
+	for (const match of section.matchAll(/\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]/g)) {
+		titles.push(match[1].trim());
+	}
+	return titles;
+}
+
+// The wiki's Open questions are the still-open set across meetings, not a
+// log - past this many the list stops being read.
+export const WIKI_OPEN_QUESTIONS_MAX = 8;
+
 export function buildWikiMarkdown(
 	topic: string,
 	result: WikiSynthesisResult,
@@ -437,7 +458,10 @@ export function buildWikiMarkdown(
 
 	const openQuestions =
 		result.open_questions.length > 0
-			? result.open_questions.map((q) => `- ${q}`).join("\n")
+			? result.open_questions
+					.slice(0, WIKI_OPEN_QUESTIONS_MAX)
+					.map((q) => `- ${q}`)
+					.join("\n")
 			: "- (none currently)";
 
 	const timelineLines = timeline
@@ -448,7 +472,9 @@ export function buildWikiMarkdown(
 
 	const sourceLines = sources.map((s) => `- [[${s}]]`).join("\n");
 
-	return `${fm}# ${topic}\n\n## Current state\n\n${result.current_state}\n\n## Open questions\n\n${openQuestions}\n\n${renderGlossary(glossary)}## Timeline\n\n${timelineLines}\n\n## Sources\n\n${sourceLines}\n`;
+	// Glossary first: a reader new to the topic needs the words before the
+	// narrative, and it is the section a person edits by hand.
+	return `${fm}# ${topic}\n\n${renderGlossary(glossary)}## Current state\n\n${result.current_state}\n\n## Open questions\n\n${openQuestions}\n\n## Timeline\n\n${timelineLines}\n\n## Sources\n\n${sourceLines}\n`;
 }
 
 export interface WinEntry {

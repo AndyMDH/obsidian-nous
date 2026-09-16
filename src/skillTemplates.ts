@@ -492,8 +492,10 @@ carry it.
 - If a topic has fewer than 4 meeting notes and no wiki exists yet, do nothing
   for it this run.
 - If a wiki already exists for a topic, go to Step 4 (update) regardless of
-  count, as long as at least one new meeting note has been added since the
-  wiki's \`updated\` date.
+  count, as long as at least one meeting note with that tag is not yet
+  listed under the wiki's \`## Sources\`. (Not "dated after the wiki's
+  \`updated\` day" - that skips every note from the same day as the last
+  update.)
 
 ## Filename convention (avoid tag/wiki collisions)
 
@@ -529,6 +531,14 @@ sources: <count>
 ---
 # <Topic>
 
+## Glossary
+
+Edit a meaning and set its status to \`confirmed\`; Nous never rewrites a row that is already here.
+
+| Term | Meaning | Status |
+| --- | --- | --- |
+| LRE | Land register extract (Grundbuchauszug) | guess |
+
 ## Current state
 
 Synthesized narrative of what is known/decided about this topic across all
@@ -539,16 +549,9 @@ meetings into connected prose.
 
 ## Open questions
 
-- ... (start from the source notes' own Open questions sections; drop a
-  question once a later note answers it, and say so in Current state)
-
-## Glossary
-
-Edit a meaning and set its status to \`confirmed\`; Nous never rewrites a row that is already here.
-
-| Term | Meaning | Status |
-| --- | --- | --- |
-| LRE | Land register extract (Grundbuchauszug) | guess |
+- ... (at most eight, most important first; start from the source notes'
+  own Open questions sections, merge near-duplicates, and drop a question
+  once a later note answers it - say so in Current state)
 
 ## Timeline
 
@@ -575,9 +578,10 @@ terms (API, CEO, PDF). Omit the whole section when there are no terms.
 
 ## Step 4 — Update an existing wiki
 
-If a wiki's topic has gained meeting notes since its \`updated\` date:
+If a wiki's topic has meeting notes that are not yet listed under its
+\`## Sources\`:
 
-1. Read the existing wiki in full, plus the newly added source meeting notes.
+1. Read the existing wiki in full, plus those not-yet-listed source notes.
 2. Rewrite \`## Current state\` to incorporate the new information — don't just
    append a paragraph, actually re-synthesize so the narrative stays coherent.
 3. Merge \`## Glossary\`: keep every existing row exactly as it is - a person

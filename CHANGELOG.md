@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.15.0
+
+- Fixed: a meeting note dated the same day as a wiki's last update never
+  reached that wiki's Current state. "New" notes are now the ones not yet
+  listed under the wiki's Sources, not the ones dated after the update.
+- The wiki's Glossary now sits right under the title, before Current
+  state.
+- The wiki's Open questions are capped at eight, most important first,
+  with near-duplicates merged and answered ones dropped.
+
 ## 2.14.0
 
 - Meeting notes gain an `## Open questions` section: the questions a

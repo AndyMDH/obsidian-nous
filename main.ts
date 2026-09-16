@@ -3306,9 +3306,11 @@ export default class NousPlugin extends Plugin {
 					}
 					continue;
 				}
-				const wikiFm = this.app.metadataCache.getFileCache(existingWiki)?.frontmatter;
-				const updatedDate = (wikiFm?.updated as string) ?? "1970-01-01";
-				const newNotes = cluster.notes.filter((n) => n.date > updatedDate);
+				// "New" = not yet listed under ## Sources. Not "dated after the
+				// wiki's updated day": that skipped every note from the same day
+				// as the last update, forever.
+				const absorbed = new Set(logic.parseWikiSources(await this.app.vault.read(existingWiki)));
+				const newNotes = cluster.notes.filter((n) => !absorbed.has(n.title));
 				if (newNotes.length > 0) {
 					await this.updateWiki(cluster.tag, existingWiki, cluster.notes, noteFiles);
 				}
@@ -3409,8 +3411,8 @@ export default class NousPlugin extends Plugin {
 	) {
 		const existingContent = await this.app.vault.read(existingWiki);
 		const existingFm = this.app.metadataCache.getFileCache(existingWiki)?.frontmatter;
-		const updatedDate = (existingFm?.updated as string) ?? "1970-01-01";
-		const newNotes = allNotes.filter((n) => n.date > updatedDate);
+		const absorbed = new Set(logic.parseWikiSources(existingContent));
+		const newNotes = allNotes.filter((n) => !absorbed.has(n.title));
 
 		const { sources: newSources } = await this.readSourcesForWiki(newNotes, noteFiles);
 		const { timeline: allTimeline } = await this.readSourcesForWiki(allNotes, noteFiles);

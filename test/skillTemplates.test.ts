@@ -25,7 +25,12 @@ test("enricher writes Open questions and the skip rule names the prompt", () => 
 	assert.match(enricher, /## Open questions/);
 	assert.match(enricher, /phrased as a question/);
 	assert.match(enricher, /file that the prompt names as a live recording note/);
-	assert.match(wikiBuilderSkill(folders), /source notes' own Open questions sections/);
+	const wiki = wikiBuilderSkill(folders);
+	assert.match(wiki, /source notes'\n\s+own Open questions sections|source notes' own Open questions sections/);
+	assert.match(wiki, /not yet\n\s+listed under the wiki's `## Sources`/);
+	assert.match(wiki, /at most eight/);
+	// Glossary comes before Current state in the template.
+	assert.ok(wiki.indexOf("## Glossary") < wiki.indexOf("## Current state"));
 });
 
 test("both skills carry the glossary contract", () => {

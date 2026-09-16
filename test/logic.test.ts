@@ -18,6 +18,7 @@ import {
 	buildWikiMarkdown,
 	mergeGlossary,
 	parseGlossary,
+	parseWikiSources,
 	buildWinsMarkdown,
 	formatRecordingElapsed,
 	clusterByTag,
@@ -447,8 +448,9 @@ test("glossary rows parse, merge without overwriting, and render sorted", () => 
 		"2026-09-16",
 		merged
 	);
-	assert.ok(md.indexOf("## Open questions") < md.indexOf("## Glossary"));
-	assert.ok(md.indexOf("## Glossary") < md.indexOf("## Timeline"));
+	// Glossary sits right under the title, before the narrative.
+	assert.ok(md.indexOf("# ING\n") < md.indexOf("## Glossary"));
+	assert.ok(md.indexOf("## Glossary") < md.indexOf("## Current state"));
 	assert.match(md, /\| BDB \| Broker data base \| guess \|/);
 	// Round trip: what we render, we can parse back.
 	assert.deepEqual(parseGlossary(md), merged);
@@ -479,6 +481,16 @@ test("buildMeetingMarkdown renders New terms after Watch and skips blank terms",
 	assert.ok(md.indexOf("## Watch") < md.indexOf("## New terms"));
 	assert.match(md, /## New terms\n\n- UPPC - unknown\n/);
 	assert.ok(!md.includes("-  - x"));
+});
+
+test("parseWikiSources lists absorbed note titles, and open questions are capped", () => {
+	const wiki = "---\ntype: wiki\n---\n# ING\n\n## Timeline\n\n- 2026-09-15 - [[A]] - x\n\n## Sources\n\n- [[2026-09-15 ING Sprint 10 Review]]\n- [[2026-09-15 ING Onboarding|alias]]\n";
+	assert.deepEqual(parseWikiSources(wiki), ["2026-09-15 ING Sprint 10 Review", "2026-09-15 ING Onboarding"]);
+	assert.deepEqual(parseWikiSources("# No sources here"), []);
+	const many = Array.from({ length: 12 }, (_, i) => `Question ${i + 1}?`);
+	const md = buildWikiMarkdown("ING", { current_state: "S.", open_questions: many }, [], [], "2026-09-01", "2026-09-16");
+	assert.ok(md.includes("- Question 8?"));
+	assert.ok(!md.includes("- Question 9?"));
 });
 
 test("buildWikiMarkdown shows a placeholder when there are no open questions", () => {

@@ -251,7 +251,7 @@ export function wikiSystemPrompt(topic: string, isUpdate: boolean): string {
 
 Write current_state like a living briefing document a colleague could read to get fully up to speed - not a bullet list of links. Pull together decisions, current direction, and unresolved tension across the source notes into connected prose.
 
-open_questions: bullet strings, genuinely open/unresolved questions. Start from the source notes' own "## Open questions" sections; drop a question once a later note answers it. Empty array if none.
+open_questions: bullet strings, genuinely open/unresolved questions, most important first, at most eight. Start from the source notes' own "## Open questions" sections; drop a question once a later note answers it, and merge near-duplicates. Empty array if none.
 
 glossary: acronyms, code names, and project jargon that appear in the source notes, each with its meaning in a few words. Draw meanings from the notes' "## New terms" sections and from context; when the notes only guess, keep the guess. Only terms actually used in the sources; skip ordinary words and well-known terms (API, CEO, PDF). Empty array if none. Terms listed under "Known glossary terms" in the user message are already in the table - do not repeat them.`;
 
