@@ -3941,6 +3941,28 @@ class NousSettingTab extends PluginSettingTab {
 			});
 		}
 
+		// Basic, not advanced: who "you" are decides which action items a note keeps.
+		meetingItems.push({
+			name: "Your name",
+			render: (setting) => {
+				setting
+					.setDesc(
+						"Action items keep only your own commitments. Other people's tasks that affect you go under Watch. Leave empty to use the Me: speaker."
+					)
+					.addText((text) =>
+						text
+							.setPlaceholder("Andy")
+							.setValue(this.plugin.settings.ownerName)
+							.onChange(async (value) => {
+								this.plugin.settings.ownerName = value.trim();
+								await this.plugin.saveSettings();
+								// CLI mode reads the name from the skill files, so rewrite them.
+								await this.plugin.ensureSkillsInstalled(true);
+							})
+					);
+			},
+		});
+
 		if (this.showAdvanced) {
 			meetingItems.push({
 				name: "Wiki threshold",
@@ -3957,27 +3979,6 @@ class NousSettingTab extends PluginSettingTab {
 									nousNotice("Wiki threshold needs a whole number above 0 - not saved.", 6000);
 								}
 							})
-						);
-				},
-			});
-
-			meetingItems.push({
-				name: "Your name",
-				render: (setting) => {
-					setting
-						.setDesc(
-							"Action items keep only your own commitments. Other people's tasks that affect you go under Watch. Leave empty to use the Me: speaker."
-						)
-						.addText((text) =>
-							text
-								.setPlaceholder("Andy")
-								.setValue(this.plugin.settings.ownerName)
-								.onChange(async (value) => {
-									this.plugin.settings.ownerName = value.trim();
-									await this.plugin.saveSettings();
-									// CLI mode reads the name from the skill files, so rewrite them.
-									await this.plugin.ensureSkillsInstalled(true);
-								})
 						);
 				},
 			});

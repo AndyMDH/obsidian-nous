@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.12.1
+
+- The "Your name" field was hidden behind the Advanced settings toggle. It
+  now shows in Settings → Nous → Meeting capture for everyone.
+
 ## 2.12.0
 
 - The live meeting note has no frontmatter any more, so Obsidian's
