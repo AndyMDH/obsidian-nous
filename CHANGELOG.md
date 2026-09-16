@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.12.2
+
+- The "Discreet recording" toggle was also hidden behind the Advanced
+  settings toggle. It now shows in Settings → Nous → Voice capture for
+  everyone.
+
 ## 2.12.1
 
 - The "Your name" field was hidden behind the Advanced settings toggle. It

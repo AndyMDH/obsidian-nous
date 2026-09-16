@@ -4036,6 +4036,25 @@ class NousSettingTab extends PluginSettingTab {
 			});
 		}
 
+		// Basic, not advanced: hiding the recording indicators is a one-time choice every user may want.
+		if (Platform.isMacOS) {
+		voiceItems.push({
+			name: "Discreet recording",
+			render: (setting) => {
+				setting
+					.setDesc(
+						"No red icon, timer, or popup while a meeting records. The live note shows only your notes, and the transcript still arrives when you stop."
+					)
+					.addToggle((toggle) =>
+						toggle.setValue(this.plugin.settings.discreetRecording).onChange(async (value) => {
+							this.plugin.settings.discreetRecording = value;
+							await this.plugin.saveSettings();
+						})
+					);
+			},
+		});
+		}
+
 		if (this.showAdvanced) {
 			voiceItems.push({
 				name: "Whisper CLI path",
@@ -4076,21 +4095,6 @@ class NousSettingTab extends PluginSettingTab {
 			});
 
 			if (Platform.isMacOS) {
-				voiceItems.push({
-					name: "Discreet recording",
-					render: (setting) => {
-						setting
-							.setDesc(
-								"No red icon, timer, or popup while a meeting records. The live note shows only your notes, and the transcript still arrives when you stop."
-							)
-							.addToggle((toggle) =>
-								toggle.setValue(this.plugin.settings.discreetRecording).onChange(async (value) => {
-									this.plugin.settings.discreetRecording = value;
-									await this.plugin.saveSettings();
-								})
-							);
-					},
-				});
 				voiceItems.push({
 					name: "Faster, less accurate model",
 					render: (setting) => {
