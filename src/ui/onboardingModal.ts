@@ -40,7 +40,7 @@ export class OnboardingModal extends Modal {
 	// installed whisper-cli path, an active recording).
 	private settingsSnapshot: Pick<
 		NousSettings,
-		"executionMode" | "apiProvider" | "apiKeys" | "localBaseUrl" | "glmBaseUrl"
+		"executionMode" | "apiProvider" | "apiKeys" | "models" | "localBaseUrl" | "glmBaseUrl"
 	> | null = null;
 	private finished = false;
 	// Bumped on every screen change and on close. Async work started by one
@@ -65,6 +65,7 @@ export class OnboardingModal extends Modal {
 				executionMode: plugin.settings.executionMode,
 				apiProvider: plugin.settings.apiProvider,
 				apiKeys: { ...plugin.settings.apiKeys },
+				models: { ...plugin.settings.models },
 				localBaseUrl: plugin.settings.localBaseUrl,
 				glmBaseUrl: plugin.settings.glmBaseUrl,
 			};
@@ -431,6 +432,19 @@ export class OnboardingModal extends Modal {
 						await this.plugin.saveSettings();
 					});
 				});
+			// Without this the wizard tested whatever model name was in
+			// settings ("llama3.1" by default) with no way to see or change
+			// it - a server running any other model failed the check.
+			new Setting(this.contentEl)
+				.setName("Model")
+				.setDesc('The model your server runs, for example "llama3.1". It must support tool calls.')
+				.addText((text) => {
+					text.inputEl.addClass("nous-mono-input");
+					text.setValue(this.plugin.settings.models.local).onChange(async (value) => {
+						this.plugin.settings.models.local = value.trim() || DEFAULT_SETTINGS.models.local;
+						await this.plugin.saveSettings();
+					});
+				});
 		} else if (provider() === "glm") {
 			new Setting(this.contentEl)
 				.setName("GLM API key")
@@ -763,7 +777,7 @@ export class OnboardingModal extends Modal {
 			text: "Click, talk, click again. It becomes a note.",
 			link: {
 				text: "Dictate from anywhere with Handy (optional)",
-				href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md",
+				href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md#voice-capture-in-depth",
 			},
 		});
 
@@ -774,7 +788,7 @@ export class OnboardingModal extends Modal {
 				text: "For when someone else is talking - calls or in person. A live note opens for your questions.",
 				link: {
 					text: "How meetings work",
-					href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md",
+					href: "https://github.com/AndyMDH/obsidian-nous/blob/main/docs/USAGE.md#meeting-capture-in-depth-macos",
 				},
 			});
 		}

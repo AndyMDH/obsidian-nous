@@ -206,7 +206,7 @@ Native meeting capture is split deliberately:
   containing `sys.m4a` and `mic.m4a`, plus a small state file in
   `~/Movies/NousRecordings`.
 
-`main.ts` prefers the native helper for the phone button. If `status` cannot
+`main.ts` prefers the native helper for the meeting button. If `status` cannot
 run, the setup wizard/settings can download the matching release asset,
 verify its SHA-256 sidecar, install it into the vault's plugin folder, and
 retry from that managed path. If the helper is still unavailable, meeting

@@ -87,7 +87,7 @@ Once a tag has four or more notes, Nous writes a wiki page for it in
 Voice notes need speech-to-text first. On macOS, open the command palette
 and run "Nous: Open setup wizard." Click Install on the voice notes step.
 This needs two clicks and no Terminal command. Or add a Gemini or OpenAI
-key instead - this needs no install. If neither is ready, Nous shows a
+key instead, in Settings → Nous → Voice capture - this needs no install. If neither is ready, Nous shows a
 setup message and does not start recording.
 
 1. Click the mic icon in Obsidian's left sidebar.
@@ -97,15 +97,15 @@ setup message and does not start recording.
    recording inside it, and you can play it back.
 
 <p align="center">
-  <img alt="Click the mic or phone icon to start recording, talk, click it again to stop — a tagged note with the audio or transcript inside lands in your inbox." src="../assets/demo.svg">
+  <img alt="Click the mic or waveform icon to start recording, talk, click it again to stop — a tagged note with the audio or transcript inside lands in your inbox." src="../assets/demo.svg">
 </p>
 
 Step 6 below uses the same click-to-start, click-to-stop pattern for
-meetings. Use the phone icon instead of the mic icon.
+meetings. Use the waveform icon instead of the mic icon.
 
 Want to see the words appear while you talk, instead of only after you
-stop? Go to Settings → Nous. Turn on Advanced settings. Add an OpenAI API
-key. Turn on Live voice transcription (beta). This feature is optional and
+stop? Go to Settings → Nous → Voice capture. Add an OpenAI API key. Turn
+on Live voice transcription (beta). This feature is optional and
 off by default. It needs an OpenAI key and a desktop computer. The plain
 version above works everywhere, with no extra setup.
 
@@ -126,7 +126,7 @@ this alone, so Nous uses a small helper program instead.
 
 1. If the wizard says the native recorder is missing, click Install. Nous
    downloads the recorder, checks it, and stores it in this vault.
-2. After that, click the phone icon when a call starts. Click it again
+2. After that, click the waveform icon when a call starts. Click it again
    when the call ends.
 
 When recording starts, Nous opens a live note with a Meeting notes

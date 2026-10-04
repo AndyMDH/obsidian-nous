@@ -57,9 +57,14 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 			// step one is done. Still says "two steps," not "download this
 			// and you're set" - the model alone was the exact silent-success
 			// bug this screen used to have.
+			// The one-click installs are macOS-only (whisper.cpp). Anywhere
+			// else the only route is a cloud key, so the row must not
+			// promise install buttons that never appear.
 			desc: status.voiceReady
 				? "Ready."
-				: "Needs speech-to-text - two one-click installs, no Terminal.",
+				: status.meeting === "unsupported"
+					? "Needs a Gemini or OpenAI key - add one in Settings → Nous → Voice capture."
+					: "Needs speech-to-text - two one-click installs, no Terminal.",
 			warning: !status.voiceReady,
 		},
 		{

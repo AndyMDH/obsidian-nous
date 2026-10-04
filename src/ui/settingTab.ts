@@ -3,7 +3,7 @@ import type NousPlugin from "../../main.ts";
 import { DEFAULT_SETTINGS, MODEL_OPTIONS, type ApiProvider, type NousSettings } from "../types.ts";
 import { NATIVE_RECORDER_INSTALL_DESC, nativeRecorderReadinessText } from "../onboarding.ts";
 import { nousNotice } from "./notice.ts";
-import { attachCancelButton } from "./controls.ts";
+import { attachCancelButton, wireWhisperInstallButton } from "./controls.ts";
 import { NOUS_LOGO_SVG } from "./icons.ts";
 import { OnboardingModal } from "./onboardingModal.ts";
 import { LlmApiError } from "../llmProvider.ts";
@@ -379,7 +379,6 @@ export class NousSettingTab extends PluginSettingTab {
 						toggle.setValue(this.plugin.settings.autoProcessOnCreate).onChange(async (value) => {
 							this.plugin.settings.autoProcessOnCreate = value;
 							await this.plugin.saveSettings();
-							nousNotice("Reload the plugin (or restart Obsidian) to make this stick.");
 						})
 				);
 			},
@@ -388,7 +387,7 @@ export class NousSettingTab extends PluginSettingTab {
 
 		const meetingItems: SettingGroupItem[] = [];
 
-		// Unconditional on macOS, like Voice capture's "Speech model" status
+		// Unconditional on macOS, like Voice capture's "Local speech-to-text" status
 		// below - whether meeting capture actually works is basic info every
 		// user needs, not an advanced setting. Without this, the whole
 		// Meeting capture group rendered as an empty heading with nothing
@@ -404,7 +403,7 @@ export class NousSettingTab extends PluginSettingTab {
 						try {
 							const status = await this.plugin.getNativeRecorderReadiness();
 							setting.setDesc(nativeRecorderReadinessText(status));
-							button?.setButtonText(status.state === "needs-permission" ? "Recheck after retrying phone button" : "Refresh");
+							button?.setButtonText(status.state === "needs-permission" ? "Recheck after you retry the meeting button" : "Refresh");
 							setting.settingEl.toggleClass(
 								"mod-warning",
 								status.state === "missing" || status.state === "needs-permission" || status.state === "error"
@@ -526,11 +525,72 @@ export class NousSettingTab extends PluginSettingTab {
 
 		const voiceItems: SettingGroupItem[] = [];
 
+		// Speech-to-text setup lives here, not only in the wizard - every
+		// "waiting on speech-to-text" notice and the recording popup's Cloud
+		// row send the user to this tab, so both routes (local install, cloud
+		// key) must actually be reachable from it in every execution mode.
+		if (Platform.isMacOS) {
+			voiceItems.push({
+				name: "Local speech-to-text",
+				render: (setting) => {
+					setting.setDesc("Checking…");
+					void Promise.all([this.plugin.hasWhisperModel(), this.plugin.hasWhisperCli()]).then(
+						([hasModel, hasCli]) => {
+							if (hasModel && hasCli) {
+								setting.setDesc("Ready. Runs on this Mac, nothing leaves it.");
+								return;
+							}
+							const step = hasModel ? "cli" : "model";
+							setting.setDesc(
+								step === "cli"
+									? "Model downloaded. One more install, through Homebrew."
+									: "Not installed. One download (~574 MB), then one install. Fully private."
+							);
+							setting.addButton((button) => {
+								button.setCta();
+								wireWhisperInstallButton(button.buttonEl, this.plugin, step, () => this.update());
+							});
+						}
+					);
+				},
+			});
+		}
+
+		// Transcription uses a Gemini or OpenAI key whatever the execution
+		// mode is, but the Provider group only shows the key of the selected
+		// API provider (and none at all in CLI mode). Skipped when that same
+		// key field is already on screen above.
+		const speechKeyItem = (provider: "gemini" | "openai", name: string, desc: string) => {
+			if (this.plugin.settings.executionMode === "api" && this.plugin.settings.apiProvider === provider) return;
+			voiceItems.push({
+				name,
+				render: (setting) => {
+					setting.setDesc(desc).addText((text) => {
+						text.inputEl.type = "password";
+						text.inputEl.autocomplete = "off";
+						text
+							.setPlaceholder("Paste your key")
+							.setValue(this.plugin.settings.apiKeys[provider])
+							.onChange(async (value) => {
+								this.plugin.settings.apiKeys[provider] = value.trim();
+								await this.plugin.saveSettings();
+							});
+					});
+				},
+			});
+		};
+		speechKeyItem("gemini", "Gemini API key for speech-to-text", "Optional. Used only to turn speech into text.");
+		speechKeyItem(
+			"openai",
+			"OpenAI API key for speech-to-text",
+			"Optional. Used only to turn speech into text, and for live captions."
+		);
+
 		voiceItems.push({
 			name: "Live voice transcription (beta)",
 			render: (setting) => {
 				setting
-					.setDesc("Live captions while you talk. Needs the OpenAI key above.")
+					.setDesc("Live captions while you talk. Needs an OpenAI key.")
 					.addToggle((toggle) =>
 						toggle.setValue(this.plugin.settings.liveTranscriptionEnabled).onChange(async (value) => {
 							this.plugin.settings.liveTranscriptionEnabled = value;
@@ -545,7 +605,7 @@ export class NousSettingTab extends PluginSettingTab {
 				name: "",
 				render: (setting) => {
 					setting
-						.setDesc("Needs an OpenAI API key above - until then, voice capture works normally (non-live).")
+						.setDesc("Needs an OpenAI API key - until then, voice capture works normally (non-live).")
 						.setClass("mod-warning");
 				},
 			});

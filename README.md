@@ -86,7 +86,7 @@ A wizard opens on its own. Follow it, screen by screen.
 **3. Capture something.**
 
 - Click the microphone icon for a voice note.
-- Click the phone icon for a meeting. Mac only.
+- Click the waveform icon for a meeting. Mac only.
 - Drop any other file into the `00-Inbox` folder.
 
 **4. Check your note.**

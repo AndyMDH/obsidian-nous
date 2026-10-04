@@ -269,7 +269,7 @@ export default class NousPlugin extends Plugin {
 	private nativeRecorderLastProblem: string | null = null;
 	// toggleMeetingCapture() decides start-vs-stop from an awaited status
 	// check (nativeRecorderStatus()) - two rapid clicks (a double-click on
-	// the phone ribbon) can both see "not recording" before either one's
+	// the meeting ribbon) can both see "not recording" before either one's
 	// "start" has actually landed, both call createLiveNativeMeetingNote(),
 	// and the second overwrites activeNativeMeetingNotePath, orphaning the
 	// first live note (it never receives a transcript when the one real
@@ -490,17 +490,19 @@ export default class NousPlugin extends Plugin {
 			callback: () => void this.convertLegacyTranscripts(),
 		});
 
-		if (this.settings.autoProcessOnCreate) {
-			this.registerEvent(
-				this.app.vault.on("create", (file) => {
-					if (file instanceof TFile && this.isInInbox(file) && !this.notionImportInProgress) {
-						// Dictation/sync tools create then immediately rewrite a
-						// file - let it settle before reading.
-						window.setTimeout(() => void this.processInbox(), 2000);
-					}
-				})
-			);
-		}
+		// Always registered, with the setting read at event time - gating the
+		// registration itself on the setting meant the "Auto-process on
+		// capture" toggle did nothing until the plugin was reloaded.
+		this.registerEvent(
+			this.app.vault.on("create", (file) => {
+				if (!this.settings.autoProcessOnCreate) return;
+				if (file instanceof TFile && this.isInInbox(file) && !this.notionImportInProgress) {
+					// Dictation/sync tools create then immediately rewrite a
+					// file - let it settle before reading.
+					window.setTimeout(() => void this.processInbox(), 2000);
+				}
+			})
+		);
 
 		// Catch up on anything that arrived while Obsidian was closed.
 		this.app.workspace.onLayoutReady(() => {
@@ -648,7 +650,7 @@ export default class NousPlugin extends Plugin {
 		}
 		const localHint = local && "failure" in local ? ` Local attempt failed: ${local.failure}` : "";
 		throw new Error(
-			`Audio capture needs local speech-to-text (Settings → Nous → Voice capture) or a Gemini/OpenAI API key. A key is only used to turn speech into text - enrichment still runs in your chosen mode.${localHint}`
+			`Audio capture needs speech-to-text - install the local one or add a Gemini/OpenAI key in Settings → Nous → Voice capture. A key is only used to turn speech into text - enrichment still runs in your chosen mode.${localHint}`
 		);
 	}
 

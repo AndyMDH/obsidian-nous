@@ -49,8 +49,9 @@ setup rows below that.
 
 After that, text and file capture are ready. Voice notes and meeting recording
 show their own setup rows in the same settings panel.
-Rarely-touched fields — CLI/recorder/whisper paths, folder names, tuning thresholds —
-are hidden behind an **Advanced settings** toggle at the bottom of the panel.
+Rarely-touched fields — the Claude CLI and whisper paths, folder names, tuning
+thresholds — are hidden behind an **Advanced settings** toggle in the Provider
+section, near the top of the panel.
 
 ## Every way to capture
 
@@ -109,11 +110,13 @@ is never lost because live transcription had trouble.
 Transcription (speech → text) prefers **local whisper.cpp** on macOS if it
 is installed — nothing leaves your machine, no API key needed. The setup
 wizard offers a one-click install for both the model and the `whisper-cli`
-engine, no Terminal needed. Skipped it during setup? Run "Nous: Open setup
-wizard" from the command palette to finish it later (the path is
+engine, no Terminal needed (the engine installs through Homebrew, so
+Homebrew must be there). Skipped it during setup? The same install button is
+in **Settings → Nous → Voice capture → Local speech-to-text** (the path is
 configurable under Nous's **Advanced settings**, if you already have your
 own install). Without that set up, it falls back to a **Gemini or OpenAI**
-API key in Nous's settings, even in Claude Code or GLM mode, where it's used
+API key. Add one in **Settings → Nous → Voice capture**; the key fields are
+there in every mode, also in Claude Code or GLM mode, where the key is used
 *only* for transcription (Claude and GLM have no audio API yet).
 
 <details>
@@ -132,7 +135,7 @@ all-or-nothing: once on, the app stops typing transcripts into other apps.
 
 Calls with other people need system-audio capture, which Obsidian's browser
 mic recorder cannot hear. Nous prefers a small native macOS helper,
-`nous-recorder`, so the phone button can start and stop a meeting recording
+`nous-recorder`, so the meeting button can start and stop a meeting recording
 directly.
 
 If the helper is missing, the setup wizard and Settings → Nous → Meeting
@@ -140,7 +143,7 @@ capture show an **Install** button. Click it once. Nous downloads its recorder,
 checks the download, puts it in this vault's plugin folder, checks that it can
 run, and uses it automatically.
 
-Then click the **📞 phone icon** in the left sidebar (or command palette →
+Then click the **waveform icon** in the left sidebar (or command palette →
 "Nous: Start/stop meeting recording") when the meeting starts, and click it again
 when it ends. First run may trigger macOS microphone and screen/system-audio
 permission prompts for Obsidian or the helper; allow them, then try the
@@ -275,8 +278,9 @@ Every step is logged to `.nous/pipeline.log` in the vault.
 - **One image, PDF, or recording per note.** HEIC photos need macOS to
   convert; PDFs need Anthropic, Gemini, or CLI mode; audio needs either local
   `whisper.cpp` (macOS) or a Gemini/OpenAI key for transcription.
-- **API keys are stored in plain text** in your vault's settings file —
-  keep the vault out of shared backups.
+- **API keys** go into Obsidian's own secret storage on Obsidian 1.11.4 and
+  later. On older versions they are stored in plain text in your vault's
+  settings file — keep the vault out of shared backups there.
 - **Privacy**: only your captured notes, tag names, and recent note titles
   are ever sent to the provider you chose. Local mode sends nothing
   anywhere. No telemetry, ever.

@@ -47,7 +47,7 @@ The layers are strict: a file in `00-Inbox` is never a final note, a note in `10
 A capture lands in `00-Inbox` by one of several paths:
 
 - **Voice capture**: the plugin records from the microphone and drops a WebM/M4A file in the inbox. Optionally (opt-in, desktop-only, beta), OpenAI's Realtime API streams an incremental transcript while recording is still in progress; when that succeeds, the known transcript is used directly and the batch transcription step below is skipped for that file. See `realtimeTranscribe.ts` in `docs/TECHNICAL.md`.
-- **Meeting capture**: on macOS, the phone button uses the native
+- **Meeting capture**: on macOS, the meeting button (waveform icon) uses the native
   `nous-recorder` helper to capture system audio and microphone audio. It
   opens a live inbox note first, so the user can type questions and quick
   notes during the call. When recording stops, a call becomes a

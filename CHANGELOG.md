@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.17.1
+
+Fixes for places where Nous pointed at something that was not there.
+
+- Settings → Nous → Voice capture now has the speech-to-text setup that
+  notices and the recording popup sent you to: a **Local speech-to-text**
+  row with its install button (macOS), and **Gemini** and **OpenAI key**
+  fields for speech-to-text. Before, a key field was only visible for the
+  selected API provider, so in Claude Code mode there was no place to add
+  one.
+- The **Auto-process on capture** toggle now works at once. Before, it did
+  nothing until the plugin was reloaded.
+- The setup wizard's local-model screen now has a **Model** field. Before,
+  it tested "llama3.1" with no way to change it.
+- Off macOS, the wizard's voice row no longer promises one-click installs
+  that only exist on macOS. It points at the key fields.
+- Text that still said "phone button" or "phone icon" now says meeting
+  button or waveform icon. The icon changed some versions ago.
+- The tour's two help links open the right section of the usage guide.
+- Docs: the Advanced settings toggle is near the top, not the bottom; there
+  is no recorder path setting; API keys use Obsidian's secret storage.
+
 ## 2.17.0
 
 - The wiki Glossary has two columns now, Term and Meaning. The Status

@@ -50,15 +50,25 @@ test("capture prerequisite checklist marks missing optional capture setup", () =
 // signaling two separate steps, not just the model download (the model
 // alone was the exact silent-success bug this screen used to have).
 test("voice notes not-ready copy names two steps, not just the model download", () => {
-	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "unsupported" });
+	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "needs-recorder" });
 	assert.equal(items[1].warning, true);
 	assert.match(items[1].desc, /two/i);
 	assert.match(items[1].desc, /install/i);
 });
 
 test("voice notes not-ready copy is the exact short two-step message (catches silent reverts to a one-piece check)", () => {
-	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "unsupported" });
+	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "needs-recorder" });
 	assert.equal(items[1].desc, "Needs speech-to-text - two one-click installs, no Terminal.");
+});
+
+// The install buttons only exist on macOS. Off macOS the row must point at
+// the one route that does exist there - a cloud key in Settings.
+test("voice notes not-ready copy off macOS points at a cloud key, not at installs that do not exist", () => {
+	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "unsupported" });
+	assert.equal(items[1].warning, true);
+	assert.doesNotMatch(items[1].desc, /install/i);
+	assert.match(items[1].desc, /Gemini or OpenAI key/);
+	assert.match(items[1].desc, /Voice capture/);
 });
 
 test("capture prerequisite checklist distinguishes native recorder readiness", () => {
