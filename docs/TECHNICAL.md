@@ -6,7 +6,7 @@ This document maps the implementation of the Obsidian Nous plugin. It complement
 
 ```
 obsidian-nous/
-├── main.ts                 # Obsidian plugin entry point; UI, settings, file I/O, orchestration
+├── main.ts                 # Obsidian plugin entry point; commands, file I/O, orchestration
 ├── src/
 │   ├── types.ts            # Settings schema, result types, model option lists
 │   ├── logic.ts            # Pure helpers: filename builders, markdown builders, clustering
@@ -20,7 +20,17 @@ obsidian-nous/
 │   ├── nativeRecorder.ts   # Argument/status helpers for the macOS meeting recorder
 │   ├── onboarding.ts       # First-run capture-prerequisite copy and checklist helpers
 │   ├── cliRunner.ts        # Claude CLI arg builders, PATH helpers, log parsing
-│   └── skillTemplates.ts   # SKILL.md templates injected into .claude/skills/
+│   ├── skillTemplates.ts   # SKILL.md templates injected into .claude/skills/
+│   ├── voiceMime.ts        # Picks the recording MIME type for voice capture
+│   └── ui/                 # Everything that draws: one class or helper group per file
+│       ├── onboardingModal.ts   # Setup wizard, tour, Notion import screen
+│       ├── settingTab.ts        # Settings tab
+│       ├── liveVoiceCaptureModal.ts, voiceCaptureSetupModal.ts, queryModal.ts,
+│       │   confirmTranscriptMigrationModal.ts
+│       ├── controls.ts          # makeClickable, whisper install button, Cancel button
+│       ├── notice.ts            # nousNotice() - every Nous toast
+│       ├── icons.ts             # Logo SVG and registered icons
+│       └── transcriptDimmer.ts  # Editor extension that dims transcript lines
 ├── native/
 │   └── nous-recorder/      # SwiftPM native macOS meeting recorder helper
 ├── test/                   # Node test-runner tests (no live API calls)
@@ -50,7 +60,7 @@ obsidian-nous/
 
 - **Lifecycle**: `onload()`, `loadSettings()`, `saveSettings()`.
 - **Commands**: process inbox, build wikis, query vault, toggle voice capture, open setup wizard.
-- **UI wiring**: settings tab (`NousSettingTab`), onboarding modal (`OnboardingModal`).
+- **UI wiring**: opens the settings tab (`NousSettingTab`) and the modals (`OnboardingModal` and others). The classes themselves live in `src/ui/` and import `NousPlugin` as a type only, so there is no runtime import cycle.
 - **Execution routing**: decides whether to use API mode or CLI mode for each operation.
 - **File I/O**: reads/writes notes, moves attachments, converts HEIC, transcribes audio, appends to `.nous/pipeline.log`.
 
@@ -172,9 +182,9 @@ In API mode, `processFile()` calls transcription before enrichment. In CLI mode,
 
 ### `realtimeTranscribe.ts`
 
-Live/streaming dictation, opt-in and desktop-only (beta): while `toggleVoiceCapture()`'s `LiveVoiceCaptureModal` (`main.ts`) is recording, this module streams microphone audio to OpenAI's Realtime API over a WebSocket and surfaces incremental transcript text as it arrives, instead of waiting until the recording stops.
+Live/streaming dictation, opt-in and desktop-only (beta): while `toggleVoiceCapture()`'s `LiveVoiceCaptureModal` (`src/ui/liveVoiceCaptureModal.ts`) is recording, this module streams microphone audio to OpenAI's Realtime API over a WebSocket and surfaces incremental transcript text as it arrives, instead of waiting until the recording stops.
 
-Kept DOM-free and network-free at this level (no `WebSocket` import) so it's unit-testable under the plain Node test runner - `RealtimeTranscriber` takes an injected `wsFactory`; the real factory in `main.ts` lazily `import("ws")`s the npm `ws` package (bundled by esbuild, unlike the Node-builtin `child_process`/`fs`/`os`/`path` handled by `loadNodeModules()` - see the comment above `loadWsModule()` in `main.ts` for why that's a different lazy-loading trick).
+Kept DOM-free and network-free at this level (no `WebSocket` import) so it's unit-testable under the plain Node test runner - `RealtimeTranscriber` takes an injected `wsFactory`; the real factory in `src/ui/liveVoiceCaptureModal.ts` lazily `import("ws")`s the npm `ws` package (bundled by esbuild, unlike the Node-builtin `child_process`/`fs`/`os`/`path` handled by `loadNodeModules()` - see the comment above `loadWsModule()` in `src/ui/liveVoiceCaptureModal.ts` for why that's a different lazy-loading trick).
 
 - `float32ToPcm16Base64()` / `downsampleTo()` - Web Audio's Float32 samples -> the base64 PCM16 wire format the Realtime API expects.
 - `buildTranscriptionSessionUpdate()` / `buildAppendAudioMessage()` - client event builders.

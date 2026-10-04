@@ -39,9 +39,11 @@ test("both skills carry the glossary contract", () => {
 	assert.match(enricher, /`## Glossary` table of every wiki/);
 	assert.match(enricher, /TERM \(meaning\)/);
 	const wiki = wikiBuilderSkill(folders);
-	assert.match(wiki, /\| Term \| Meaning \| Status \|/);
+	assert.match(wiki, /\| Term \| Meaning \|\n\| --- \| --- \|\n/);
+	assert.doesNotMatch(wiki, /\| Status \||`guess`|`confirmed`/);
 	assert.match(wiki, /keep every existing row exactly as it is/);
-	assert.match(wiki, /status `guess`/);
+	assert.match(wiki, /drop\s+that column/);
+	assert.doesNotMatch(enricher, /Term, Meaning, Status/);
 	assert.match(wiki, /### Document types/);
 	assert.match(wiki, /`Way of working`/);
 	assert.match(wiki, /Sort terms alphabetically inside a group/);
@@ -59,6 +61,14 @@ test("meeting enricher skill preserves typed live meeting notes separately", () 
 	assert.match(skill, /## Notes taken during meeting/);
 	assert.match(skill, /`## Notes`/);
 	assert.match(skill, /typed by the user during the meeting/);
+});
+
+test("meeting enricher skill lets typed questions steer the summary", () => {
+	const skill = meetingEnricherSkill(folders);
+	assert.match(skill, /\*\*Typed notes steer the summary\.\*\*/);
+	assert.match(skill, /Never\s+fill a project fact from general knowledge/);
+	assert.match(skill, /\*\(general, not from meeting\)\*/);
+	assert.match(skill, /put the question in `## Open questions`/);
 });
 
 test("meeting enricher skill auto-suggests the win tag and extracts win fields", () => {

@@ -18,6 +18,7 @@ import {
 	buildWikiMarkdown,
 	mergeGlossary,
 	parseGlossary,
+	renderGlossary,
 	parseWikiSources,
 	buildWinsMarkdown,
 	formatRecordingElapsed,
@@ -422,11 +423,11 @@ test("buildWikiMarkdown sorts timeline entries chronologically regardless of inp
 });
 
 test("glossary rows parse, merge without overwriting, and render grouped and sorted", () => {
-	const wiki = `---\ntype: wiki\n---\n# ING\n\n## Glossary\n\nEdit a meaning...\n\n### Document types\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| LRE | Land register extract | confirmed |\n\n### Governance and risk\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| TMD | Technical model documentation | guess |\n\n## Timeline\n\n- x\n`;
+	const wiki = `---\ntype: wiki\n---\n# ING\n\n## Glossary\n\nEdit a meaning...\n\n### Document types\n\n| Term | Meaning |\n| --- | --- |\n| LRE | Land register extract |\n\n### Governance and risk\n\n| Term | Meaning |\n| --- | --- |\n| TMD | Technical model documentation |\n\n## Timeline\n\n- x\n`;
 	const existing = parseGlossary(wiki);
 	assert.deepEqual(existing, [
-		{ term: "LRE", meaning: "Land register extract", category: "Document types", status: "confirmed" },
-		{ term: "TMD", meaning: "Technical model documentation", category: "Governance and risk", status: "guess" },
+		{ term: "LRE", meaning: "Land register extract", category: "Document types" },
+		{ term: "TMD", meaning: "Technical model documentation", category: "Governance and risk" },
 	]);
 	const merged = mergeGlossary(existing, [
 		{ term: "lre", meaning: "something else", category: "Other" },
@@ -434,13 +435,12 @@ test("glossary rows parse, merge without overwriting, and render grouped and sor
 		{ term: "Hill climb", meaning: "Accuracy loop", category: "method" },
 		{ term: "", meaning: "skip me" },
 	]);
-	// Group order first (Document types, Way of working, Data and vendors, Governance and risk), then A-Z.
+	// Group order first (Document types, Way of working, Data and vendors, Governance and risk).
 	assert.deepEqual(
 		merged.map((g) => `${g.category}:${g.term}`),
 		["Document types:LRE", "Way of working:Hill climb", "Data and vendors:BDB", "Governance and risk:TMD"]
 	);
 	assert.equal(merged.find((g) => g.term === "LRE")?.meaning, "Land register extract");
-	assert.equal(merged.find((g) => g.term === "BDB")?.status, "guess");
 	const md = buildWikiMarkdown(
 		"ING",
 		{ current_state: "State.", open_questions: [] },
@@ -457,14 +457,41 @@ test("glossary rows parse, merge without overwriting, and render grouped and sor
 	assert.ok(md.indexOf("### Document types") < md.indexOf("### Way of working"));
 	assert.ok(md.indexOf("### Way of working") < md.indexOf("### Data and vendors"));
 	assert.ok(!md.includes("### Roles"));
-	assert.match(md, /\| BDB \| Broker data base \| guess \|/);
+	assert.match(md, /\| BDB \| Broker data base \|\n/);
 	// Round trip: what we render, we can parse back.
 	assert.deepEqual(parseGlossary(md), merged);
+	assert.ok(!md.includes("Status"));
 	// A 2.12 flat table (no sub-headings) lands in Other.
-	const flat = "## Glossary\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| X | Old style | guess |\n\n## Timeline\n";
-	assert.deepEqual(parseGlossary(flat), [{ term: "X", meaning: "Old style", category: "Other", status: "guess" }]);
+	const flat = "## Glossary\n\n| Term | Meaning |\n| --- | --- |\n| X | Old style |\n\n## Timeline\n";
+	assert.deepEqual(parseGlossary(flat), [{ term: "X", meaning: "Old style", category: "Other" }]);
+	// A pre-2.17 table with a Status column parses, and renders without it.
+	const withStatus = parseGlossary(
+		"## Glossary\n\n### Roles\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| PO | Product owner | confirmed |\n\n## Timeline\n"
+	);
+	assert.deepEqual(withStatus, [{ term: "PO", meaning: "Product owner", category: "Roles" }]);
+	assert.match(renderGlossary(withStatus), /\| Term \| Meaning \|\n\| --- \| --- \|\n\| PO \| Product owner \|\n/);
 	// No terms, no section.
 	assert.ok(!buildWikiMarkdown("ING", { current_state: "S.", open_questions: [] }, [], [], "2026-09-01", "2026-09-16").includes("## Glossary"));
+});
+
+test("glossary merge keeps a person's row order and appends new terms A-Z at the end of their group", () => {
+	// A person ordered the document types top-down, not A-Z.
+	const existing = parseGlossary(
+		"## Glossary\n\n### Document types\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n| LRE | Land register extract | guess |\n| DoD | Declaration of division | guess |\n| BP | Building plan | guess |\n\n## Timeline\n"
+	);
+	const merged = mergeGlossary(existing, [
+		{ term: "EPC", meaning: "Energy certificate", category: "Document types" },
+		{ term: "CAL", meaning: "Calculation", category: "Document types" },
+		{ term: "Node", meaning: "One step", category: "Way of working" },
+	]);
+	assert.deepEqual(
+		merged.map((g) => g.term),
+		["LRE", "DoD", "BP", "CAL", "EPC", "Node"]
+	);
+	const md = buildWikiMarkdown("ING", { current_state: "S.", open_questions: [] }, [], [], "2026-09-01", "2026-09-16", merged);
+	assert.ok(md.indexOf("| LRE |") < md.indexOf("| DoD |"));
+	assert.ok(md.indexOf("| DoD |") < md.indexOf("| BP |"));
+	assert.deepEqual(parseGlossary(md), merged);
 });
 
 test("buildMeetingMarkdown renders Open questions between Decisions and Action items", () => {

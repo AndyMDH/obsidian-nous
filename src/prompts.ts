@@ -2,14 +2,14 @@ import type { NoteIndexEntry } from "./types.ts";
 
 // The plugin does all file I/O; the model's only job is to return the
 // enrich_note tool call - no tool loop, one round trip.
-export function ownerDescription(ownerName: string): string {
+function ownerDescription(ownerName: string): string {
 	const name = ownerName.trim();
 	return name
 		? `${name}, the person whose notes these are (on call transcripts the "Me:" lines are theirs)`
 		: `the person whose notes these are (on call transcripts the "Me:" speaker; otherwise infer from context who is taking the notes)`;
 }
 
-export interface KnownTerm {
+interface KnownTerm {
 	term: string;
 	meaning: string;
 }
@@ -60,7 +60,7 @@ When "win" is in tags, fill the win field: category is one of "client work", "tr
 Known terms from the vault's wiki glossaries: ${glossaryBlock}
 - In summary and key_points, the first time a known term appears write it as "TERM (meaning)", e.g. "LRE (land register extract)". After that, the bare term.
 - new_terms: acronyms, code names, or project jargon used in this text that are NOT in the known list and that a newcomer could not decode. Give each a best guess from context in a few words, or "unknown" if the text gives no clue. At most eight. Empty array if none. Never list ordinary words or well-known terms (API, CEO, PDF).
-- If the raw captured text includes sections named "Questions to ask" or "Live notes", those were typed by the user during the meeting. Use them as context for the summary, key points, open threads, and action items, but do not treat them as spoken transcript lines.
+- If the raw captured text includes sections named "Meeting notes", "Notes", "Questions to ask", or "Live notes", those were typed by the user during the meeting. Do not treat them as spoken transcript lines. They show what the user cared about, so let them steer summary and key_points. For each question in them: a question about the project (who, where, when, what was decided, how this team or client does something) is answered only from what was said in the meeting - as a key point if the meeting answered it, otherwise as an open_questions entry; never fill a project fact from general knowledge. A "what is X" question about a general term (building plan, OCR, cadastral map) that the meeting does not explain gets a key point answered from general knowledge that ends with "*(general, not from meeting)*". Fold typed notes that are not questions into key_points or action_items; never write "the typed note says".
 Do not include the original transcript text in your response - the caller already has it and will attach it verbatim itself.
 
 ## Duplicate check

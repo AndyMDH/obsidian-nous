@@ -75,3 +75,5 @@ export function downloadProgressText(filename: string, received: number, total: 
 	const percent = Math.min(100, Math.floor((received / total) * 100));
 	return `Downloading ${filename}… ${percent}% of ${formatBytes(total)}`;
 }
+
+export const DEFAULT_WHISPER_CLI_BIN = "whisper-cli";

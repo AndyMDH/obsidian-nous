@@ -246,9 +246,9 @@ and seeing a linked note. (Full detail:
 7. **Glossary.** Each wiki opens with a `## Glossary` of the acronyms and
    project jargon found in its notes, grouped into Document types, Way of
    working, Systems and tools, Data and vendors, Governance and risk, Roles,
-   and Other, alphabetical inside each group, one row per term with a
-   meaning and a status. Nous writes every row as `guess`. Edit the meaning and set the
-   status to `confirmed`; Nous never rewrites a row that is already there.
+   and Other, one row per term with a meaning. Edit a meaning, move a term
+   to another group, or reorder the rows; Nous never rewrites a row that is
+   already there, and adds new terms at the end of their group.
    When a new note arrives, the enricher expands known terms on first use
    ("LRE (land register extract)") and lists unknown ones under
    `## New terms` with a best guess, so the table grows as you learn.

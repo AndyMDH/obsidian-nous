@@ -4,6 +4,7 @@ import {
 	augmentedPath,
 	buildEnrichArgs,
 	buildWikiArgs,
+	PIPELINE_MODEL,
 	cliErrorDetail,
 	summarizeLogLines,
 } from "../src/cliRunner.ts";
@@ -63,4 +64,12 @@ test("cliErrorDetail prefers stderr, falls back to stdout, never returns blank",
 	assert.equal(cliErrorDetail({ code: 1, stdout: "stdout msg", stderr: "   \n" }), "stdout msg");
 	assert.equal(cliErrorDetail({ code: 1, stdout: "", stderr: "" }), "(no output)");
 	assert.equal(cliErrorDetail({ code: 1, stdout: "x".repeat(400), stderr: "" }).length, 300);
+});
+
+test("buildEnrichArgs and buildWikiArgs pin the pipeline model", () => {
+	for (const args of [buildEnrichArgs("00-Inbox"), buildWikiArgs("10-Meetings")]) {
+		const i = args.indexOf("--model");
+		assert.ok(i >= 0);
+		assert.equal(args[i + 1], PIPELINE_MODEL);
+	}
 });

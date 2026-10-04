@@ -1,4 +1,4 @@
-export type ExecutionMode = "api" | "cli";
+type ExecutionMode = "api" | "cli";
 
 // Only used in API mode - CLI mode always shells out to `claude`.
 export type ApiProvider = "anthropic" | "openai" | "gemini" | "glm" | "local";
@@ -117,7 +117,7 @@ export interface NoteIndexEntry {
 	snippet: string;
 }
 
-export type WinCategory =
+type WinCategory =
 	| "client work"
 	| "training"
 	| "internship"
@@ -168,14 +168,13 @@ export interface EnrichResult {
 	win: WinDetails | null;
 }
 
-export interface NewTerm {
+interface NewTerm {
 	term: string;
 	guess: string;
 }
 
-// One row of a wiki's "## Glossary" table. "guess" rows come from the
-// model; a person flips status to "confirmed" by editing the wiki, and the
-// builder never rewrites an existing row.
+// One row of a wiki's "## Glossary" table. A person may edit a meaning or
+// move a row, and the builder never rewrites an existing row.
 export const GLOSSARY_CATEGORIES = [
 	"Document types",
 	"Way of working",
@@ -191,7 +190,6 @@ export interface GlossaryEntry {
 	term: string;
 	meaning: string;
 	category: GlossaryCategory;
-	status: "guess" | "confirmed";
 }
 
 // The one live meeting note a recording is writing into. Kept in settings

@@ -130,7 +130,7 @@ export function extractEnrichedSections(noteContent: string): string {
 	return afterFrontmatter.slice(0, end).trim();
 }
 
-export interface ManualNotesSplit {
+interface ManualNotesSplit {
 	manualNotes: string;
 	transcript: string;
 }
@@ -192,7 +192,7 @@ export function formatRecordingElapsed(totalSeconds: number): string {
 	return `REC ${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-export interface CapturedAttachment {
+interface CapturedAttachment {
 	filename: string;
 	kind: "image" | "document" | "audio";
 }
@@ -362,13 +362,15 @@ export interface TimelineEntry {
 }
 
 // "## Glossary" of a wiki: one "### <category>" sub-heading per group, each
-// with a | Term | Meaning | Status | table, groups in GLOSSARY_CATEGORIES
-// order and terms alphabetical inside a group. Rows are keyed by term,
+// with a | Term | Meaning | table, groups in GLOSSARY_CATEGORIES
+// order. Inside a group, existing rows keep the order a person gave them and
+// new terms are appended A-Z at the end. Rows are keyed by term,
 // case-insensitive. A table with no sub-heading (the 2.12 layout) parses
-// into "Other".
+// into "Other". Tables from before 2.17 carry a third Status column - it is
+// ignored, and the next render drops it.
 const GLOSSARY_HEADING = "## Glossary";
 
-export function normalizeGlossaryCategory(raw: string | undefined): GlossaryCategory {
+function normalizeGlossaryCategory(raw: string | undefined): GlossaryCategory {
 	const wanted = (raw ?? "").trim().toLowerCase().replace(/&/g, "and").replace(/\s+/g, " ");
 	for (const category of GLOSSARY_CATEGORIES) {
 		if (category.toLowerCase() === wanted) return category;
@@ -404,9 +406,9 @@ export function parseGlossary(wikiContent: string): GlossaryEntry[] {
 			.split("|")
 			.map((c) => c.trim());
 		if (cells.length < 2) continue;
-		const [term, meaning, status = ""] = cells;
+		const [term, meaning] = cells;
 		if (!term || term.toLowerCase() === "term" || /^-+$/.test(term)) continue;
-		entries.push({ term, meaning, category, status: status.toLowerCase() === "confirmed" ? "confirmed" : "guess" });
+		entries.push({ term, meaning, category });
 	}
 	return entries;
 }
@@ -416,26 +418,29 @@ function compareTerms(a: string, b: string): number {
 }
 
 // Existing rows win, always - a person may have corrected a meaning, moved
-// a term to another group, or marked it confirmed, and a re-synthesis must
-// never undo that. Proposed rows only add terms the table does not know
-// yet, as guesses.
+// a term to another group, and a re-synthesis must
+// never undo that - including the order of rows inside a group. Proposed
+// rows only add terms the table does not know yet, sorted A-Z
+// and appended after the existing rows of their group.
 export function mergeGlossary(
 	existing: GlossaryEntry[],
 	proposed: { term: string; meaning: string; category?: string }[] | undefined
 ): GlossaryEntry[] {
 	const known = new Set(existing.map((e) => e.term.toLowerCase()));
-	const merged = existing.slice();
+	const added: GlossaryEntry[] = [];
 	for (const row of proposed ?? []) {
 		const term = row.term.trim();
 		const meaning = row.meaning.trim();
 		if (!term || !meaning || known.has(term.toLowerCase())) continue;
 		known.add(term.toLowerCase());
-		merged.push({ term, meaning, category: normalizeGlossaryCategory(row.category), status: "guess" });
+		added.push({ term, meaning, category: normalizeGlossaryCategory(row.category) });
 	}
-	return merged.sort((a, b) => {
-		const byCategory = GLOSSARY_CATEGORIES.indexOf(a.category) - GLOSSARY_CATEGORIES.indexOf(b.category);
-		return byCategory !== 0 ? byCategory : compareTerms(a.term, b.term);
-	});
+	added.sort((a, b) => compareTerms(a.term, b.term));
+	// Array.prototype.sort is stable, so sorting by group alone keeps the
+	// existing row order and puts new rows after them.
+	return [...existing, ...added].sort(
+		(a, b) => GLOSSARY_CATEGORIES.indexOf(a.category) - GLOSSARY_CATEGORIES.indexOf(b.category)
+	);
 }
 
 function escapeTableCell(text: string): string {
@@ -445,13 +450,13 @@ function escapeTableCell(text: string): string {
 export function renderGlossary(entries: GlossaryEntry[]): string {
 	if (entries.length === 0) return "";
 	const parts: string[] = [
-		`${GLOSSARY_HEADING}\n\nEdit a meaning, move a term to another group, or set its status to \`confirmed\`; Nous never rewrites a row that is already here.\n`,
+		`${GLOSSARY_HEADING}\n\nEdit a meaning or move a term to another group; Nous never rewrites a row that is already here.\n`,
 	];
 	for (const category of GLOSSARY_CATEGORIES) {
-		const rows = entries.filter((e) => e.category === category).sort((a, b) => compareTerms(a.term, b.term));
+		const rows = entries.filter((e) => e.category === category);
 		if (rows.length === 0) continue;
-		const table = rows.map((e) => `| ${escapeTableCell(e.term)} | ${escapeTableCell(e.meaning)} | ${e.status} |`);
-		parts.push(`\n### ${category}\n\n| Term | Meaning | Status |\n| --- | --- | --- |\n${table.join("\n")}\n`);
+		const table = rows.map((e) => `| ${escapeTableCell(e.term)} | ${escapeTableCell(e.meaning)} |`);
+		parts.push(`\n### ${category}\n\n| Term | Meaning |\n| --- | --- |\n${table.join("\n")}\n`);
 	}
 	return `${parts.join("")}\n`;
 }
@@ -475,7 +480,7 @@ export function parseWikiSources(wikiContent: string): string[] {
 
 // The wiki's Open questions are the still-open set across meetings, not a
 // log - past this many the list stops being read.
-export const WIKI_OPEN_QUESTIONS_MAX = 8;
+const WIKI_OPEN_QUESTIONS_MAX = 8;
 
 export function buildWikiMarkdown(
 	topic: string,
@@ -582,7 +587,7 @@ export interface NoteMeta {
 	tags: string[];
 }
 
-export interface TopicCluster {
+interface TopicCluster {
 	tag: string;
 	notes: NoteMeta[];
 }

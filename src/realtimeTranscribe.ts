@@ -50,7 +50,7 @@ export interface RealtimeSocket {
 	onclose: (() => void) | null;
 }
 
-export type RealtimeSocketFactory = (url: string, headers: Record<string, string>) => RealtimeSocket;
+type RealtimeSocketFactory = (url: string, headers: Record<string, string>) => RealtimeSocket;
 
 // Float32 samples (Web Audio's native format, range -1..1) -> base64-encoded
 // little-endian PCM16, the wire format `input_audio_buffer.append` expects.
@@ -105,7 +105,7 @@ export function buildAppendAudioMessage(base64Audio: string): string {
 	return JSON.stringify({ type: "input_audio_buffer.append", audio: base64Audio });
 }
 
-export type RealtimeEvent =
+type RealtimeEvent =
 	| { kind: "delta"; text: string }
 	| { kind: "completed"; text: string }
 	| { kind: "error"; message: string }
@@ -135,7 +135,7 @@ export function parseRealtimeEvent(raw: string): RealtimeEvent {
 	return { kind: "unknown", type };
 }
 
-export interface RealtimeTranscriberOptions {
+interface RealtimeTranscriberOptions {
 	apiKey: string;
 	wsFactory: RealtimeSocketFactory;
 	model?: string;

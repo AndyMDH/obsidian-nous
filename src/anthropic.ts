@@ -15,7 +15,7 @@ export type HttpPost = (
 ) => Promise<HttpResponse>;
 
 // Alias kept so existing imports of AnthropicTool still work.
-export type AnthropicTool = LlmTool;
+type AnthropicTool = LlmTool;
 
 // Subclass so both instanceof checks (specific and generic) keep working.
 export class AnthropicApiError extends LlmApiError {

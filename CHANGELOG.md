@@ -1,5 +1,35 @@
 # Changelog
 
+## 2.17.0
+
+- The wiki Glossary has two columns now, Term and Meaning. The Status
+  column is gone; an old table loses it on the next update. Rows keep the
+  order a person gave them, and new terms go at the end of their group.
+- Notes you type during a meeting now steer the summary. A question about
+  the project is answered only from what was said, or it goes to Open
+  questions. A "what is X" question about a general term gets a short
+  answer marked `*(general, not from meeting)*`.
+- CLI mode runs enrichment and wiki building on Sonnet, not on your
+  Claude Code default model. It is faster for this work.
+- Setup wizard fixes:
+  - A connection check that ends after you click Back or close the wizard
+    no longer moves you to another screen. The same holds for the capture
+    check and for an install that ends late.
+  - "Rerun setup" closed without Finish puts back only the provider
+    settings. It no longer discards a whisper model, a whisper-cli path, or
+    a recording state that was saved while the wizard was open.
+  - "I have an API key" no longer opens on the local-model form after you
+    picked the local model and went back.
+  - The API key field shows the stored key (masked) when you come back to
+    it.
+  - "Show tour" from the command palette has no Back button on its first
+    step. Before, Back opened a Finish screen with a wrong title.
+  - "Import from Notion" from the command palette closes after the import.
+    It no longer shows step dots or ends on the Welcome screen.
+- Internal: the settings tab, the wizard, and the other modals moved out of
+  `main.ts` into `src/ui/`. One helper now builds each whisper install
+  button, and one handles Enter/Space on clickable rows.
+
 ## 2.16.0
 
 - The wiki Glossary is now grouped: Document types, Way of working,

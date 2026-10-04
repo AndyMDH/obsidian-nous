@@ -18,7 +18,7 @@ export class LlmApiError extends Error {
 	}
 }
 
-export interface AttachmentInput {
+interface AttachmentInput {
 	kind: "image" | "document"; // "document" is currently PDF-only
 	mediaType: string; // e.g. "image/png" or "application/pdf"
 	base64Data: string;

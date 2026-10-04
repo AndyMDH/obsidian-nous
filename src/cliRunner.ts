@@ -1,7 +1,7 @@
 // Pure helpers for CLI execution mode (command construction, PATH, log
 // summarizing). Process-spawning lives in main.ts.
 
-export interface CliExecResult {
+interface CliExecResult {
 	code: number;
 	stdout: string;
 	stderr: string;
@@ -22,6 +22,11 @@ export function augmentedPath(existingPath: string, homeDir: string, extraDir: s
 	return [...extras, existingPath].join(":");
 }
 
+// Enrichment and wiki building are summary/tagging work - Sonnet does it
+// well and much faster than the user's global Claude Code default (often
+// Opus). Pinned here so the vault pipeline does not inherit that default.
+export const PIPELINE_MODEL = "sonnet";
+
 export function buildEnrichArgs(inboxFolder: string, liveNotePath: string | null = null): string[] {
 	// A live meeting note has no frontmatter flag any more, so the skill
 	// cannot recognize it on its own - name it here instead.
@@ -35,6 +40,8 @@ export function buildEnrichArgs(inboxFolder: string, liveNotePath: string | null
 		"Read,Write,Edit,Glob,Grep,Bash",
 		"--permission-mode",
 		"acceptEdits",
+		"--model",
+		PIPELINE_MODEL,
 	];
 }
 
@@ -46,6 +53,8 @@ export function buildWikiArgs(meetingsFolder: string): string[] {
 		"Read,Write,Edit,Glob,Grep,Bash",
 		"--permission-mode",
 		"acceptEdits",
+		"--model",
+		PIPELINE_MODEL,
 	];
 }
 
@@ -66,7 +75,7 @@ export function cliErrorDetail(result: CliExecResult): string {
 	return detail || "(no output)";
 }
 
-export interface LogSummary {
+interface LogSummary {
 	enriched: number;
 	newWikis: number;
 	updatedWikis: number;

@@ -574,10 +574,6 @@
 	align-items: center;
 	gap: 10px;
 }
-.nous-numbered-hint {
-	font-size: 12px;
-	color: var(--nous-muted);
-}
 /* A quiet text button, not a second CTA - sits next to the download button
    only while a download is actually in progress, so a ~466MB transfer has
    a real way to back out instead of none at all. */

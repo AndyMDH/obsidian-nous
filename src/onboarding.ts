@@ -6,20 +6,23 @@ export const MEETING_RECORDER_MISSING_NOTICE = "Meeting recorder isn't installed
 export const NATIVE_RECORDER_INSTALL_DESC =
 	"Nous downloads its recorder, checks it, and uses it automatically.";
 
-export type MeetingCapturePrerequisite = "ready-native" | "needs-recorder" | "needs-permission" | "unsupported";
+type MeetingCapturePrerequisite = "ready-native" | "needs-recorder" | "needs-permission" | "unsupported";
 
 export interface CapturePrerequisiteStatus {
 	voiceReady: boolean;
 	meeting: MeetingCapturePrerequisite;
 }
 
-export interface CapturePrerequisiteItem {
+interface CapturePrerequisiteItem {
+	// What the row is about - callers key their per-row buttons and overrides
+	// on this, never on the row's position in the list.
+	id: "text" | "voice" | "meeting";
 	name: string;
 	desc: string;
 	warning: boolean;
 }
 
-export type NativeRecorderReadinessState =
+type NativeRecorderReadinessState =
 	| "unsupported"
 	| "missing"
 	| "installed"
@@ -41,11 +44,13 @@ export function hasGeminiOrOpenAiTranscriptionKey(apiKeys: { gemini?: string; op
 export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): CapturePrerequisiteItem[] {
 	return [
 		{
+			id: "text",
 			name: "Text, images, and PDFs",
 			desc: "Ready.",
 			warning: false,
 		},
 		{
+			id: "voice",
 			name: "Voice notes",
 			// Short on purpose - the button right here handles step one, and
 			// step two (also a button, no Terminal needed) only shows up once
@@ -58,6 +63,7 @@ export function capturePrerequisiteItems(status: CapturePrerequisiteStatus): Cap
 			warning: !status.voiceReady,
 		},
 		{
+			id: "meeting",
 			name: "Meeting capture",
 			desc:
 				status.meeting === "ready-native"

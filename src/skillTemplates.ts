@@ -288,7 +288,7 @@ the owner's own work, each as \`Owner: what, by when\` in under twelve words
 mirror everyone's tasks there.
 
 **Glossary.** Before writing, read the \`## Glossary\` table of every wiki in
-\`${f.wikis}/\` (columns Term, Meaning, Status). In Summary and Key points,
+\`${f.wikis}/\` (columns Term, Meaning). In Summary and Key points,
 the first time a known term appears, write it as \`TERM (meaning)\`, for
 example \`LRE (land register extract)\`; after that, the bare term.
 \`## New terms\` lists acronyms, code names, and project jargon used in this
@@ -303,6 +303,22 @@ watch, and New terms entirely if every term is already known. Omit \`## Notes ta
 inbox file did not contain \`## Meeting notes\`, \`## Notes\`, \`## Questions to ask\`,
 \`## Live notes\`, or \`## Notes taken during meeting\` with content. Never
 invent decisions or action items that aren't actually in the transcript.
+
+**Typed notes steer the summary.** If the inbox file has typed notes (see
+below), read them before you write Summary and Key points - they show what
+the note owner cared about. For each question in them:
+- A question about the project (who, where, when, what was decided, how
+  this team or client does something): answer it only from what was said
+  in the meeting. If the meeting answered it, write that answer as a key
+  point. If it did not, put the question in \`## Open questions\`. Never
+  fill a project fact from general knowledge.
+- A "what is X" question about a general term (building plan, OCR,
+  cadastral map): if the meeting explains it, use that. If not, answer it
+  in a key point from general knowledge and end that point with
+  \`*(general, not from meeting)*\`.
+Fold typed notes that are not questions into Key points or Action items
+where they fit. Do not quote them as "the typed note says", and do not add
+a section for them.
 
 **Never delete, summarize away, or paraphrase the original transcript text.**
 It moves intact, verbatim, under the collapsed \`> [!note]- Transcript\`
@@ -533,19 +549,19 @@ sources: <count>
 
 ## Glossary
 
-Edit a meaning, move a term to another group, or set its status to \`confirmed\`; Nous never rewrites a row that is already here.
+Edit a meaning or move a term to another group; Nous never rewrites a row that is already here.
 
 ### Document types
 
-| Term | Meaning | Status |
-| --- | --- | --- |
-| LRE | Land register extract (Grundbuchauszug) | guess |
+| Term | Meaning |
+| --- | --- |
+| LRE | Land register extract (Grundbuchauszug) |
 
 ### Way of working
 
-| Term | Meaning | Status |
-| --- | --- | --- |
-| Hill climb | Iterative accuracy improvement per node against a holdout set | guess |
+| Term | Meaning |
+| --- | --- |
+| Hill climb | Iterative accuracy improvement per node against a holdout set |
 
 ## Current state
 
@@ -584,8 +600,8 @@ vendors\` (data objects, datasets, suppliers), \`Governance and risk\`
 (assessments, controls, committees), \`Roles\` (kinds of people), \`Other\`.
 Sort terms alphabetically inside a group. Take candidates from each note's
 \`## New terms\` section and from terms that recur in Summary and Key points;
-take meanings from the notes' guesses and context. Every row you write gets
-status \`guess\`. Skip ordinary words and well-known terms (API, CEO, PDF).
+take meanings from the notes' guesses and context. The table has two
+columns, Term and Meaning. Skip ordinary words and well-known terms (API, CEO, PDF).
 Omit the whole section when there are no terms.
 
 3. Append to \`.nous/pipeline.log\`:
@@ -599,12 +615,14 @@ If a wiki's topic has meeting notes that are not yet listed under its
 1. Read the existing wiki in full, plus those not-yet-listed source notes.
 2. Rewrite \`## Current state\` to incorporate the new information — don't just
    append a paragraph, actually re-synthesize so the narrative stays coherent.
-3. Merge \`## Glossary\`: keep every existing row exactly as it is and in
-   its group - a person may have corrected the meaning, moved the term, or
-   set status \`confirmed\` - and only add rows for terms the tables do not
-   have yet (status \`guess\`, in the fitting group), then re-sort each group
-   alphabetically. Never delete or rewrite an existing row. If an old wiki
-   still has one flat table, keep its rows and file them under \`### Other\`.
+3. Merge \`## Glossary\`: keep every existing row exactly as it is, in its
+   group and in its position - a person may have corrected the meaning,
+   moved the term, or reordered the rows - and only add rows for terms the
+   tables do not have yet (in the fitting group), at the end of that group
+   in alphabetical order. Never delete, rewrite, or reorder an existing row.
+   If an old wiki still has one flat table, keep its rows and file them
+   under \`### Other\`. If a table still has a third Status column, drop
+   that column and keep Term and Meaning as they are.
 4. Append new entries to \`## Timeline\` (keep existing entries, keep
    chronological order).
 5. Append new notes to \`## Sources\`. **Never drop existing Sources** — only add.

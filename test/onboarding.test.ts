@@ -27,11 +27,11 @@ test("meeting recorder missing notice stays terse - settingsNotice's own link ha
 test("capture prerequisite checklist marks missing optional capture setup", () => {
 	const items = capturePrerequisiteItems({ voiceReady: false, meeting: "needs-recorder" });
 	assert.deepEqual(
-		items.map((item) => [item.name, item.warning]),
+		items.map((item) => [item.id, item.name, item.warning]),
 		[
-			["Text, images, and PDFs", false],
-			["Voice notes", true],
-			["Meeting capture", true],
+			["text", "Text, images, and PDFs", false],
+			["voice", "Voice notes", true],
+			["meeting", "Meeting capture", true],
 		]
 	);
 	assert.match(items[1].desc, /speech-to-text/i);

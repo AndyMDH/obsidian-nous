@@ -1,22 +1,22 @@
 export const DEFAULT_NATIVE_RECORDER_BIN = "nous-recorder";
-export const NATIVE_RECORDER_RELEASE_REPO = "AndyMDH/obsidian-nous";
+const NATIVE_RECORDER_RELEASE_REPO = "AndyMDH/obsidian-nous";
 export const NATIVE_RECORDER_ASSET = "nous-recorder-macos-universal";
-export const PENDING_NATIVE_RECORDING_FLAG = "nous_pending_native_recording";
-export const LIVE_NATIVE_RECORDING_FLAG = "nous_live_native_recording";
+const PENDING_NATIVE_RECORDING_FLAG = "nous_pending_native_recording";
+const LIVE_NATIVE_RECORDING_FLAG = "nous_live_native_recording";
 
-export type NativeRecorderCommand = "status" | "start" | "stop";
+type NativeRecorderCommand = "status" | "start" | "stop";
 
 export interface NativeRecorderStatus {
 	recording: boolean;
 	output: string | null;
 }
 
-export interface PendingNativeRecording {
+interface PendingNativeRecording {
 	recordingDir: string;
 	recordedAt: string;
 }
 
-export interface LiveNativeRecording {
+interface LiveNativeRecording {
 	recordingDir: string | null;
 	recordedAt: string;
 	status: "recording";

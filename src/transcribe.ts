@@ -24,8 +24,8 @@ const TRANSCRIBE_PROMPT =
 	"Transcribe this audio recording verbatim. Output only the transcript text - no preamble, no timestamps, no speaker labels unless multiple speakers are clearly distinguishable (then label them Speaker 1, Speaker 2, ...). Transcribe in the language spoken.";
 
 // Fixed cheap defaults - the user's chat model may not accept audio at all.
-export const GEMINI_TRANSCRIBE_MODEL = "gemini-2.5-flash";
-export const OPENAI_TRANSCRIBE_MODEL = "whisper-1";
+const GEMINI_TRANSCRIBE_MODEL = "gemini-2.5-flash";
+const OPENAI_TRANSCRIBE_MODEL = "whisper-1";
 
 export async function transcribeWithGemini(
 	httpPost: HttpPost,
